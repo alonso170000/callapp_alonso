@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/screens/screens.dart';
 
@@ -11,6 +12,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedDestination = 0;
   final List<WeeklyCallProgress> _weeklyProgress = const [
     WeeklyCallProgress(
       dayLabel: 'Lun',
@@ -158,61 +160,73 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SafeArea(
               bottom: false,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 118),
-                    sliver: SliverList.list(
-                      children: [
-                        const HomeHeader(userName: 'Leonardo Pérez'),
-                        const SizedBox(height: 18),
-                        WeeklyProgressStrip(days: _weeklyProgress),
-                        const SizedBox(height: 16),
-                        Row(
+              child: IndexedStack(
+                index: _selectedDestination == 1 ? 1 : 0,
+                children: [
+                  CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 118),
+                        sliver: SliverList.list(
                           children: [
-                            Expanded(
-                              child: MetricSummaryCard(metric: _metrics[0]),
+                            const HomeHeader(userName: 'Leonardo Pérez'),
+                            const SizedBox(height: 18),
+                            WeeklyProgressStrip(days: _weeklyProgress),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: MetricSummaryCard(metric: _metrics[0]),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: MetricSummaryCard(metric: _metrics[1]),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: MetricSummaryCard(metric: _metrics[1]),
+                            const SizedBox(height: 20),
+                            ProspectSection(
+                              title: 'Prospectos del día',
+                              color: AppColors.homeOrangeSection,
+                              prospects: _todayProspects,
+                              height: 166,
+                            ),
+                            const SizedBox(height: 20),
+                            ProspectSection(
+                              title: 'Prospectos nuevos',
+                              color: AppColors.homeBlueSection,
+                              prospects: _newProspects,
+                              showAddButton: true,
+                              height: 136,
+                            ),
+                            const SizedBox(height: 20),
+                            ProspectSection(
+                              title: 'Llamadas atrasadas',
+                              color: AppColors.homeRedSection,
+                              prospects: _lateCalls,
+                              height: 136,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        ProspectSection(
-                          title: 'Prospectos del día',
-                          color: AppColors.homeOrangeSection,
-                          prospects: _todayProspects,
-                          height: 166,
-                        ),
-                        const SizedBox(height: 20),
-                        ProspectSection(
-                          title: 'Prospectos nuevos',
-                          color: AppColors.homeBlueSection,
-                          prospects: _newProspects,
-                          showAddButton: true,
-                          height: 136,
-                        ),
-                        const SizedBox(height: 20),
-                        ProspectSection(
-                          title: 'Llamadas atrasadas',
-                          color: AppColors.homeRedSection,
-                          prospects: _lateCalls,
-                          height: 136,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  const ProspectsScreen(),
                 ],
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               bottom: 18,
-              child: SafeArea(top: false, child: NavigationBarWidget()),
+              child: SafeArea(
+                top: false,
+                child: NavigationBarWidget(
+                  onDestinationSelected: (index) =>
+                      setState(() => _selectedDestination = index),
+                ),
+              ),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class NavigationBarWidget extends StatefulWidget {
   final ValueChanged<String>? onSearchChanged;
@@ -18,7 +19,7 @@ class NavigationBarWidget extends StatefulWidget {
 }
 
 class _NavigationBarWidgetState extends State<NavigationBarWidget> {
-  static const Duration _animationDuration = Duration(milliseconds: 300);
+  static const Duration _animationDuration = Duration(milliseconds: 600);
   static const Curve _animationCurve = Curves.easeOutCubic;
 
   final TextEditingController _searchController = TextEditingController();
@@ -28,17 +29,17 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   bool _isSearchOpen = false;
 
   final List<_NavigationItem> itemsNoSelected = const [
-    _NavigationItem(icon: Icons.home_outlined, label: 'Inicio'),
-    _NavigationItem(icon: Icons.person_add_alt_1_outlined, label: 'Contactos'),
-    _NavigationItem(icon: Icons.calendar_today_outlined, label: 'Agenda'),
-    _NavigationItem(icon: Icons.account_circle_outlined, label: 'Perfil'),
+    _NavigationItem(icon: Iconsax.home_2_copy, label: 'Inicio'),
+    _NavigationItem(icon: Iconsax.profile_2user_copy, label: 'Prospectos'),
+    _NavigationItem(icon: Iconsax.calendar_2_copy, label: 'Agenda'),
+    _NavigationItem(icon: Iconsax.profile_circle_copy, label: 'Perfil'),
   ];
 
   final List<_NavigationItem> itemsSelected = const [
-    _NavigationItem(icon: Icons.home_rounded, label: 'Inicio'),
-    _NavigationItem(icon: Icons.person_add_alt_1_rounded, label: 'Contactos'),
-    _NavigationItem(icon: Icons.calendar_month_rounded, label: 'Agenda'),
-    _NavigationItem(icon: Icons.account_circle_rounded, label: 'Perfil'),
+    _NavigationItem(icon: Iconsax.home_2, label: 'Inicio'),
+    _NavigationItem(icon: Iconsax.profile_2user, label: 'Prospectos'),
+    _NavigationItem(icon: Iconsax.calendar_2, label: 'Agenda'),
+    _NavigationItem(icon: Iconsax.profile_circle, label: 'Perfil'),
   ];
 
   @override
@@ -115,42 +116,43 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   Widget _buildNormalBar() {
     return Row(
       key: const ValueKey('normal-navigation-bar'),
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
+        Flexible(
           child: LiquidGlass(
             height: 64,
+            width: 280,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+
               children: List.generate(itemsSelected.length, (index) {
                 final itemsSelec = itemsSelected[index];
                 final itemsNoSelec = itemsNoSelected[index];
                 final isSelected = selectedIndex == index;
 
-                return Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      setState(() {
-                        selectedIndex = index;
-                      });
-                      widget.onDestinationSelected?.call(index);
-                    },
-                    child: AnimatedOpacity(
-                      duration: _animationDuration,
-                      opacity: 1,
-                      child: _NavigationOption(
-                        itemsSelected: itemsSelec,
-                        itemsNoSelected: itemsNoSelec,
-                        isSelected: isSelected,
-                      ),
-                    ),
+                final option = GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    setState(() {
+                      selectedIndex = index;
+                    });
+                    widget.onDestinationSelected?.call(index);
+                  },
+                  child: _NavigationOption(
+                    itemsSelected: itemsSelec,
+                    itemsNoSelected: itemsNoSelec,
+                    isSelected: isSelected,
                   ),
                 );
+
+                return Expanded(flex: isSelected ? 3 : 1, child: option);
               }),
             ),
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
         _SearchCircleButton(onTap: _openSearch),
       ],
     );
@@ -168,8 +170,8 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
           semanticLabel: 'Cerrar búsqueda',
           child: Center(
             child: Icon(
-              Icons.home_outlined,
-              color: AppColors.whiteColor,
+              Iconsax.home_2_copy,
+              color: AppColors.primaryColor,
               size: 28,
             ),
           ),
@@ -185,9 +187,9 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                 focusNode: _searchFocusNode,
                 autocorrect: false,
                 textInputAction: TextInputAction.search,
-                cursorColor: AppColors.whiteColor,
+                cursorColor: AppColors.primaryColor,
                 style: const TextStyle(
-                  color: AppColors.whiteColor,
+                  color: AppColors.primaryColor,
                   fontSize: 16,
                 ),
                 decoration: InputDecoration(
@@ -195,12 +197,12 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                   isDense: true,
                   hintText: 'Buscar prospecto...',
                   hintStyle: const TextStyle(
-                    color: AppColors.textSecondaryColor,
+                    color: AppColors.primaryColor,
                     fontSize: 15,
                   ),
                   prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: AppColors.textSecondaryColor,
+                    Iconsax.search_normal_1_copy,
+                    color: AppColors.primaryColor,
                     size: 24,
                   ),
                   prefixIconConstraints: const BoxConstraints(
@@ -212,7 +214,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                           onTap: _searchController.clear,
                           child: const Icon(
                             Icons.close_rounded,
-                            color: AppColors.textSecondaryColor,
+                            color: AppColors.primaryColor,
                             size: 22,
                           ),
                         )
@@ -244,30 +246,51 @@ class _NavigationOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          isSelected ? itemsSelected.icon : itemsNoSelected.icon,
-          color: isSelected
-              ? AppColors.whiteColor
-              : AppColors.textSecondaryColor,
-          size: 26,
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      label: itemsSelected.label,
+      excludeSemantics: true,
+      child: Container(
+        height: 50,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 6 : 0,
+          vertical: 4,
         ),
-        const SizedBox(height: 4),
-        Text(
-          itemsNoSelected.label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: isSelected
-                ? AppColors.whiteColor
-                : AppColors.textSecondaryColor,
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          ),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? itemsSelected.icon : itemsNoSelected.icon,
+              color: isSelected
+                  ? AppColors.accentColor
+                  : AppColors.primaryColor,
+              size: 26,
+            ),
+            if (isSelected) const SizedBox(width: 3),
+            if (isSelected)
+              Flexible(
+                child: Text(
+                  itemsSelected.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.accentColor,
+                    fontFamily: 'SulphurPoint',
+                    fontSize: 16,
+                    height: 1,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -284,11 +307,11 @@ class _SearchCircleButton extends StatelessWidget {
       width: 64,
       height: 64,
       onTap: onTap,
-      semanticLabel: 'Buscar películas',
+      semanticLabel: 'Buscar prospectos',
       child: const Center(
         child: Icon(
-          Icons.search_rounded,
-          color: AppColors.whiteColor,
+          Iconsax.search_normal_1_copy,
+          color: AppColors.primaryColor,
           size: 30,
         ),
       ),

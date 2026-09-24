@@ -16,6 +16,7 @@ dependencies:
 
 
   cupertino_icons: ^1.0.8
+  iconsax_flutter: ^1.0.1
 
 dev_dependencies:
   flutter_test:
@@ -23,9 +24,14 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
 
+  flutter_launcher_icons: ^0.14.4
+
 flutter:
 
   uses-material-design: true
+
+  assets:
+    - lib/resources/images/
 
   fonts:
     - family: BebasNeue

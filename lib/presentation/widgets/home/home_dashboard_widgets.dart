@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
+  final String title;
 
-  const HomeHeader({super.key, required this.userName});
+  const HomeHeader({
+    super.key,
+    required this.userName,
+    this.title = 'BIENVENIDO',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,16 +22,16 @@ class HomeHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'BIENVENIDO',
-                style: TextStyle(
+              Text(
+                title,
+                style: const TextStyle(
                   color: AppColors.homeDeepTeal,
                   fontFamily: 'BebasNeue',
                   fontSize: 34,
                   height: 0.9,
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -300,8 +306,8 @@ class ProspectAvatar extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: -10,
-            top: -3,
+            left: 10,
+            top: 3,
             child: Container(width: 34, height: 64, color: item.accentColor),
           ),
           Positioned.fill(
@@ -434,18 +440,16 @@ class _ArrowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 31,
-      height: 31,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: const Icon(
-        Icons.north_east_rounded,
-        color: Colors.black,
-        size: 27,
-      ),
+    return const Stack(
+      alignment: Alignment.center,
+      children: [
+        SizedBox(width: 20, height: 20, child: ColoredBox(color: Colors.black)),
+        Icon(
+          FluentIcons.arrow_square_up_right_24_filled,
+          color: AppColors.whiteColor,
+          size: 31,
+        ),
+      ],
     );
   }
 }

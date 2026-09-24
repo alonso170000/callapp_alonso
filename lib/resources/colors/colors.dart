@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primaryColor = Color.fromARGB(5, 100, 95, 1);
-  static const Color secondaryColor = Color(0x00F8DB9D);
-  static const Color accentColor = Color.fromARGB(255, 67, 154, 150);
+  static const Color primaryColor = Color.fromRGBO(5, 100, 95, 1);
+  static const Color secondaryColor = Color.fromRGBO(172, 239, 226, 114);
+  static const Color accentColor = Color.fromRGBO(248, 219, 157, 1);
   static const Color transparentColor = Color(0x00000000);
 
   static const Color backgroundColor = Color(0xFF121212);
   static const Color textPrimaryColor = Color(0xFFFFFFFF);
-  static const Color textSecondaryColor = Color.fromARGB(255, 229, 229, 229);
+  static const Color textSecondaryColor = Color.fromRGBO(229, 229, 229, 1);
 
   static const Color googleRed = Color(0xFFDB4437);
   static const Color whiteColor = Color(0xFFFFFFFF);
@@ -123,8 +123,8 @@ class AppColors {
     ],
   );
   static const LinearGradient navigationGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xBB8EEBD7), Color(0x9983DCCB)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color.fromRGBO(83, 172, 154, 1), Color.fromRGBO(172, 239, 226, 1)],
   );
 }
