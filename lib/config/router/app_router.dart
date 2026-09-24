@@ -9,7 +9,6 @@ final appRouter = GoRouter(
 
   // errorBuilder: (context, state) =>
   //     NotFoundScreen(onGoHome: () => context.go('/')),
-
   routes: [
     // GoRoute(
     //   //url de la ruta
@@ -21,11 +20,16 @@ final appRouter = GoRouter(
     // ),
     GoRoute(
       //url de la ruta
-      path: '/login',
+      path: '/',
       //nombre de la ruta (util para la nevegacion por nombre)
       name: LoginScreen.name,
       //es el widget que se mostrara cuando entremos en esta ruta
-      builder: (context, state) => LoginScreen(),
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/home',
+      name: HomeScreen.name,
+      builder: (context, state) => const HomeScreen(),
     ),
   ],
 );

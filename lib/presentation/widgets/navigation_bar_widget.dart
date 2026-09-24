@@ -1,4 +1,3 @@
-import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/screens/screens.dart';
 
@@ -29,17 +28,17 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   bool _isSearchOpen = false;
 
   final List<_NavigationItem> itemsNoSelected = const [
-    _NavigationItem(icon: FluentIcons.home_16_regular, label: 'Inicio'),
-    _NavigationItem(icon: FluentIcons.heart_16_regular, label: 'Favoritos'),
-    _NavigationItem(icon: FluentIcons.bookmark_16_regular, label: 'Guardado'),
-    _NavigationItem(icon: FluentIcons.person_16_regular, label: 'Perfil'),
+    _NavigationItem(icon: Icons.home_outlined, label: 'Inicio'),
+    _NavigationItem(icon: Icons.person_add_alt_1_outlined, label: 'Contactos'),
+    _NavigationItem(icon: Icons.calendar_today_outlined, label: 'Agenda'),
+    _NavigationItem(icon: Icons.account_circle_outlined, label: 'Perfil'),
   ];
 
   final List<_NavigationItem> itemsSelected = const [
-    _NavigationItem(icon: FluentIcons.home_16_filled, label: 'Inicio'),
-    _NavigationItem(icon: FluentIcons.heart_16_filled, label: 'Favoritos'),
-    _NavigationItem(icon: FluentIcons.bookmark_16_filled, label: 'Guardado'),
-    _NavigationItem(icon: FluentIcons.person_16_filled, label: 'Perfil'),
+    _NavigationItem(icon: Icons.home_rounded, label: 'Inicio'),
+    _NavigationItem(icon: Icons.person_add_alt_1_rounded, label: 'Contactos'),
+    _NavigationItem(icon: Icons.calendar_month_rounded, label: 'Agenda'),
+    _NavigationItem(icon: Icons.account_circle_rounded, label: 'Perfil'),
   ];
 
   @override
@@ -169,7 +168,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
           semanticLabel: 'Cerrar búsqueda',
           child: Center(
             child: Icon(
-              FluentIcons.home_16_regular,
+              Icons.home_outlined,
               color: AppColors.whiteColor,
               size: 28,
             ),
@@ -194,13 +193,13 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   isDense: true,
-                  hintText: 'Buscar película...',
+                  hintText: 'Buscar prospecto...',
                   hintStyle: const TextStyle(
                     color: AppColors.textSecondaryColor,
                     fontSize: 15,
                   ),
                   prefixIcon: const Icon(
-                    FluentIcons.search_32_regular,
+                    Icons.search_rounded,
                     color: AppColors.textSecondaryColor,
                     size: 24,
                   ),
@@ -212,7 +211,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                       ? GestureDetector(
                           onTap: _searchController.clear,
                           child: const Icon(
-                            FluentIcons.dismiss_16_regular,
+                            Icons.close_rounded,
                             color: AppColors.textSecondaryColor,
                             size: 22,
                           ),
@@ -288,7 +287,7 @@ class _SearchCircleButton extends StatelessWidget {
       semanticLabel: 'Buscar películas',
       child: const Center(
         child: Icon(
-          FluentIcons.search_32_regular,
+          Icons.search_rounded,
           color: AppColors.whiteColor,
           size: 30,
         ),

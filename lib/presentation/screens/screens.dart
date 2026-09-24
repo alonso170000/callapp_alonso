@@ -9,6 +9,8 @@ export '/presentation/widgets/navigation_bar_widget.dart';
 export '/presentation/widgets/textfield_widget.dart';
 export '/presentation/widgets/button_widget.dart';
 export '/presentation/widgets/card_widget.dart';
+export '/presentation/widgets/home/home_dashboard_widgets.dart';
+export '/presentation/models/home_models.dart';
 
 //Carpeta resources/
 export '/resources/styles/styles.dart';

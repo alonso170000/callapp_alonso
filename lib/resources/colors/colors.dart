@@ -15,6 +15,17 @@ class AppColors {
   static const Color textDarkColor = Color(0xDD000000);
   static const Color textMutedColor = Color(0x73000000);
 
+  // Paleta principal para la pantalla Home.
+  static const Color homeBackground = Color(0xFFDDF9F1);
+  static const Color homeDeepTeal = Color(0xFF00756B);
+  static const Color homeWarmText = Color(0xFFFFD982);
+  static const Color homeGreenCard = Color(0xFF85F5A6);
+  static const Color homeYellowCard = Color(0xFFFFF47A);
+  static const Color homeOrangeSection = Color(0xFFFFD391);
+  static const Color homeBlueSection = Color(0xFF64D7EA);
+  static const Color homeRedSection = Color(0xFFFF9CA2);
+  static const Color homeBadge = Color(0xFFF2FF81);
+
   // Colores compartidos por las pantallas de autenticación.
   static const Color authCyan = Color(0xFF1DEBFF);
   static const Color authPurple = Color(0xFF8D1CFF);
@@ -68,13 +79,13 @@ class AppColors {
   static const LinearGradient genreGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color.fromARGB(0, 0, 0, 0), Color(0xFF6BB2F6),],
+    colors: [Color.fromARGB(0, 0, 0, 0), Color(0xFF6BB2F6)],
   );
 
   static const LinearGradient verTrailer = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color.fromARGB(255, 255, 255, 255),Color(0xFF6BB2F6)],
+    colors: [Color.fromARGB(255, 255, 255, 255), Color(0xFF6BB2F6)],
   );
 
   static const RadialGradient buttomGradient = RadialGradient(
@@ -114,11 +125,6 @@ class AppColors {
   static const LinearGradient navigationGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color.fromARGB(0, 255, 255, 255),
-      Color.fromARGB(0, 0, 0, 0),
-    ],
+    colors: [Color(0xBB8EEBD7), Color(0x9983DCCB)],
   );
-
-
 }

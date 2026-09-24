@@ -74,11 +74,6 @@ class _AuthScreenLayoutState extends State<AuthScreenLayout> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Positioned(
-                          right: 10,
-                          top: AppStyles.authCharacterTop,
-                          child: _AuthCharacter(),
-                        ),
                         Positioned(
                           left: 0,
                           right: 0,
@@ -168,19 +163,7 @@ class AuthCard extends StatelessWidget {
   }
 }
 
-class _AuthCharacter extends StatelessWidget {
-  const _AuthCharacter();
 
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      'lib/resources/images/jampa_login_register.png',
-      width: AppStyles.authCharacterSize,
-      height: AppStyles.authCharacterSize,
-      fit: BoxFit.contain,
-    );
-  }
-}
 
 class _AuthBackground extends StatelessWidget {
   const _AuthBackground();
