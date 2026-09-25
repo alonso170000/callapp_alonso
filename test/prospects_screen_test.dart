@@ -75,9 +75,12 @@ void main() {
     await openProspects(tester);
     tester.view.physicalSize = const Size(320, 640);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Filtrar por temperatura'));
+    await tester.tap(find.byTooltip('Filtrar prospectos'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Frío'));
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Tibio'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('VER 1 RESULTADOS'));
     await tester.pumpAndSettle();
     expect(find.text('MOSTRANDO 1 PROSPECTOS'), findsOneWidget);
     final call = find.byTooltip('Llamar a María José Sánchez');

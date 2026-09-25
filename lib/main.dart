@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/config/router/app_router.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,4 +24,3 @@ class MainApp extends StatelessWidget {
     );
   }
 }
-

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 
 // Este es mi widget para los textos o labels de la app
 class LabelWidget extends StatelessWidget {

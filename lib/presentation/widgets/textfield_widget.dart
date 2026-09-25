@@ -1,7 +1,8 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class CustomTextField extends StatefulWidget {
   final String hintText;

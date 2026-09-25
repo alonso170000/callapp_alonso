@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  static const Color loginBackground = Color(0xFFE0FFF9);
+  static const Color loginField = Color(0xFF439D98);
   static const Color primaryColor = Color.fromRGBO(5, 100, 95, 1);
   static const Color secondaryColor = Color.fromRGBO(172, 239, 226, 114);
   static const Color accentColor = Color.fromRGBO(248, 219, 157, 1);
@@ -25,6 +27,11 @@ class AppColors {
   static const Color homeBlueSection = Color(0xFF64D7EA);
   static const Color homeRedSection = Color(0xFFFF9CA2);
   static const Color homeBadge = Color(0xFFF2FF81);
+
+  // Paleta principal para la pantalla Profile.
+  static const Color profileDatos = Color.fromRGBO(186, 248, 157, 1);
+  static const Color profileSincronizacion = Color.fromRGBO(157, 248, 227, 1);
+  static const Color profileConfiguracion = Color.fromRGBO(242, 176, 255, 1);
 
   // Colores compartidos por las pantallas de autenticación.
   static const Color authCyan = Color(0xFF1DEBFF);
@@ -113,15 +120,6 @@ class AppColors {
     colors: [Color.fromARGB(79, 0, 0, 0), Color.fromARGB(55, 80, 0, 107)],
   );
 
-  static const LinearGradient navigationBorderGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Color.fromARGB(108, 255, 255, 255),
-      Color.fromARGB(0, 0, 0, 0),
-      Color.fromARGB(108, 255, 255, 255),
-    ],
-  );
   static const LinearGradient navigationGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,

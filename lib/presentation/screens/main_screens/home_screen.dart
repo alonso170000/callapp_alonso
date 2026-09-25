@@ -1,6 +1,11 @@
-import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
+import 'package:callerapp_frontend/presentation/models/home_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
+import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   static const name = 'home-screen';
@@ -13,143 +18,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedDestination = 0;
-  final List<WeeklyCallProgress> _weeklyProgress = const [
-    WeeklyCallProgress(
-      dayLabel: 'Lun',
-      calls: 7,
-      status: CallProgressStatus.completed,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Mar',
-      calls: 8,
-      status: CallProgressStatus.pending,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Mie',
-      calls: 9,
-      status: CallProgressStatus.pending,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Jue',
-      calls: 10,
-      status: CallProgressStatus.completed,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Vie',
-      calls: 11,
-      status: CallProgressStatus.pending,
-      isSelected: true,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Sab',
-      calls: 12,
-      status: CallProgressStatus.missed,
-    ),
-    WeeklyCallProgress(
-      dayLabel: 'Dom',
-      calls: 13,
-      status: CallProgressStatus.missed,
-    ),
-  ];
-
-  final List<DashboardMetric> _metrics = const [
-    DashboardMetric(
-      value: 0,
-      title: 'Llamadas\nRealizadas',
-      backgroundColor: AppColors.homeGreenCard,
-    ),
-    DashboardMetric(
-      value: 23,
-      title: 'Llamadas\nPendientes',
-      backgroundColor: AppColors.homeYellowCard,
-    ),
-  ];
-
-  final List<ProspectItem> _todayProspects = const [
-    ProspectItem(
-      name: 'Betsua',
-      subtitle: 'Con Cita',
-      timeLabel: '10:00 am',
-      avatarColor: Color(0xFFBF4242),
-      accentColor: Color(0xFF23C9DC),
-    ),
-    ProspectItem(
-      name: 'Alan Do...',
-      subtitle: 'Con Cita',
-      timeLabel: '11:30 am',
-      avatarColor: Color(0xFF81F59B),
-      accentColor: Color(0xFFE753C2),
-    ),
-    ProspectItem(
-      name: 'Juan Uch',
-      subtitle: 'Con Cita',
-      timeLabel: '12:30 pm',
-      avatarColor: Color(0xFF078C88),
-      accentColor: Color(0xFFF5DB58),
-    ),
-    ProspectItem(
-      name: 'Manuel',
-      avatarColor: Color(0xFFA08AF7),
-      accentColor: Color(0xFFA08AF7),
-    ),
-    ProspectItem(
-      name: 'Joshua',
-      avatarColor: Color(0xFF93DDF2),
-      accentColor: Color(0xFFF9B734),
-    ),
-  ];
-
-  final List<ProspectItem> _newProspects = const [
-    ProspectItem(
-      name: 'Karina Do...',
-      avatarColor: Color(0xFF86F5A0),
-      accentColor: Color(0xFFE64FBF),
-    ),
-    ProspectItem(
-      name: 'Julia Da...',
-      avatarColor: Color(0xFF93DDF2),
-      accentColor: Color(0xFFFFC334),
-    ),
-    ProspectItem(
-      name: 'Vanesa L.',
-      avatarColor: Color(0xFF058F8A),
-      accentColor: Color(0xFFE8DA63),
-    ),
-    ProspectItem(
-      name: 'Damian',
-      avatarColor: Color(0xFFBF4242),
-      accentColor: Color(0xFF23C9DC),
-    ),
-  ];
-
-  final List<ProspectItem> _lateCalls = const [
-    ProspectItem(
-      name: 'Julia Da...',
-      avatarColor: Color(0xFFA08AF7),
-      accentColor: Color(0xFFA08AF7),
-    ),
-    ProspectItem(
-      name: 'Julia Da...',
-      avatarColor: Color(0xFF93DDF2),
-      accentColor: Color(0xFFFFC334),
-    ),
-    ProspectItem(
-      name: 'Damian',
-      avatarColor: Color(0xFFBF4242),
-      accentColor: Color(0xFF23C9DC),
-    ),
-    ProspectItem(
-      name: 'Karina Do...',
-      avatarColor: Color(0xFF86F5A0),
-      accentColor: Color(0xFFE64FBF),
-    ),
-    ProspectItem(
-      name: 'Vanesa L.',
-      avatarColor: Color(0xFF058F8A),
-      accentColor: Color(0xFFE8DA63),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SafeArea(
               bottom: false,
               child: IndexedStack(
-                index: _selectedDestination == 1 ? 1 : 0,
+                index: _selectedDestination,
                 children: [
                   CustomScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -172,16 +40,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             const HomeHeader(userName: 'Leonardo Pérez'),
                             const SizedBox(height: 18),
-                            WeeklyProgressStrip(days: _weeklyProgress),
+                            WeeklyProgressStrip(days: demoWeeklyProgress),
                             const SizedBox(height: 18),
                             Row(
                               children: [
                                 Expanded(
-                                  child: MetricSummaryCard(metric: _metrics[0]),
+                                  child: MetricSummaryCard(
+                                    metric: demoDashboardMetrics[0],
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
-                                  child: MetricSummaryCard(metric: _metrics[1]),
+                                  child: MetricSummaryCard(
+                                    metric: demoDashboardMetrics[1],
+                                  ),
                                 ),
                               ],
                             ),
@@ -189,14 +61,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             ProspectSection(
                               title: 'Prospectos del día',
                               color: AppColors.homeOrangeSection,
-                              prospects: _todayProspects,
+                              prospects: demoTodayProspects,
                               height: 166,
                             ),
                             const SizedBox(height: 20),
                             ProspectSection(
                               title: 'Prospectos nuevos',
                               color: AppColors.homeBlueSection,
-                              prospects: _newProspects,
+                              prospects: demoNewProspects,
                               showAddButton: true,
                               height: 136,
                             ),
@@ -204,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ProspectSection(
                               title: 'Llamadas atrasadas',
                               color: AppColors.homeRedSection,
-                              prospects: _lateCalls,
+                              prospects: demoLateCalls,
                               height: 136,
                             ),
                           ],
@@ -213,6 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const ProspectsScreen(),
+                  const AgendaScreen(),
+                  const ProfileScreen(),
                 ],
               ),
             ),

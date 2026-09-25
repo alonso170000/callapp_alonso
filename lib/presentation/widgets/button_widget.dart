@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class CustomButton extends StatelessWidget {
   final String texto;

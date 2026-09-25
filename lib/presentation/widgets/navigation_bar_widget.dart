@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class NavigationBarWidget extends StatefulWidget {
@@ -120,7 +121,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Flexible(
-          child: LiquidGlass(
+          child: _NavigationSurface(
             height: 64,
             width: 280,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -162,8 +163,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
     return Row(
       key: const ValueKey('search-navigation-bar'),
       children: [
-        LiquidGlass(
-          style: LiquidGlassStyle.button,
+        _NavigationSurface(
           width: 64,
           height: 64,
           onTap: _closeSearch,
@@ -178,7 +178,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: LiquidGlass(
+          child: _NavigationSurface(
             height: 64,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
@@ -302,8 +302,7 @@ class _SearchCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LiquidGlass(
-      style: LiquidGlassStyle.button,
+    return _NavigationSurface(
       width: 64,
       height: 64,
       onTap: onTap,
@@ -324,4 +323,51 @@ class _NavigationItem {
   final String label;
 
   const _NavigationItem({required this.icon, required this.label});
+}
+
+class _NavigationSurface extends StatelessWidget {
+  final Widget child;
+  final double? width;
+  final double height;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final String? semanticLabel;
+
+  const _NavigationSurface({
+    required this.child,
+    this.width,
+    required this.height,
+    this.padding = EdgeInsets.zero,
+    this.onTap,
+    this.semanticLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(32);
+    return Semantics(
+      button: onTap != null,
+      label: semanticLabel,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: AppColors.navigationGradient,
+              borderRadius: radius,
+            ),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: Padding(padding: padding, child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

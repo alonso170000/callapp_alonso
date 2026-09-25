@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class AppStyles {
   static const double authContentTop = 120;
@@ -158,3 +159,15 @@ class AppStyles {
     return h(context, 0.018);
   }
 }
+
+const agendaHeadingStyle = TextStyle(
+  fontFamily: 'BebasNeue',
+  fontSize: 21,
+  color: AppColors.primaryColor,
+);
+
+const profileHeading = TextStyle(
+  fontFamily: 'BebasNeue',
+  fontSize: 20,
+  color: AppColors.primaryColor,
+);
