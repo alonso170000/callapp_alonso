@@ -217,9 +217,12 @@ class ProspectDetailHeader extends StatelessWidget {
                               horizontal: 6,
                             ),
                             backgroundColor: const Color(0xFF004F4B),
-                            selectedColor: name == 'Discovery'
-                                ? const Color(0xFF95FF90)
-                                : const Color(0xFF96E3F4),
+                            selectedColor: switch (name) {
+                              'Discovery' => const Color(0xFF95FF90),
+                              'Guiones' => const Color(0xFFFFF47A),
+                              'Prospecto' => const Color(0xFFFF929C),
+                              _ => const Color(0xFF96E3F4),
+                            },
                             labelStyle: TextStyle(
                               fontFamily: 'SulphurPoint',
                               fontSize: 11,
@@ -272,11 +275,14 @@ class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             child: Row(
               children: [
-                if (widget.title.contains('seguimiento')) ...[
+                if (widget.title.contains('seguimiento') ||
+                    widget.title == 'Datos del prospecto') ...[
                   Icon(
                     Icons.cloud_done,
                     size: 21,
-                    color: widget.nested
+                    color: widget.title == 'Datos del prospecto'
+                        ? const Color(0xFFB80009)
+                        : widget.nested
                         ? const Color(0xFF48A7BC)
                         : const Color(0xFF398AA0),
                   ),

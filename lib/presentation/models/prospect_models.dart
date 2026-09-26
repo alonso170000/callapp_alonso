@@ -13,6 +13,12 @@ class ProspectRecord {
   final DateTime? assignedAt;
   final DateTime? nextContact;
   final String lastContactResult;
+  final Duration? lastCallDuration;
+  final DateTime? lastCallAt;
+  final String? lastCallStatus;
+  final String city;
+  final String company;
+  final String occupation;
 
   const ProspectRecord({
     required this.name,
@@ -27,6 +33,12 @@ class ProspectRecord {
     this.assignedAt,
     this.nextContact,
     this.lastContactResult = 'Sin contacto',
+    this.lastCallDuration,
+    this.lastCallAt,
+    this.lastCallStatus,
+    this.city = 'Sin registro de ciudad',
+    this.company = 'Sin registro de Empresa',
+    this.occupation = 'Sin registro de ocupación',
   });
 
   String get note =>
@@ -65,6 +77,11 @@ final demoProspects = <ProspectRecord>[
     appointment: DateTime(2026, 9, 14, 11, 30),
     assignedAt: DateTime(_demoToday.year, _demoToday.month, _demoToday.day - 1),
     lastContactResult: 'Cita programada',
+    lastCallDuration: Duration(minutes: 10, seconds: 12),
+    lastCallAt: DateTime(2026, 9, 17, 12, 30),
+    lastCallStatus: 'Contestada',
+    city: 'Pachuca',
+    occupation: 'Arquitecto',
     nextContact: DateTime(
       _demoToday.year,
       _demoToday.month,

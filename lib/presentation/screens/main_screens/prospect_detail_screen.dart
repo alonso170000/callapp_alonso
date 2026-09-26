@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_discovery_form.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_data_form.dart';
+import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectDetailScreen extends StatefulWidget {
@@ -15,8 +21,6 @@ class ProspectDetailScreen extends StatefulWidget {
 class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   final _selected = {'Seguimiento', 'Discovery'};
   final _history = <String>[];
-  final _discovery = TextEditingController();
-  String _savedDiscovery = '';
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) =>
       Expanded(
         child: SizedBox(
@@ -37,7 +41,6 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
       );
   @override
   void dispose() {
-    _discovery.dispose();
     super.dispose();
   }
 
@@ -136,7 +139,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                             'Llamar',
                             style: TextStyle(
                               fontFamily: 'SulphurPoint',
-                              fontSize: 10,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -207,84 +210,52 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                             'Discovery',
                             'Registrar discovery',
                             const Color(0xFF95FF90),
-                            Column(
-                              children: [
-                                TextField(
-                                  controller: _discovery,
-                                  minLines: 3,
-                                  maxLines: 6,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Necesidades del prospecto',
-                                  ),
-                                ),
-                                Wrap(
-                                  alignment: WrapAlignment.end,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          _discovery.text = _savedDiscovery,
-                                      child: const Text('CANCELAR'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        if (_discovery.text.trim().isEmpty) {
-                                          return;
-                                        }
-                                        setState(() {
-                                          _savedDiscovery = _discovery.text
-                                              .trim();
-                                          _history.insert(
-                                            0,
-                                            'Discovery · $_savedDiscovery',
-                                          );
-                                        });
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Discovery guardado en esta vista.',
-                                                ),
-                                              ),
-                                            );
-                                      },
-                                      child: const Text('GUARDAR'),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            ProspectDiscoveryForm(
+                              onSaved: (summary) =>
+                                  setState(() => _history.insert(0, summary)),
                             ),
                           ),
                           _section(
                             'Guiones',
-                            'Guiones',
-                            Colors.white,
-                            const Text('No hay guiones disponibles.'),
+                            'Guiones de llamadas',
+                            const Color(0xFFFFF18A),
+                            Column(
+                              children: [
+                                const ProspectCallScripts(
+                                  script: demoAlanCallScript,
+                                ),
+                                const SizedBox(height: 12),
+                                ProspectFollowUpCallScript(
+                                  onContinue: () => setState(
+                                    () => _history.insert(
+                                      0,
+                                      'Guiones · Continuar al cierre',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           _section(
                             'Prospecto',
                             'Datos del prospecto',
-                            Colors.white,
-                            Column(
-                              children: [
-                                SelectableText(p.name),
-                                SelectableText(p.phone),
-                                SelectableText(p.email),
-                              ],
+                            const Color(0xFFFF929C),
+                            ProspectDataForm(
+                              prospect: p,
+                              onSaved: (summary) =>
+                                  setState(() => _history.insert(0, summary)),
                             ),
                           ),
                           _section(
                             'Historial',
                             'Historial',
-                            Colors.white,
-                            Column(
-                              children: _history.isEmpty
-                                  ? [const Text('Sin registros en esta vista.')]
-                                  : _history
-                                        .map(
-                                          (entry) =>
-                                              ListTile(title: Text(entry)),
-                                        )
-                                        .toList(),
+                            const Color(0xFFCE82F3),
+                            ProspectHistory(
+                              comments: demoProspectHistoryComments,
+                              discoverySummary: demoProspectDiscoverySummary,
+                              emails: demoProspectEmailHistory,
+                              callHours: demoProspectCallHours,
+                              sessionEntries: _history,
                             ),
                           ),
                         ],

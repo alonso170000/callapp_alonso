@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_information.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 
@@ -21,9 +22,16 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   String _method = 'Llamada telefónica';
   late String _priority = widget.prospect.temperature;
   bool _success = false;
-  bool _schedule = false;
-  DateTime? _next;
+  late bool _schedule;
+  late DateTime? _next;
   Map<String, dynamic>? _saved;
+
+  @override
+  void initState() {
+    super.initState();
+    _next = widget.prospect.nextContact;
+    _schedule = _next != null;
+  }
 
   @override
   void dispose() {
@@ -39,8 +47,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _origin.text = _saved?['origin'] ?? 'Campaña FB';
     _notes.text = _saved?['notes'] ?? '';
     _success = _saved?['success'] ?? false;
-    _schedule = _saved?['schedule'] ?? false;
-    _next = _saved?['next'];
+    _schedule = _saved?['schedule'] ?? widget.prospect.nextContact != null;
+    _next = _saved?['next'] ?? widget.prospect.nextContact;
   });
 
   Future<void> _pickDate() async {
@@ -52,6 +60,20 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       lastDate: DateTime(now.year + 5),
     );
     if (!mounted || date == null) return;
+    final current = _next ?? now;
+    setState(
+      () => _next = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        current.hour,
+        current.minute,
+      ),
+    );
+  }
+
+  Future<void> _pickTime() async {
+    final now = DateTime.now();
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_next ?? now),
@@ -59,14 +81,18 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     if (!mounted || time == null) return;
     setState(
       () => _next = DateTime(
-        date.year,
-        date.month,
-        date.day,
+        (_next ?? now).year,
+        (_next ?? now).month,
+        (_next ?? now).day,
         time.hour,
         time.minute,
       ),
     );
   }
+
+  String _dateLabel(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/'
+      '${value.month.toString().padLeft(2, '0')}/${value.year}';
 
   InputDecoration _decoration() => InputDecoration(
     filled: true,
@@ -158,6 +184,20 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           ],
         ),
       );
+
+  Widget _scheduleButton(String label, VoidCallback onPressed) => TextButton(
+    style: TextButton.styleFrom(
+      backgroundColor: const Color(0xFF398FA3),
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 17),
+    ),
+    onPressed: onPressed,
+    child: Text(label),
+  );
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -194,7 +234,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 'Llamada telefónica',
                 'Mensaje',
                 'Correo',
-                'Visita presencial',
               ], (v) => _method = v),
               _select('Prioridad del prospecto', _priority, [
                 'Caliente',
@@ -214,16 +253,26 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               if (_schedule)
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _pickDate,
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text(
-                      _next == null
-                          ? 'Seleccionar fecha y hora'
-                          : '${MaterialLocalizations.of(context).formatCompactDate(_next!)} · ${TimeOfDay.fromDateTime(_next!).format(context)}',
-                    ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _scheduleButton(
+                        _next == null
+                            ? 'Seleccionar fecha'
+                            : _dateLabel(_next!),
+                        _pickDate,
+                      ),
+                      _scheduleButton(
+                        _next == null
+                            ? 'Seleccionar hora'
+                            : TimeOfDay.fromDateTime(_next!).format(context),
+                        _pickTime,
+                      ),
+                    ],
                   ),
                 ),
+              const SizedBox(height: 6),
               _label(
                 'Notas de la interacción',
                 TextField(
@@ -295,18 +344,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           ),
         ),
       ),
-      const ExpansionTile(
-        title: Text('Información de la llamada'),
-        childrenPadding: EdgeInsets.all(12),
-        children: [
-          ListTile(
-            title: Text('Sin llamada registrada'),
-            subtitle: Text(
-              'Duración, estado y fecha estarán disponibles al conectar el servicio de llamadas.',
-            ),
-          ),
-        ],
-      ),
+      const SizedBox(height: 14),
+      ProspectCallInformation(prospect: widget.prospect),
     ],
   );
 }
