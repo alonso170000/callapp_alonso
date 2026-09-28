@@ -19,10 +19,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedDestination = 0;
   final AgendaController _agendaController = AgendaController();
+  final ProspectsController _prospectsController = ProspectsController();
 
   @override
   void dispose() {
     _agendaController.dispose();
+    _prospectsController.dispose();
     super.dispose();
   }
 
@@ -92,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const ProspectsScreen(),
+                  ProspectsScreen(controller: _prospectsController),
                   AgendaScreen(controller: _agendaController),
                   const ProfileScreen(),
                 ],
@@ -108,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onDestinationSelected: (index) =>
                       setState(() => _selectedDestination = index),
                   onAddAgenda: _agendaController.openNewActivity,
+                  onAddProspect: _prospectsController.openNewProspect,
                 ),
               ),
             ),

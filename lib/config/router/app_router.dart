@@ -17,6 +17,9 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/prospectos/:phone',
       builder: (context, state) {
+        if (state.extra is ProspectRecord) {
+          return ProspectDetailScreen(prospect: state.extra! as ProspectRecord);
+        }
         final matches = demoProspects.where(
           (p) => p.phone == state.pathParameters['phone'],
         );

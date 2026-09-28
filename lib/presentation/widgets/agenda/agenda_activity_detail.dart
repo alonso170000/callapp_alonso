@@ -1,6 +1,8 @@
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AgendaActivityDetail extends StatelessWidget {
   final AgendaActivity activity;
@@ -52,6 +54,7 @@ class AgendaActivityDetail extends StatelessWidget {
     AgendaStatus.completed => AppColors.homeGreenCard,
     AgendaStatus.overdue => AppColors.homeRedSection,
     AgendaStatus.pending => AppColors.homeYellowCard,
+    AgendaStatus.cancelled => const Color(0xFFB7D1CB),
   };
 
   String get _time {
@@ -125,19 +128,6 @@ class AgendaActivityDetail extends StatelessWidget {
             ),
             const SizedBox(height: 7),
             Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.black,
-                fontFamily: 'SulphurPoint',
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                height: 0.95,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
               detail,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -147,6 +137,19 @@ class AgendaActivityDetail extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 height: 1,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.black,
+                fontFamily: 'SulphurPoint',
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                height: 0.95,
               ),
             ),
           ],
@@ -204,14 +207,14 @@ class AgendaActivityDetail extends StatelessWidget {
             ),
             _contactAction(
               'Enviar mensaje',
-              Icons.chat_bubble_outline,
+              Iconsax.message_copy,
               AppColors.homeGreenCard,
               onMessage,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 2),
             _contactAction(
               'Llamar al prospecto',
-              Icons.phone_in_talk_outlined,
+              Iconsax.call_calling_copy,
               AppColors.homeWarmText,
               onCall,
             ),
@@ -219,40 +222,52 @@ class AgendaActivityDetail extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (activity.tags.isNotEmpty)
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 3,
-                  ),
-                  color: const Color(0xFFEAA4EE),
-                  child: Text(
-                    activity.tags.first,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.primaryColor,
-                      fontFamily: 'BebasNeue',
-                      fontSize: 13,
-                    ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: activity.tags.isEmpty
+                    ? const SizedBox.shrink()
+                    : Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        color: const Color(0xFFEAA4EE),
+                        child: Text(
+                          activity.tags.first,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.primaryColor,
+                            fontFamily: 'BebasNeue',
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: 'Ver prospecto',
+                onPressed: onOpenProspect,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size.square(42),
+                  maximumSize: const Size.square(42),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-              ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: onOpenProspect,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(0, 34),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.north_east, size: 17),
-              label: const Text(
-                'VER PROSPECTO',
-                style: TextStyle(fontFamily: 'BebasNeue', fontSize: 14),
+                icon: const SizedBox.square(
+                  dimension: 36,
+                  child: FittedBox(child: HomeCardArrow()),
+                ),
               ),
             ),
           ],

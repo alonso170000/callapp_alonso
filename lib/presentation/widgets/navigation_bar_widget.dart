@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -8,6 +7,7 @@ class NavigationBarWidget extends StatefulWidget {
   final ValueChanged<bool>? onSearchVisibilityChanged;
   final ValueChanged<int>? onDestinationSelected;
   final VoidCallback? onAddAgenda;
+  final VoidCallback? onAddProspect;
 
   const NavigationBarWidget({
     super.key,
@@ -15,6 +15,7 @@ class NavigationBarWidget extends StatefulWidget {
     this.onSearchVisibilityChanged,
     this.onDestinationSelected,
     this.onAddAgenda,
+    this.onAddProspect,
   });
 
   @override
@@ -93,9 +94,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppStyles.spacingLarge(context),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: AnimatedSwitcher(
         duration: _animationDuration,
         switchInCurve: _animationCurve,
@@ -117,20 +116,23 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   }
 
   Widget _buildNormalBar() {
+    final addAction = selectedIndex == 1 ? widget.onAddProspect : selectedIndex == 2 ? widget.onAddAgenda : null;
+    final compact = MediaQuery.sizeOf(context).width < 360 && addAction != null;
+    final height = compact ? 52.0 : 64.0;
     return Row(
       key: const ValueKey('normal-navigation-bar'),
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (selectedIndex == 2 && widget.onAddAgenda != null) ...[
-          _AddAgendaButton(onTap: widget.onAddAgenda!),
-          const SizedBox(width: 10),
+        if (addAction != null) ...[
+          _AddAgendaButton(onTap: addAction, size: height, label: selectedIndex == 1 ? 'Agregar prospecto' : 'Agendar nueva actividad'),
+          SizedBox(width: compact ? 6 : 8),
         ],
         Flexible(
           child: _NavigationSurface(
-            height: 64,
-            width: 280,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            height: height,
+            width: 240,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
 
@@ -154,13 +156,13 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                   ),
                 );
 
-                return Expanded(flex: isSelected ? 3 : 1, child: option);
+                return isSelected ? Expanded(child: option) : SizedBox(width: compact ? 40 : 35, child: option);
               }),
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        _SearchCircleButton(onTap: _openSearch),
+        SizedBox(width: compact ? 6 : 8),
+        _SearchCircleButton(onTap: _openSearch, size: height),
       ],
     );
   }
@@ -303,14 +305,15 @@ class _NavigationOption extends StatelessWidget {
 
 class _SearchCircleButton extends StatelessWidget {
   final VoidCallback onTap;
+  final double size;
 
-  const _SearchCircleButton({required this.onTap});
+  const _SearchCircleButton({required this.onTap, this.size = 64});
 
   @override
   Widget build(BuildContext context) {
     return _NavigationSurface(
-      width: 64,
-      height: 64,
+      width: size,
+      height: size,
       onTap: onTap,
       semanticLabel: 'Buscar prospectos',
       child: const Center(
@@ -326,16 +329,18 @@ class _SearchCircleButton extends StatelessWidget {
 
 class _AddAgendaButton extends StatelessWidget {
   final VoidCallback onTap;
+  final double size;
+  final String label;
 
-  const _AddAgendaButton({required this.onTap});
+  const _AddAgendaButton({required this.onTap, this.size = 64, this.label = 'Agendar nueva actividad'});
 
   @override
   Widget build(BuildContext context) {
     return _NavigationSurface(
-      width: 64,
-      height: 64,
+      width: size,
+      height: size,
       onTap: onTap,
-      semanticLabel: 'Agendar nueva actividad',
+      semanticLabel: label,
       child: const Center(
         child: Icon(Icons.add_rounded, color: AppColors.primaryColor, size: 38),
       ),

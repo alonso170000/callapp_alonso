@@ -8,7 +8,13 @@ class ProspectRecord {
   final String temperature;
   final Color avatarColor;
   final Color statusColor;
-  final DateTime appointment;
+  final DateTime? appointment;
+  final String? comments;
+  final String product;
+  final String lotDescription;
+  final double dimension;
+  final double fullPrice;
+  final bool decision, willingness, money, passedToTO, discoveryComplete;
   final int daysSinceContact;
   final DateTime? assignedAt;
   final DateTime? nextContact;
@@ -22,6 +28,16 @@ class ProspectRecord {
   final String origin;
 
   const ProspectRecord({
+    this.comments,
+    this.product = '',
+    this.lotDescription = '',
+    this.dimension = 0,
+    this.fullPrice = 0,
+    this.decision = false,
+    this.willingness = false,
+    this.money = false,
+    this.passedToTO = false,
+    this.discoveryComplete = false,
     required this.name,
     required this.phone,
     required this.email,
@@ -29,7 +45,7 @@ class ProspectRecord {
     required this.temperature,
     required this.avatarColor,
     required this.statusColor,
-    required this.appointment,
+    this.appointment,
     this.daysSinceContact = 1,
     this.assignedAt,
     this.nextContact,
@@ -44,6 +60,7 @@ class ProspectRecord {
   });
 
   String get note =>
+      comments ??
       'Llamada de seguimiento agendada para el lunes que no fue atendida. Llamada de seguimiento agendada para el lunes que no fue atendida. Pendiente de confirmar una nueva cita.';
 }
 

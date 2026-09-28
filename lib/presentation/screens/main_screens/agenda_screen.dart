@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_filters_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.dart';
@@ -48,7 +50,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   DateTime _date = DateUtils.dateOnly(DateTime.now());
   late final List<AgendaActivity> _activities = demoAgendaActivities(_date);
   AgendaPeriod _period = AgendaPeriod.day;
-  AgendaStatus? _status;
+  AgendaFilters _filters = AgendaFilters();
 
   @override
   void initState() {
@@ -72,18 +74,54 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Future<void> _showNewActivityDialog() async {
-    final activity = await showDialog<AgendaActivity>(
+    final activity = await showModalBottomSheet<AgendaActivity>(
       context: context,
       barrierColor: Colors.black54,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.homeBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (context) => NewAgendaActivityDialog(initialDate: _date),
     );
     if (!mounted || activity == null) return;
     setState(() {
       _activities.add(activity);
       _date = DateUtils.dateOnly(activity.date);
-      _status = null;
+      _filters = AgendaFilters();
     });
     _showActionMessage('Actividad agendada.');
+  }
+
+  Future<void> _showFilters() async {
+    final prospects =
+        _activities.map((activity) => activity.prospect).toSet().toList()
+          ..sort();
+    final result = await showModalBottomSheet<AgendaFilters>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.homeBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => AgendaFiltersSheet(
+        initial: _filters,
+        prospects: prospects,
+        count: (filters) => _activities
+            .where(
+              (activity) =>
+                  DateUtils.isSameDay(activity.date, _date) &&
+                  filters.matches(activity),
+            )
+            .length,
+      ),
+    );
+    if (mounted && result != null) setState(() => _filters = result);
   }
 
   DateTime get _start => switch (_period) {
@@ -203,7 +241,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
             .where(
               (activity) =>
                   DateUtils.isSameDay(activity.date, _date) &&
-                  (_status == null || activity.status == _status),
+                  _filters.matches(activity),
             )
             .toList()
           ..sort((a, b) => a.date.compareTo(b.date));
@@ -277,36 +315,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       style: agendaHeadingStyle,
                     ),
                   ),
-                  PopupMenuButton<String>(
+                  IconButton(
                     tooltip: 'Filtrar actividades',
-                    initialValue: _status?.name ?? 'all',
                     icon: Icon(
-                      _status == null ? Icons.tune : Icons.filter_alt,
+                      _filters.active ? Icons.filter_alt : Icons.tune,
                       color: AppColors.primaryColor,
                     ),
-                    onSelected: (value) => setState(
-                      () => _status = value == 'all'
-                          ? null
-                          : AgendaStatus.values.byName(value),
-                    ),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'all', child: Text('Todas')),
-                      ...AgendaStatus.values.map(
-                        (status) => PopupMenuItem(
-                          value: status.name,
-                          child: Text(status.label),
-                        ),
-                      ),
-                    ],
+                    onPressed: _showFilters,
                   ),
                 ],
               ),
-              if (_status != null)
+              if (_filters.active)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: InputChip(
-                    label: Text(_status!.label),
-                    onDeleted: () => setState(() => _status = null),
+                    label: const Text('Filtros activos'),
+                    onDeleted: () => setState(() => _filters = AgendaFilters()),
                   ),
                 ),
               if (visible.isEmpty)
@@ -329,7 +353,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       TextButton(
                         onPressed: () => setState(() {
                           _date = DateUtils.dateOnly(DateTime.now());
-                          _status = null;
+                          _filters = AgendaFilters();
                         }),
                         child: const Text('Volver a hoy'),
                       ),

@@ -82,14 +82,12 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
-      backgroundColor: AppColors.homeBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 430),
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: SafeArea(
+        top: false,
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(22, 14, 22, 16 + viewInsets.bottom),
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -244,6 +242,7 @@ class _AgendaDropdown<T> extends StatelessWidget {
     children: [
       _FieldLabel(label),
       DropdownButtonFormField<T>(
+        isExpanded: true,
         initialValue: value,
         dropdownColor: AppColors.primaryColor,
         iconEnabledColor: AppColors.homeBackground,
@@ -255,8 +254,14 @@ class _AgendaDropdown<T> extends StatelessWidget {
         decoration: _fieldDecoration,
         items: items
             .map(
-              (item) =>
-                  DropdownMenuItem(value: item, child: Text(itemLabel(item))),
+              (item) => DropdownMenuItem(
+                value: item,
+                child: Text(
+                  itemLabel(item),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             )
             .toList(),
         onChanged: (item) {

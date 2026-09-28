@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'prospect_models.dart';
 
 class ProspectFilters {
-  static const priorities = ['Caliente', 'Tibio', 'Frío'];
+  static const priorities = ['Caliente', 'Tibio', 'Frío', 'Sin calificar'];
   static const outcomes = [
     'Contestó',
     'No contestó',

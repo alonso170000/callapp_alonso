@@ -77,8 +77,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
     await tester.pumpAndSettle();
-    expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
-    expect(initial.temperatures.length, 3);
+    expect(
+      find.text('VER ${ProspectFilters.priorities.length - 1} RESULTADOS'),
+      findsOneWidget,
+    );
+    expect(initial.temperatures.length, ProspectFilters.priorities.length);
     await tester.tap(find.byTooltip('Cerrar filtros'));
     await tester.pumpAndSettle();
     expect(applied, isNull);
@@ -88,7 +91,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('LIMPIAR FILTROS'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('VER 3 RESULTADOS'));
+    await tester.tap(
+      find.text('VER ${ProspectFilters.priorities.length} RESULTADOS'),
+    );
     await tester.pumpAndSettle();
     expect(applied!.active, isFalse);
     expect(tester.takeException(), isNull);

@@ -19,6 +19,7 @@ class AgendaActivityTile extends StatelessWidget {
       AgendaStatus.completed => AppColors.homeGreenCard,
       AgendaStatus.overdue => AppColors.homeRedSection,
       AgendaStatus.pending => AppColors.homeYellowCard,
+      AgendaStatus.cancelled => const Color(0xFFB7D1CB),
     };
     final hour = activity.date.hour % 12;
     final time =
@@ -55,16 +56,22 @@ class AgendaActivityTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          activity.title,
-                          style: agendaHeadingStyle.copyWith(color: color),
+                        Expanded(
+                          child: Text(
+                            activity.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: agendaHeadingStyle.copyWith(color: color),
+                          ),
                         ),
+                        const SizedBox(width: 10),
                         Container(
+                          key: ValueKey(
+                            'agenda-status-${activity.status.name}',
+                          ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 3,

@@ -28,50 +28,51 @@ class ProspectSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return HomeTappableCard(
       color: color,
-      height: height,
       onTap: onOpen,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: height),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        height: 1,
+                      ),
                     ),
                   ),
-                ),
-                const HomeCardArrow(),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView.separated(
+                  const HomeCardArrow(),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(0, 4, 8, 0),
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                itemBuilder: (context, index) {
-                  if (showAddButton && index == 0) {
-                    return _AddProspectTile(onTap: onAdd);
-                  }
-
-                  final prospectIndex = showAddButton ? index - 1 : index;
-                  return ProspectTile(item: prospects[prospectIndex]);
-                },
-                separatorBuilder: (_, _) => const SizedBox(width: 9),
-                itemCount: prospects.length + (showAddButton ? 1 : 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 9,
+                  children: [
+                    if (showAddButton) _AddProspectTile(onTap: onAdd),
+                    for (final prospect in prospects)
+                      ProspectTile(item: prospect),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

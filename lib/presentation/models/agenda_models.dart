@@ -3,7 +3,8 @@ enum AgendaPeriod { day, week, month }
 enum AgendaStatus {
   completed('COMPLETADA'),
   overdue('ATRASADO'),
-  pending('PENDIENTE');
+  pending('PENDIENTE'),
+  cancelled('CANCELADA');
 
   const AgendaStatus(this.label);
   final String label;

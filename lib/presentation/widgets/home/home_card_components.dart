@@ -14,7 +14,7 @@ class HomeCardArrow extends StatelessWidget {
         Icon(
           FluentIcons.arrow_square_up_right_24_filled,
           color: AppColors.whiteColor,
-          size: 31,
+          size: 50,
         ),
       ],
     );

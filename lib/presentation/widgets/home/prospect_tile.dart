@@ -14,6 +14,7 @@ class ProspectTile extends StatelessWidget {
     return SizedBox(
       width: 58,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             clipBehavior: Clip.none,

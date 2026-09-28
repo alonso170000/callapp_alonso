@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_filters_sheet.dart';
 import 'package:flutter/material.dart';
@@ -8,14 +9,62 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
+class ProspectsController {
+  VoidCallback? _open;
+  void openNewProspect() => _open?.call();
+  void dispose() => _open = null;
+}
+
 class ProspectsScreen extends StatefulWidget {
-  const ProspectsScreen({super.key});
+  final ProspectsController? controller;
+  const ProspectsScreen({super.key, this.controller});
 
   @override
   State<ProspectsScreen> createState() => _ProspectsScreenState();
 }
 
 class _ProspectsScreenState extends State<ProspectsScreen> {
+  final _records = List<ProspectRecord>.of(demoProspects);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?._open = _addProspect;
+  }
+
+  @override
+  void didUpdateWidget(covariant ProspectsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._open = null;
+      widget.controller?._open = _addProspect;
+    }
+  }
+
+  Future<void> _addProspect() async {
+    final record = await showModalBottomSheet<ProspectRecord>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.homeBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => const NewProspectSheet(),
+    );
+    if (!mounted || record == null) return;
+    setState(() {
+      _records.insert(0, record);
+      _search.clear();
+      _status = 'Todos';
+      _advanced = ProspectFilters();
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Prospecto agregado.')));
+  }
+
   static const _filters = [
     'Todos',
     'Atrasados',
@@ -32,6 +81,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
 
   @override
   void dispose() {
+    widget.controller?._open = null;
     _search.dispose();
     super.dispose();
   }
@@ -46,7 +96,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   List<ProspectRecord> get _visible => _filtered(_advanced);
   List<ProspectRecord> _filtered(ProspectFilters filters) {
     final query = _normalize(_search.text.trim());
-    final result = demoProspects
+    final result = _records
         .where(
           (p) =>
               (_status == 'Todos' || p.status == _status) &&
@@ -290,8 +340,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
               padding: const EdgeInsets.only(bottom: 10),
               child: ProspectCard(
                 prospect: prospects[index],
-                onTap: () =>
-                    context.push('/prospectos/${prospects[index].phone}'),
+                onTap: () => context.push(
+                  '/prospectos/${prospects[index].phone}',
+                  extra: prospects[index],
+                ),
               ),
             ),
           ),

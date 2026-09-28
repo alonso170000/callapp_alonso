@@ -66,7 +66,7 @@ class ProspectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = prospect.appointment;
+    final date = prospect.appointment ?? prospect.nextContact;
     String two(int value) => value.toString().padLeft(2, '0');
     final temperatureColor = switch (prospect.temperature) {
       'Caliente' => const Color(0xFFFF535C),
@@ -113,7 +113,9 @@ class ProspectCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Llamada · Hace ${prospect.daysSinceContact} ${prospect.daysSinceContact == 1 ? 'día' : 'días'}',
+                        prospect.daysSinceContact == 0
+                            ? 'Sin contacto'
+                            : 'Llamada · Hace ${prospect.daysSinceContact} ${prospect.daysSinceContact == 1 ? 'día' : 'días'}',
                         style: const TextStyle(
                           fontFamily: 'SulphurPoint',
                           fontSize: 10,
@@ -167,16 +169,18 @@ class ProspectCard extends StatelessWidget {
                   temperatureColor,
                   foreground: Colors.white,
                 ),
-                _tag(
-                  '${two(date.day)}-${two(date.month)}-${date.year}',
-                  const Color(0xFFA8F5E4),
-                ),
-                _tag(
-                  '${two(date.hour % 12 == 0 ? 12 : date.hour % 12)}:${two(date.minute)} ${date.hour < 12 ? 'AM' : 'PM'}',
-                  prospect.status == 'Atrasados'
-                      ? const Color(0xFFFFA3A6)
-                      : const Color(0xFFA8F5E4),
-                ),
+                if (date != null)
+                  _tag(
+                    '${two(date.day)}-${two(date.month)}-${date.year}',
+                    const Color(0xFFA8F5E4),
+                  ),
+                if (date != null)
+                  _tag(
+                    '${two(date.hour % 12 == 0 ? 12 : date.hour % 12)}:${two(date.minute)} ${date.hour < 12 ? 'AM' : 'PM'}',
+                    prospect.status == 'Atrasados'
+                        ? const Color(0xFFFFA3A6)
+                        : const Color(0xFFA8F5E4),
+                  ),
               ],
             ),
           ],
