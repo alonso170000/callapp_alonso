@@ -27,6 +27,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   late final _occupation = TextEditingController(
     text: widget.prospect.occupation,
   );
+  late final _origin = TextEditingController(text: widget.prospect.origin);
   Map<String, String>? _saved;
 
   List<TextEditingController> get _controllers => [
@@ -36,6 +37,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _email,
     _company,
     _occupation,
+    _origin,
   ];
 
   @override
@@ -90,6 +92,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _email.text = _saved?['email'] ?? widget.prospect.email;
     _company.text = _saved?['company'] ?? widget.prospect.company;
     _occupation.text = _saved?['occupation'] ?? widget.prospect.occupation;
+    _origin.text = _saved?['origin'] ?? widget.prospect.origin;
     _formKey.currentState?.reset();
   });
 
@@ -102,6 +105,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       'email': _email.text.trim(),
       'company': _company.text.trim(),
       'occupation': _occupation.text.trim(),
+      'origin': _origin.text.trim(),
     };
     widget.onSaved('Prospecto · Datos actualizados');
     ScaffoldMessenger.of(context).showSnackBar(
@@ -147,6 +151,13 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           ),
           _field('Empresa', _company),
           _field('Ocupación', _occupation),
+          _field(
+            'Origen del prospecto',
+            _origin,
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'El origen es obligatorio'
+                : null,
+          ),
           const SizedBox(height: 2),
           Row(
             children: [

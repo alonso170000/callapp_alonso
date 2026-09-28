@@ -10,6 +10,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_history_models.d
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class ProspectDetailScreen extends StatefulWidget {
   final ProspectRecord prospect;
@@ -20,6 +21,7 @@ class ProspectDetailScreen extends StatefulWidget {
 
 class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   final _selected = {'Seguimiento', 'Discovery'};
+  final _panelRevisions = <String, int>{};
   final _history = <String>[];
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) =>
       Expanded(
@@ -78,9 +80,22 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         maintainState: true,
         child: Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: ProspectDetailPanel(title: title, color: color, child: child),
+          child: ProspectDetailPanel(
+            key: ValueKey('$name-${_panelRevisions[name] ?? 0}'),
+            title: title,
+            color: color,
+            initiallyExpanded:
+                name == 'Seguimiento' || (_panelRevisions[name] ?? 0) > 0,
+            child: child,
+          ),
         ),
       );
+
+  void _toggleSection(String name) => setState(() {
+    if (_selected.remove(name)) return;
+    _selected.add(name);
+    _panelRevisions[name] = (_panelRevisions[name] ?? 0) + 1;
+  });
   @override
   Widget build(BuildContext context) {
     final p = widget.prospect;
@@ -106,13 +121,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
               children: [
                 _actionButton(
                   'Datos para mensaje',
-                  Icons.send_outlined,
+                  Iconsax.send_2_copy,
                   _contact,
                 ),
                 const SizedBox(width: 7),
                 _actionButton(
                   'Datos del prospecto',
-                  Icons.contact_page_outlined,
+                  Iconsax.profile_tick_copy,
                   _contact,
                 ),
                 const SizedBox(width: 7),
@@ -133,7 +148,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.phone_in_talk, size: 25),
+                          Icon(Iconsax.call_calling, size: 25),
                           SizedBox(height: 2),
                           Text(
                             'Llamar',
@@ -150,7 +165,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                 const SizedBox(width: 7),
                 _actionButton(
                   'Descartar prospecto',
-                  Icons.person_remove_outlined,
+                  Iconsax.profile_delete_copy,
                   () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -186,11 +201,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                     ProspectDetailHeader(
                       prospect: p,
                       selected: _selected,
-                      onToggle: (name) => setState(() {
-                        _selected.contains(name)
-                            ? _selected.remove(name)
-                            : _selected.add(name);
-                      }),
+                      onToggle: _toggleSection,
                     ),
                     Padding(
                       padding: const EdgeInsets.all(14),

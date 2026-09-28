@@ -16,7 +16,6 @@ class ProspectFollowUpForm extends StatefulWidget {
 }
 
 class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
-  final _origin = TextEditingController(text: 'Campaña FB');
   final _notes = TextEditingController();
   String _status = 'Nuevo';
   String _method = 'Llamada telefónica';
@@ -35,7 +34,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   @override
   void dispose() {
-    _origin.dispose();
     _notes.dispose();
     super.dispose();
   }
@@ -44,7 +42,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _status = _saved?['status'] ?? 'Nuevo';
     _method = _saved?['method'] ?? 'Llamada telefónica';
     _priority = _saved?['priority'] ?? widget.prospect.temperature;
-    _origin.text = _saved?['origin'] ?? 'Campaña FB';
     _notes.text = _saved?['notes'] ?? '';
     _success = _saved?['success'] ?? false;
     _schedule = _saved?['schedule'] ?? widget.prospect.nextContact != null;
@@ -222,14 +219,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 'Negociación',
                 'Venta realizada',
               ], (v) => _status = v),
-              _label(
-                'Origen del prospecto',
-                TextField(
-                  controller: _origin,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _decoration(),
-                ),
-              ),
               _select('¿Cómo intentaste contactarlo?', _method, [
                 'Llamada telefónica',
                 'Mensaje',
@@ -318,7 +307,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                           'status': _status,
                           'method': _method,
                           'priority': _priority,
-                          'origin': _origin.text,
                           'notes': _notes.text,
                           'success': _success,
                           'schedule': _schedule,

@@ -45,12 +45,12 @@ class ProfileSettingRow extends StatelessWidget {
         tooltip: actionLabel,
         onPressed: onPressed,
         icon: Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: AppColors.homeBackground,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Icon(icon, size: 18, color: AppColors.primaryColor),
+          child: Icon(icon, size: 20, color: AppColors.primaryColor),
         ),
       ),
     ],

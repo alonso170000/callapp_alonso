@@ -19,6 +19,7 @@ class ProspectRecord {
   final String city;
   final String company;
   final String occupation;
+  final String origin;
 
   const ProspectRecord({
     required this.name,
@@ -39,6 +40,7 @@ class ProspectRecord {
     this.city = 'Sin registro de ciudad',
     this.company = 'Sin registro de Empresa',
     this.occupation = 'Sin registro de ocupación',
+    this.origin = 'Campaña FB',
   });
 
   String get note =>

@@ -7,12 +7,14 @@ class NavigationBarWidget extends StatefulWidget {
   final ValueChanged<String>? onSearchChanged;
   final ValueChanged<bool>? onSearchVisibilityChanged;
   final ValueChanged<int>? onDestinationSelected;
+  final VoidCallback? onAddAgenda;
 
   const NavigationBarWidget({
     super.key,
     this.onSearchChanged,
     this.onSearchVisibilityChanged,
     this.onDestinationSelected,
+    this.onAddAgenda,
   });
 
   @override
@@ -120,6 +122,10 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (selectedIndex == 2 && widget.onAddAgenda != null) ...[
+          _AddAgendaButton(onTap: widget.onAddAgenda!),
+          const SizedBox(width: 10),
+        ],
         Flexible(
           child: _NavigationSurface(
             height: 64,
@@ -313,6 +319,25 @@ class _SearchCircleButton extends StatelessWidget {
           color: AppColors.primaryColor,
           size: 30,
         ),
+      ),
+    );
+  }
+}
+
+class _AddAgendaButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddAgendaButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _NavigationSurface(
+      width: 64,
+      height: 64,
+      onTap: onTap,
+      semanticLabel: 'Agendar nueva actividad',
+      child: const Center(
+        child: Icon(Icons.add_rounded, color: AppColors.primaryColor, size: 38),
       ),
     );
   }

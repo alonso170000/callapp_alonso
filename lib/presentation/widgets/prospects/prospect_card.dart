@@ -130,7 +130,7 @@ class ProspectCard extends StatelessWidget {
                   color: const Color(0xFF64FF98),
                   icon: Iconsax.message_copy,
                 ),
-                const SizedBox(width: 2),
+                const SizedBox(width: 0),
                 _action(
                   context,
                   message: false,

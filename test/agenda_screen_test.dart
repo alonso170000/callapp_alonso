@@ -5,6 +5,44 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 void main() {
+  testWidgets('El botón para agendar solo aparece en Agenda y crea actividad', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    expect(find.byTooltip('Agendar nueva actividad'), findsNothing);
+
+    await tester.tap(find.byIcon(Iconsax.calendar_2_copy));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Agendar nueva actividad'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Agendar nueva actividad'));
+    await tester.pumpAndSettle();
+    expect(find.byType(NewAgendaActivityDialog), findsOneWidget);
+    expect(find.text('Nueva actividad'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('new-activity-description')),
+      'Revisar documentación',
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('save-new-activity')));
+    await tester.tap(find.byKey(const ValueKey('save-new-activity')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NewAgendaActivityDialog), findsNothing);
+    expect(find.text('MOSTRANDO 4 ACTIVIDADES'), findsOneWidget);
+    expect(find.text('Actividad agendada.'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Iconsax.home_2_copy));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Agendar nueva actividad'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Month calendar includes adjacent dates and leap day', (
     tester,
   ) async {
@@ -118,7 +156,34 @@ void main() {
       expect(find.byType(AgendaActivityTile), findsOneWidget);
       await tester.tap(find.byType(AgendaActivityTile));
       await tester.pumpAndSettle();
-      expect(find.text('Estado: PENDIENTE'), findsOneWidget);
+      expect(find.byType(AgendaActivityDetail), findsOneWidget);
+      expect(find.byType(AgendaActivityTile), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(AgendaActivityDetail),
+          matching: find.text('VISITA PRESENCIAL'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AgendaActivityDetail),
+          matching: find.text('PENDIENTE'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Ubicación'), findsOneWidget);
+      expect(find.text('LOTE'), findsOneWidget);
+      expect(find.text('Recordatorio'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
+      expect(find.text('minutos antes'), findsOneWidget);
+      expect(find.text('DESCRIPCIÓN'), findsOneWidget);
+      final complete = find.text('COMPLETAR ACTIVIDAD');
+      await tester.ensureVisible(complete);
+      await tester.tap(complete);
+      await tester.pumpAndSettle();
+      expect(find.byType(AgendaActivityDetail), findsNothing);
+      expect(find.text('Actividad completada.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

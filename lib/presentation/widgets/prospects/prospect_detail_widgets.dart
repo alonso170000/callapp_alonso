@@ -199,7 +199,7 @@ class ProspectDetailHeader extends StatelessWidget {
                       ]
                       .map(
                         (name) => Padding(
-                          padding: const EdgeInsets.only(right: 5),
+                          padding: const EdgeInsets.only(right: 6),
                           child: FilterChip(
                             label: Text(name),
                             selected: selected.contains(name),
@@ -221,6 +221,7 @@ class ProspectDetailHeader extends StatelessWidget {
                               'Discovery' => const Color(0xFF95FF90),
                               'Guiones' => const Color(0xFFFFF47A),
                               'Prospecto' => const Color(0xFFFF929C),
+                              'Historial' => const Color.fromRGBO(207, 149, 255,1),
                               _ => const Color(0xFF96E3F4),
                             },
                             labelStyle: TextStyle(

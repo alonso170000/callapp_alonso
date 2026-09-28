@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/models/profile_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/profile_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -96,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'NOMBRE',
             value: _profile.name,
             titleColor: AppColors.profileDatos,
-            icon: Icons.edit_outlined,
+            icon: Iconsax.edit_2_copy,
             actionLabel: 'Editar nombre',
             onPressed: () => _edit('Nombre', _profile.name),
           ),
@@ -104,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'TELÉFONO',
             value: _profile.phone,
             titleColor: AppColors.profileDatos,
-            icon: Icons.edit_outlined,
+            icon: Iconsax.edit_2_copy,
             actionLabel: 'Editar teléfono',
             onPressed: () => _edit('Teléfono', _profile.phone),
           ),
@@ -112,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'CORREO',
             value: _profile.email,
             titleColor: AppColors.profileDatos,
-            icon: Icons.edit_outlined,
+            icon: Iconsax.edit_2_copy,
             actionLabel: 'Editar correo',
             onPressed: () => _edit('Correo', _profile.email),
           ),

@@ -25,6 +25,9 @@ void main() {
             .selected,
         isTrue,
       );
+      expect(find.text('Acerca del seguimiento'), findsOneWidget);
+      expect(find.text('Información de la llamada'), findsOneWidget);
+      expect(find.text('Necesidad y objetivo'), findsNothing);
       await tester.ensureVisible(find.widgetWithText(FilterChip, 'Historial'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilterChip, 'Historial'));
@@ -35,10 +38,6 @@ void main() {
             .selected,
         isTrue,
       );
-      await tester.tap(find.text('Registrar seguimiento'));
-      await tester.pumpAndSettle();
-      expect(find.text('Acerca del seguimiento'), findsOneWidget);
-      expect(find.text('Información de la llamada'), findsOneWidget);
       expect(find.text('10min 12s'), findsOneWidget);
       expect(find.text('Contestada'), findsOneWidget);
       final save = find.widgetWithText(FilledButton, 'GUARDAR');
@@ -60,8 +59,6 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, 'Guiones'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Guiones de llamadas'));
-      await tester.tap(find.text('Guiones de llamadas'));
-      await tester.pumpAndSettle();
       expect(find.text('Llamada 1'), findsOneWidget);
       expect(find.text('Saludo Inicial'), findsOneWidget);
       expect(
@@ -75,14 +72,13 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, 'Prospecto'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Datos del prospecto'));
-      await tester.tap(find.text('Datos del prospecto'));
-      await tester.pumpAndSettle();
       expect(find.text('Ciudad'), findsOneWidget);
       expect(find.text('Empresa'), findsOneWidget);
       expect(find.text('Ocupación'), findsOneWidget);
+      expect(find.text('Origen del prospecto'), findsOneWidget);
+      expect(find.text('Campaña FB'), findsOneWidget);
       final historyPanelTitle = find.text('Historial').last;
       await tester.ensureVisible(historyPanelTitle);
-      await tester.tap(historyPanelTitle);
       await tester.pumpAndSettle();
       expect(find.text('Historial de comentarios'), findsOneWidget);
       expect(find.text('Resumen de discovery'), findsOneWidget);

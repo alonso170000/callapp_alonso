@@ -18,6 +18,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedDestination = 0;
+  final AgendaController _agendaController = AgendaController();
+
+  @override
+  void dispose() {
+    _agendaController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const ProspectsScreen(),
-                  const AgendaScreen(),
+                  AgendaScreen(controller: _agendaController),
                   const ProfileScreen(),
                 ],
               ),
@@ -99,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: NavigationBarWidget(
                   onDestinationSelected: (index) =>
                       setState(() => _selectedDestination = index),
+                  onAddAgenda: _agendaController.openNewActivity,
                 ),
               ),
             ),

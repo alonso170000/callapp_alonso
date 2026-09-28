@@ -4,8 +4,18 @@ import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.da
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
+class AgendaController {
+  VoidCallback? _openNewActivity;
+
+  void openNewActivity() => _openNewActivity?.call();
+
+  void dispose() => _openNewActivity = null;
+}
+
 class AgendaScreen extends StatefulWidget {
-  const AgendaScreen({super.key});
+  final AgendaController? controller;
+
+  const AgendaScreen({super.key, this.controller});
 
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
@@ -39,6 +49,42 @@ class _AgendaScreenState extends State<AgendaScreen> {
   late final List<AgendaActivity> _activities = demoAgendaActivities(_date);
   AgendaPeriod _period = AgendaPeriod.day;
   AgendaStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?._openNewActivity = _showNewActivityDialog;
+  }
+
+  @override
+  void didUpdateWidget(covariant AgendaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._openNewActivity = null;
+      widget.controller?._openNewActivity = _showNewActivityDialog;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?._openNewActivity = null;
+    super.dispose();
+  }
+
+  Future<void> _showNewActivityDialog() async {
+    final activity = await showDialog<AgendaActivity>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) => NewAgendaActivityDialog(initialDate: _date),
+    );
+    if (!mounted || activity == null) return;
+    setState(() {
+      _activities.add(activity);
+      _date = DateUtils.dateOnly(activity.date);
+      _status = null;
+    });
+    _showActionMessage('Actividad agendada.');
+  }
 
   DateTime get _start => switch (_period) {
     AgendaPeriod.day => _date,
@@ -92,36 +138,62 @@ class _AgendaScreenState extends State<AgendaScreen> {
   });
 
   void _showActivity(AgendaActivity activity) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.homeBackground,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                activity.title,
-                style: agendaHeadingStyle.copyWith(fontSize: 28),
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (detailContext) => Scaffold(
+          backgroundColor: AppColors.homeBackground,
+          body: SafeArea(
+            bottom: false,
+            child: AgendaActivityDetail(
+              activity: activity,
+              onClose: () => Navigator.pop(detailContext),
+              onMessage: () => _showActionMessage(
+                'Mensaje para ${activity.prospect}',
+                detailContext,
               ),
-              const SizedBox(height: 12),
-              Text(activity.prospect, style: agendaHeadingStyle),
-              Text(
-                '${_dayLabel(activity.date)} · ${TimeOfDay.fromDateTime(activity.date).format(context)}',
+              onCall: () => _showActionMessage(
+                'Llamada para ${activity.prospect}',
+                detailContext,
               ),
-              const SizedBox(height: 12),
-              Text(activity.description),
-              const SizedBox(height: 12),
-              Text('Estado: ${activity.status.label}'),
-            ],
+              onOpenProspect: () => _showActionMessage(
+                'El detalle del prospecto estará disponible al conectar esta actividad.',
+                detailContext,
+              ),
+              onEdit: () => _showActionMessage(
+                'La edición estará disponible al conectar el servicio.',
+                detailContext,
+              ),
+              onComplete: () => _completeActivity(activity, detailContext),
+              onReschedule: () => _showActionMessage(
+                'La reprogramación estará disponible al conectar el servicio.',
+                detailContext,
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  void _showActionMessage(String message, [BuildContext? messageContext]) {
+    ScaffoldMessenger.of(messageContext ?? context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _completeActivity(AgendaActivity activity, BuildContext detailContext) {
+    if (activity.status != AgendaStatus.completed) {
+      final index = _activities.indexOf(activity);
+      if (index != -1) {
+        setState(() {
+          _activities[index] = activity.copyWith(
+            status: AgendaStatus.completed,
+          );
+        });
+      }
+    }
+    Navigator.pop(detailContext);
+    _showActionMessage('Actividad completada.');
   }
 
   @override

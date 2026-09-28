@@ -16,6 +16,9 @@ class AgendaActivity {
   final DateTime date;
   final AgendaStatus status;
   final List<String> tags;
+  final String location;
+  final int reminderMinutes;
+  final String lastContact;
 
   const AgendaActivity({
     required this.title,
@@ -24,7 +27,22 @@ class AgendaActivity {
     required this.date,
     required this.status,
     this.tags = const [],
+    this.location = 'Sin ubicación',
+    this.reminderMinutes = 15,
+    this.lastContact = 'Llamada · Hace 1 día',
   });
+
+  AgendaActivity copyWith({AgendaStatus? status}) => AgendaActivity(
+    title: title,
+    prospect: prospect,
+    description: description,
+    date: date,
+    status: status ?? this.status,
+    tags: tags,
+    location: location,
+    reminderMinutes: reminderMinutes,
+    lastContact: lastContact,
+  );
 }
 
 List<AgendaActivity> demoAgendaActivities(DateTime day) => [
@@ -46,9 +64,10 @@ List<AgendaActivity> demoAgendaActivities(DateTime day) => [
   AgendaActivity(
     title: 'VISITA PRESENCIAL',
     prospect: 'ALAN DORANTES',
-    description: 'Visita de Alan al lote 23.',
+    description: 'Visita presencial agendada para recorrer el lote 23 con Alan Dorantes. Revisar detalles de la corrida financiera y responder preguntas sobre la delimitación física del terreno.',
     date: DateTime(day.year, day.month, day.day, 15),
     status: AgendaStatus.pending,
-    tags: ['LOTE'],
+    tags: ['CONTACTADO Y VALIDADO'],
+    location: 'LOTE',
   ),
 ];
