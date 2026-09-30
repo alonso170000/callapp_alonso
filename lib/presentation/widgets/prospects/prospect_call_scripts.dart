@@ -1,24 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_script_components.dart';
+
 import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 
+export 'prospect_follow_up_call_script.dart';
+
 class ProspectCallScripts extends StatefulWidget {
   final CallScript script;
+  final String prospectName;
 
-  const ProspectCallScripts({super.key, required this.script});
+  const ProspectCallScripts({
+    super.key,
+    required this.script,
+    required this.prospectName,
+  });
 
   @override
   State<ProspectCallScripts> createState() => _ProspectCallScriptsState();
 }
 
 class _ProspectCallScriptsState extends State<ProspectCallScripts> {
-  int _step = 0;
+  final List<CallScriptStep> _history = [];
+  CallScriptStep get _current =>
+      _history.isEmpty ? widget.script.steps.first : _history.last;
+
+  void _advance(CallScriptStep step) => setState(() => _history.add(step));
+
+  String _personalize(String text) =>
+      text.replaceAll('{prospectName}', widget.prospectName.toUpperCase());
+
+  Widget _speech(String text) => CallScriptSpeech(text: _personalize(text));
 
   @override
   Widget build(BuildContext context) {
-    final current = widget.script.steps[_step];
-    final canGoBack = _step > 0;
-    final canGoNext = _step < widget.script.steps.length - 1;
+    final current = _current;
+    final hasCards = current.responses.any((response) => response.icon != null);
+    final branchColor = switch (current.tone) {
+      CallScriptTone.positive => const Color(0xFF006B4F),
+      CallScriptTone.negative => const Color(0xFFB42336),
+      CallScriptTone.discovery => const Color(0xFF0056C9),
+      CallScriptTone.investment => const Color(0xFF009FB7),
+      CallScriptTone.neutral => null,
+    };
+    final index = widget.script.steps.indexOf(current);
+    final canGoNext = index >= 0 && index < widget.script.steps.length - 1;
 
     return ProspectDetailPanel(
       title: widget.script.title,
@@ -27,308 +54,239 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
       initiallyExpanded: true,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(8, 9, 8, 10),
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
         decoration: BoxDecoration(
           color: const Color(0xFFFFFBC6),
+
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(current.title, style: const TextStyle(fontSize: 15)),
-            const SizedBox(height: 5),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B8329),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Text(
-                current.content,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'SulphurPoint',
-                  fontSize: 15,
-                  height: 1.22,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B8329),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.white, size: 16),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      current.instruction,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'BebasNeue',
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF5C5C5C),
-                      disabledBackgroundColor: const Color(0xFF8A8A8A),
+                if (_history.isNotEmpty)
+                  IconButton(
+                    tooltip: 'Volver al paso anterior',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 36,
+                      height: 36,
                     ),
-                    onPressed: canGoBack ? () => setState(() => _step--) : null,
-                    child: const Text('ANTERIOR'),
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    iconSize: 20,
+                    onPressed: () => setState(() => _history.removeLast()),
+                    color: const Color(0xFF786B20),
+                    icon: const Icon(Iconsax.arrow_left_copy),
                   ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF008A98),
-                      disabledBackgroundColor: const Color(0xFF73B9BE),
+                  child: Text(
+                    current.title,
+                    textAlign: TextAlign.start,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      height: 1.3,
+                      color: Color(0xFF665000),
+                      fontWeight: FontWeight.bold,
                     ),
-                    onPressed: canGoNext ? () => setState(() => _step++) : null,
-                    child: const Text('SIGUIENTE'),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 6),
+            if (current.introduction != null) ...[
+              _speech(current.introduction!),
+              const SizedBox(height: 8),
+            ],
+
+            for (final point in current.bulletPoints)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Iconsax.tick_circle_copy,
+                      color: Color(0xFF0056C9),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(point, style: const TextStyle(fontSize: 15)),
+                    ),
+                  ],
+                ),
+              ),
+            if (hasCards)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 8,
+                ),
+                child: Text(
+                  _personalize(current.content),
+                  style: const TextStyle(fontSize: 15),
+                ),
+              )
+            else if (branchColor == null)
+              _speech(current.content),
+            if (current.instruction.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              CallScriptNote(
+                text: current.instruction,
+                discovery: current.tone == CallScriptTone.discovery,
+              ),
+            ],
+            if (branchColor != null) ...[
+              if (current.instruction.isNotEmpty) const SizedBox(height: 8),
+              _speech(current.content),
+            ],
+            if (current.benefits.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) => Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: current.benefits
+                      .map(
+                        (benefit) => SizedBox(
+                          width: constraints.maxWidth < 420
+                              ? constraints.maxWidth
+                              : (constraints.maxWidth - 12) / 2,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Iconsax.tick_circle_copy,
+                                size: 20,
+                                color: Color(0xFF0056C9),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  benefit,
+                                  style: const TextStyle(
+                                    fontFamily: 'BebasNeue',
+                                    fontSize: 18,
+                                    color: Color(0xFF0056C9),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+            if (current.showContinue) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: callScriptButtonStyle(
+                    branchColor ?? const Color(0xFF008A98),
+                  ),
+                  onPressed: () {
+                    if (current.nextStep case final next?) {
+                      _advance(next);
+                    } else {
+                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'El siguiente texto del guion aún no está disponible.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  label: const Text('SEGUIR LEYENDO'),
+                  icon: const Icon(Iconsax.arrow_right_copy, size: 18),
+                  iconAlignment: IconAlignment.end,
+                ),
+              ),
+            ],
+            if (current.responses.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) => Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: current.responses.asMap().entries.map((entry) {
+                    final response = entry.value;
+                    final color = hasCards
+                        ? const Color(0xFF0056C9)
+                        : entry.key == 0
+                        ? const Color(0xFF006B4F)
+                        : const Color(0xFFB42336);
+                    return SizedBox(
+                      width: constraints.maxWidth < (hasCards ? 360 : 300)
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth -
+                                    10 * (current.responses.length - 1)) /
+                                current.responses.length,
+                      child: OutlinedButton(
+                        style: callScriptButtonStyle(color),
+                        onPressed: () {
+                          if (response.nextStep case final next?) {
+                            _advance(next);
+                          } else {
+                            ScaffoldMessenger.of(context)
+                                .removeCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'El guion de ${response.label.toLowerCase()} aún no está disponible.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: response.icon == null
+                            ? Text(response.label, textAlign: TextAlign.center)
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(switch (response.icon!) {
+                                      CallScriptResponseIcon.investment =>
+                                        Iconsax.chart_2_copy,
+                                      CallScriptResponseIcon.housing =>
+                                        Iconsax.home_2_copy,
+                                      CallScriptResponseIcon.rental =>
+                                        Iconsax.key_copy,
+                                    }, size: 28),
+                                    const SizedBox(height: 6),
+                                    Text(response.label),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ] else if (canGoNext) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: callScriptButtonStyle(const Color(0xFF008A98)),
+                  onPressed: () => _advance(widget.script.steps[index + 1]),
+                  child: const Text('SIGUIENTE'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
-}
-
-class ProspectFollowUpCallScript extends StatelessWidget {
-  final VoidCallback onContinue;
-
-  const ProspectFollowUpCallScript({super.key, required this.onContinue});
-
-  Widget _speech(String text) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: const Color(0xFF8B8329),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white,
-        fontFamily: 'SulphurPoint',
-        fontSize: 15,
-        height: 1.22,
-      ),
-    ),
-  );
-
-  Widget _benefitList(CallScriptBenefitGroup group, Color color) => Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(group.title, style: const TextStyle(fontSize: 14)),
-        const SizedBox(height: 5),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: group.items
-                .map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.check_circle_outline,
-                          size: 17,
-                          color: Color(0xFF006B61),
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            item,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _category(CallScriptBenefitGroup group) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF8B8329),
-      borderRadius: BorderRadius.circular(7),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          color: const Color(0xFF62352D),
-          child: Text(
-            group.title,
-            style: const TextStyle(color: Colors.white, fontSize: 11),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(6),
-          child: Text(
-            group.items.join(',\n'),
-            style: const TextStyle(color: Colors.white, fontSize: 11),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) => ProspectDetailPanel(
-    title: 'Llamada 2',
-    color: const Color(0xFF786B20),
-    nested: true,
-    initiallyExpanded: true,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(8, 9, 8, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFBC6),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Llamada de Seguimiento (Día 2)',
-            style: TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 5),
-          _speech(
-            'Hola buen día Sr(a). Cesar Martinez Dorado, ¿Cómo está? '
-            'Habla Miguel Jurado.\n\n'
-            'Hablamos el día de ayer y le envié la información del desarrollo '
-            'RUNA YUCATÁN, dígame... ¿Encontró alguna ubicación de su agrado?',
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B8329),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.white, size: 18),
-                SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    '¿Qué preguntas tiene?\n'
-                    '(Resuelve dudas antes de pasar a la corrida financiera).',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'BebasNeue',
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _speech(
-            'Me gustaría comentarle de nuevo que no solo es un terreno; la '
-            'inversión le incluye un proyecto completo con alta plusvalía y '
-            'en armonía con el medio ambiente:',
-          ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _benefitList(demoFollowUpIncludes, const Color(0xFF9BF5EB)),
-              const SizedBox(width: 10),
-              _benefitList(demoFollowUpBenefits, const Color(0xFFA9F6AC)),
-            ],
-          ),
-          const SizedBox(height: 9),
-          const Center(
-            child: Text(
-              '“Inversión inteligente en un proyecto completo”',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: demoFollowUpCategories
-                .map(
-                  (group) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 5),
-                      child: _category(group),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 9),
-          _speech(
-            'Contamos con 0% impacto ecológico y cultura verde. El uso de '
-            'suelo es habitacional con límite de construcción del 50%, '
-            'garantizando plusvalía y cero contaminación visual.',
-          ),
-          const SizedBox(height: 8),
-          _speech('¿Desea que comencemos a construir su sueño hoy mismo?'),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF008A98),
-              ),
-              onPressed: () {
-                onContinue();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Continuación al cierre registrada.'),
-                  ),
-                );
-              },
-              child: const Text('CONTINUAR AL CIERRE'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }

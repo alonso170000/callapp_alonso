@@ -232,8 +232,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                             const Color(0xFFFFF18A),
                             Column(
                               children: [
-                                const ProspectCallScripts(
+                                ProspectCallScripts(
                                   script: demoAlanCallScript,
+                                  prospectName: p.name,
                                 ),
                                 const SizedBox(height: 12),
                                 ProspectFollowUpCallScript(
