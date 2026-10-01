@@ -240,9 +240,10 @@ class AgendaActivityDetail extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: AppColors.primaryColor,
+                            color: AppColors.textDarkColor,
                             fontFamily: 'BebasNeue',
-                            fontSize: 13,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
@@ -251,22 +252,20 @@ class AgendaActivityDetail extends StatelessWidget {
             const SizedBox(width: 10),
             Align(
               alignment: Alignment.centerRight,
-              child: IconButton(
-                tooltip: 'Ver prospecto',
-                onPressed: onOpenProspect,
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  minimumSize: const Size.square(42),
-                  maximumSize: const Size.square(42),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 5),
+                child: IconButton(
+                  tooltip: 'Ver prospecto',
+                  onPressed: onOpenProspect,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    fixedSize: const Size.square(52),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
-                icon: const SizedBox.square(
-                  dimension: 36,
-                  child: FittedBox(child: HomeCardArrow()),
+                  icon: const HomeCardArrow(),
                 ),
               ),
             ),
@@ -285,8 +284,9 @@ class AgendaActivityDetail extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 52),
+        backgroundColor: const Color(0xFFACEFE2),
         foregroundColor: AppColors.primaryColor,
-        side: const BorderSide(color: AppColors.primaryColor, width: 1.5),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
         padding: const EdgeInsets.symmetric(horizontal: 6),
       ),
@@ -480,11 +480,17 @@ class AgendaActivityDetail extends StatelessWidget {
               const SizedBox(height: 9),
               Row(
                 children: [
-                  _secondaryAction('EDITAR', Icons.edit_outlined, onEdit),
+                  _secondaryAction('EDITAR', Iconsax.edit_copy, onEdit),
                   const SizedBox(width: 9),
                   _secondaryAction(
-                    'REPROGRAMAR',
-                    Icons.event_repeat_outlined,
+                    'Cancelar',
+                    Iconsax.calendar_remove_copy,
+                    onReschedule,
+                  ),
+                  const SizedBox(width: 9),
+                  _secondaryAction(
+                    'Eliminar',
+                    Iconsax.trash_copy,
                     onReschedule,
                   ),
                 ],

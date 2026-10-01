@@ -37,7 +37,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
               ),
             ),
             onPressed: onPressed,
-            icon: Icon(icon, size: 23),
+            icon: Icon(icon, size: 30),
           ),
         ),
       );
@@ -238,6 +238,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 ProspectFollowUpCallScript(
+                                  prospectName: p.name,
                                   onContinue: () => setState(
                                     () => _history.insert(
                                       0,

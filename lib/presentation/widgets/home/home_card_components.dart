@@ -7,16 +7,26 @@ class HomeCardArrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(width: 20, height: 20, child: ColoredBox(color: Colors.black)),
-        Icon(
-          FluentIcons.arrow_square_up_right_24_filled,
-          color: AppColors.whiteColor,
-          size: 50,
-        ),
-      ],
+    return SizedBox.square(
+      dimension: 52,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.textDarkColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const Icon(
+            FluentIcons.arrow_square_up_right_24_filled,
+            color: AppColors.whiteColor,
+            size: 52,
+          ),
+        ],
+      ),
     );
   }
 }

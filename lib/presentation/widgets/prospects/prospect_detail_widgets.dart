@@ -50,17 +50,17 @@ class ProspectDetailHeader extends StatelessWidget {
                   children: [
                     Text(
                       days[date.weekday - 1],
-                      style: const TextStyle(fontSize: 10),
+                      style: const TextStyle(fontSize: 13),
                     ),
                     Text(
                       '${date.day}'.padLeft(2, '0'),
-                      style: const TextStyle(fontSize: 25, height: 1),
+                      style: const TextStyle(fontSize: 32, height: 1),
                     ),
                   ],
                 ),
                 Text(
                   '${months[date.month - 1]} ${date.year}',
-                  style: const TextStyle(fontSize: 9, height: 1),
+                  style: const TextStyle(fontSize: 13, height: 1.2),
                 ),
               ],
             ),
@@ -68,7 +68,7 @@ class ProspectDetailHeader extends StatelessWidget {
   }
 
   Widget _badge(Widget child) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
       color: const Color(0xFF004C49),
       borderRadius: BorderRadius.circular(6),
@@ -83,9 +83,9 @@ class ProspectDetailHeader extends StatelessWidget {
   );
   Widget _group(String label, Widget child) => Column(
     children: [
-      FittedBox(fit: BoxFit.scaleDown, child: child),
-      const SizedBox(height: 3),
-      Text(label, style: const TextStyle(fontSize: 10, color: Colors.white)),
+      child,
+      const SizedBox(height: 6),
+      Text(label, style: const TextStyle(fontSize: 13, color: Colors.white)),
     ],
   );
 
@@ -133,53 +133,47 @@ class ProspectDetailHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 16,
+            runSpacing: 16,
             children: [
-              Flexible(
-                flex: 5,
-                child: _group(
-                  'Próximo contacto',
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _date(next),
-                      const SizedBox(width: 6),
-                      if (next != null)
-                        _badge(
-                          Column(
-                            children: [
-                              Text(
-                                '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
-                                style: const TextStyle(fontSize: 24, height: 1),
-                              ),
-                              Text(
-                                next.hour < 12 ? 'am' : 'pm',
-                                style: const TextStyle(fontSize: 9, height: 1),
-                              ),
-                            ],
-                          ),
+              _group(
+                'Próximo contacto',
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _date(next),
+                    if (next != null) ...[
+                      _badge(
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 30, height: 1.1),
+                            ),
+                            Text(
+                              next.hour < 12 ? 'am' : 'pm',
+                              style: const TextStyle(fontSize: 13, height: 1.2),
+                            ),
+                          ],
                         ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                flex: 3,
-                child: _group(
-                  'Fecha de asignación',
-                  _date(prospect.assignedAt),
-                ),
-              ),
-              const SizedBox(width: 8),
+              _group('Fecha de asignación', _date(prospect.assignedAt)),
               _group(
                 'Venta',
                 _badge(
                   Text(
                     prospect.status == 'Venta realizada' ? 'SÍ' : 'NO',
-                    style: const TextStyle(fontSize: 25),
+                    style: const TextStyle(fontSize: 32),
                   ),
                 ),
               ),
@@ -221,7 +215,12 @@ class ProspectDetailHeader extends StatelessWidget {
                               'Discovery' => const Color(0xFF95FF90),
                               'Guiones' => const Color(0xFFFFF47A),
                               'Prospecto' => const Color(0xFFFF929C),
-                              'Historial' => const Color.fromRGBO(207, 149, 255,1),
+                              'Historial' => const Color.fromRGBO(
+                                207,
+                                149,
+                                255,
+                                1,
+                              ),
                               _ => const Color(0xFF96E3F4),
                             },
                             labelStyle: TextStyle(

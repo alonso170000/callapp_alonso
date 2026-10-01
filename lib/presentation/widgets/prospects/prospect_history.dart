@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class ProspectHistory extends StatelessWidget {
   final List<ProspectHistoryComment> comments;
@@ -79,7 +80,7 @@ class ProspectHistory extends StatelessWidget {
                 border: Border.all(color: const Color(0xFF776315)),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.phone_in_talk, size: 15),
+              child: const Icon(Iconsax.call_calling_copy, size: 15),
             ),
             ...comment.results.map(_resultBadge),
           ],

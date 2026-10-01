@@ -63,11 +63,17 @@ void main() {
       expect(find.text('Llamada 1'), findsOneWidget);
       expect(find.text('Saludo Inicial'), findsOneWidget);
       expect(
-        find.textContaining('Hola buen día Alan Dorantes'),
+        find.textContaining(
+          'Hola buen día ${demoProspects[1].name.toUpperCase()}',
+        ),
         findsOneWidget,
       );
       expect(find.text('Llamada 2'), findsOneWidget);
       expect(find.text('Llamada de Seguimiento (Día 2)'), findsOneWidget);
+      expect(
+        find.textContaining('Hola buen día Sr(a). ${demoProspects[1].name}'),
+        findsOneWidget,
+      );
       expect(find.text('CONTINUAR AL CIERRE'), findsOneWidget);
       final next = find.widgetWithText(FilledButton, 'SIGUIENTE');
       final previous = find.byTooltip('Volver al paso anterior');
@@ -124,49 +130,34 @@ void main() {
         find.textContaining('600 m² y hasta más de 1000 m²'),
         findsOneWidget,
       );
+      final investmentText = tester.widget<Text>(
+        find.textContaining('Esa es una muy buena opción sr(a)'),
+      );
+      final paragraphs = investmentText.data!.split('\n\n');
+      expect(paragraphs, hasLength(3));
+      expect(
+        paragraphs[1],
+        contains('Runa Residencial tiene excelente ubicación'),
+      );
+      expect(paragraphs[2], startsWith('Pertenece al municipio de Telchac'));
       await tester.ensureVisible(continueReading);
       await tester.tap(continueReading);
       await tester.pumpAndSettle();
-      expect(find.text('Ubicación y plusvalía'), findsOneWidget);
+      expect(find.text('Inversión y atractivos de la zona'), findsOneWidget);
       expect(
-        find.textContaining('Runa Residencial tiene excelente ubicación'),
+        find.textContaining('el 98 % de los inversionistas'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('Carretera Federal 172 Motul – Telchac Puerto'),
-        findsOneWidget,
-      );
-      await tester.ensureVisible(continueReading);
-      await tester.tap(continueReading);
-      await tester.pumpAndSettle();
-      expect(find.text('Telchac'), findsOneWidget);
-      expect(
-        find.textContaining('Pertenece al municipio de Telchac'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining(
-          'las zonas con mayor crecimiento y plusvalía en México.',
-        ),
-        findsOneWidget,
-      );
-      await tester.ensureVisible(continueReading);
-      await tester.tap(continueReading);
-      await tester.pumpAndSettle();
-      expect(
-        find.text('El siguiente texto del guion aún no está disponible.'),
-        findsOneWidget,
-      );
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(previous);
-      await tester.tap(previous);
-      await tester.pumpAndSettle();
-      expect(find.text('Ubicación y plusvalía'), findsOneWidget);
+      expect(find.text('CENOTES'), findsOneWidget);
+      expect(find.text('RESERVAS ECOLÓGICAS'), findsOneWidget);
       await tester.ensureVisible(previous);
       await tester.tap(previous);
       await tester.pumpAndSettle();
       expect(find.text('Inversión'), findsOneWidget);
+      expect(
+        find.textContaining('Pertenece al municipio de Telchac'),
+        findsOneWidget,
+      );
       await tester.ensureVisible(previous);
       await tester.tap(previous);
       await tester.pumpAndSettle();
@@ -190,30 +181,34 @@ void main() {
         find.textContaining('cada Clúster es privado y con acceso controlado'),
         findsOneWidget,
       );
-      expect(continueReading, findsOneWidget);
+      final housingText = tester.widget<Text>(
+        find.textContaining('cada Clúster es privado y con acceso controlado'),
+      );
+      final housingParagraphs = housingText.data!.split('\n\n');
+      expect(housingParagraphs, hasLength(5));
+      expect(
+        housingParagraphs[1],
+        contains('Runa Residencial tiene excelente ubicación'),
+      );
+      expect(
+        housingParagraphs[2],
+        contains('San Crisanto, la Laguna Rosada, el Club de Yates'),
+      );
+      expect(
+        housingParagraphs[3],
+        contains('régimen de condominio en catastro'),
+      );
+      expect(housingParagraphs[4], endsWith('en contacto con la naturaleza.'));
       await tester.ensureVisible(continueReading);
       await tester.tap(continueReading);
       await tester.pumpAndSettle();
-      expect(find.text('Ubicación y playa'), findsOneWidget);
+      expect(find.text('Inversión y atractivos de la zona'), findsOneWidget);
       expect(
-        find.textContaining(
-          'una playa cálida con aguas cristalinas y arena fina,',
-        ),
+        find.textContaining('el 98 % de los inversionistas'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('Runa Residencial tiene excelente ubicación'),
-        findsOneWidget,
-      );
-      await tester.ensureVisible(continueReading);
-      await tester.tap(continueReading);
-      await tester.pumpAndSettle();
-      expect(
-        find.text('El siguiente texto del guion aún no está disponible.'),
-        findsOneWidget,
-      );
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pumpAndSettle();
+      expect(find.text('CENOTES'), findsOneWidget);
+      expect(find.text('RESERVAS ECOLÓGICAS'), findsOneWidget);
       await tester.ensureVisible(previous);
       await tester.tap(previous);
       await tester.pumpAndSettle();
@@ -279,12 +274,110 @@ void main() {
       await tester.ensureVisible(continueReading);
       await tester.tap(continueReading);
       await tester.pumpAndSettle();
+      expect(find.text('Beneficios y servicios del proyecto'), findsOneWidget);
+      for (final title in [
+        'LOTES AMPLIOS',
+        'ÁREAS HOLÍSTICAS',
+        'ÁREAS DEPORTIVAS',
+        'ÁREA SOCIAL',
+      ]) {
+        expect(find.text(title), findsOneWidget);
+      }
+      expect(find.text('Fuente de los cuencos tibetanos'), findsOneWidget);
+      expect(find.text('Área de asador'), findsOneWidget);
+      await tester.ensureVisible(continueReading);
+      await tester.tap(continueReading);
+      await tester.pumpAndSettle();
+      expect(find.text('Preguntas y financiamiento'), findsOneWidget);
       expect(
-        find.text('El siguiente texto del guion aún no está disponible.'),
+        find.textContaining(
+          'nuestro plan maestro con la distribución de los lotes',
+        ),
         findsOneWidget,
       );
-      await tester.pump(const Duration(seconds: 5));
+      expect(
+        find.textContaining(
+          'financiamiento hasta por un 70%, con una inversión inicial del 30%.',
+        ),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(continueReading);
+      await tester.tap(continueReading);
       await tester.pumpAndSettle();
+      expect(find.text('Bloqueo de lote y promoción'), findsOneWidget);
+      expect(find.textContaining('durante 24 horas'), findsOneWidget);
+      expect(find.textContaining('hasta la fecha ____'), findsOneWidget);
+      expect(find.textContaining('MÁSTER ES INTERACTIVO'), findsOneWidget);
+      await tester.ensureVisible(continueReading);
+      await tester.tap(continueReading);
+      await tester.pumpAndSettle();
+      expect(find.text('Cierre y Agendamiento'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Sr(a) ${demoProspects[1].name.toUpperCase()} Todo',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(
+          OutlinedButton,
+          '¿No puede entrar y ver los datos?',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Agendar llamada para dudas'),
+        findsOneWidget,
+      );
+      expect(continueReading, findsNothing);
+      final unableToView = find.widgetWithText(
+        OutlinedButton,
+        '¿No puede entrar y ver los datos?',
+      );
+      await tester.ensureVisible(unableToView);
+      await tester.tap(unableToView);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Revisión de información y seguimiento'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Entiendo que esté ocupado ahora'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('consulta con tu supervisor'), findsOneWidget);
+      expect(
+        find.textContaining('SR ${demoProspects[1].name.toUpperCase()}'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('AGENDAS LA LLAMADA PARA ACLARAR PREGUNTAS'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Agendar llamada para dudas'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(previous);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      expect(find.text('Cierre y Agendamiento'), findsOneWidget);
+      await tester.ensureVisible(previous);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      expect(find.text('Bloqueo de lote y promoción'), findsOneWidget);
+      await tester.ensureVisible(previous);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      expect(find.text('Preguntas y financiamiento'), findsOneWidget);
+      await tester.ensureVisible(previous);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      expect(find.text('Beneficios y servicios del proyecto'), findsOneWidget);
+      await tester.ensureVisible(previous);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      expect(find.text('Inversión y atractivos de la zona'), findsOneWidget);
       await tester.ensureVisible(previous);
       await tester.tap(previous);
       await tester.pumpAndSettle();

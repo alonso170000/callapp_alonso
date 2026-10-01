@@ -1,96 +1,50 @@
+import 'package:callerapp_frontend/resources/styles/styles.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
+
 import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_script_components.dart';
 
 class ProspectFollowUpCallScript extends StatelessWidget {
   final VoidCallback onContinue;
+  final String prospectName;
 
-  const ProspectFollowUpCallScript({super.key, required this.onContinue});
+  const ProspectFollowUpCallScript({
+    super.key,
+    required this.onContinue,
+    this.prospectName = 'prospecto',
+  });
 
-  Widget _speech(String text) => CallScriptSpeech(text: text);
+  Widget _speech(String text) =>
+      CallScriptSpeech(text: text.replaceAll('{prospectName}', prospectName));
 
   Widget _benefitList(CallScriptBenefitGroup group, Color color) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(group.title, style: const TextStyle(fontSize: 14)),
       const SizedBox(height: 12),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: group.items
-              .map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Iconsax.tick_circle_copy,
-                        size: 17,
-                        color: Color(0xFF006B61),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(item, style: const TextStyle(fontSize: 14)),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ),
+      CallScriptBenefits(items: group.items, color: color),
     ],
   );
 
-  Widget _category(CallScriptBenefitGroup group) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF8B8329),
-      borderRadius: BorderRadius.circular(7),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          color: const Color(0xFF62352D),
-          child: Text(
-            group.title,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(6),
-          child: Text(
-            group.items.join(',\n'),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-        ),
-      ],
-    ),
+  Widget _category(CallScriptBenefitGroup group) => CallScriptServiceCard(
+    title: group.title,
+    items: group.items,
+    separator: ',',
   );
 
   @override
   Widget build(BuildContext context) => ProspectDetailPanel(
     title: 'Llamada 2',
-    color: const Color(0xFF786B20),
+    color: AppColors.scriptPanel,
     nested: true,
     initiallyExpanded: true,
     child: Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBC6),
+        color: AppColors.scriptBackground,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -101,16 +55,11 @@ class ProspectFollowUpCallScript extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF665000),
+              color: AppColors.scriptHeading,
             ),
           ),
           const SizedBox(height: 12),
-          _speech(
-            'Hola buen día Sr(a). Cesar Martinez Dorado, ¿Cómo está? '
-            'Habla Miguel Jurado.\n\n'
-            'Hablamos el día de ayer y le envié la información del desarrollo '
-            'RUNA YUCATÁN, dígame... ¿Encontró alguna ubicación de su agrado?',
-          ),
+          _speech(demoFollowUpGreeting),
           const SizedBox(height: 12),
           const CallScriptNote(
             text:
@@ -118,16 +67,12 @@ class ProspectFollowUpCallScript extends StatelessWidget {
                 '(Resuelve dudas antes de pasar a la corrida financiera).',
           ),
           const SizedBox(height: 12),
-          _speech(
-            'Me gustaría comentarle de nuevo que no solo es un terreno; la '
-            'inversión le incluye un proyecto completo con alta plusvalía y '
-            'en armonía con el medio ambiente:',
-          ),
+          _speech(demoFollowUpProjectIntroduction),
           const SizedBox(height: 12),
           CallScriptColumns(
             children: [
-              _benefitList(demoFollowUpIncludes, const Color(0xFF9BF5EB)),
-              _benefitList(demoFollowUpBenefits, const Color(0xFFA9F6AC)),
+              _benefitList(demoFollowUpIncludes, AppColors.scriptIncludes),
+              _benefitList(demoFollowUpBenefits, AppColors.scriptBenefits),
             ],
           ),
           const SizedBox(height: 12),
@@ -136,7 +81,7 @@ class ProspectFollowUpCallScript extends StatelessWidget {
               '“Inversión inteligente en un proyecto completo”',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF665000),
+                color: AppColors.scriptHeading,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -147,23 +92,21 @@ class ProspectFollowUpCallScript extends StatelessWidget {
             children: demoFollowUpCategories.map(_category).toList(),
           ),
           const SizedBox(height: 12),
-          _speech(
-            'Contamos con 0% impacto ecológico y cultura verde. El uso de '
-            'suelo es habitacional con límite de construcción del 50%, '
-            'garantizando plusvalía y cero contaminación visual.',
-          ),
+          _speech(demoFollowUpEcology),
           const SizedBox(height: 12),
-          _speech('¿Desea que comencemos a construir su sueño hoy mismo?'),
+          _speech(demoFollowUpClosingQuestion),
           const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              style: callScriptButtonStyle(const Color(0xFF008A98)),
+              style: callScriptButtonStyle(AppColors.scriptBlue),
               onPressed: () {
                 onContinue();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Continuación al cierre registrada.'),
+                    content: Text(
+                      'Continuación al cierre registrada en esta vista.',
+                    ),
                   ),
                 );
               },

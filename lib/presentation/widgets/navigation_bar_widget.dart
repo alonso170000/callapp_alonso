@@ -116,7 +116,11 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   }
 
   Widget _buildNormalBar() {
-    final addAction = selectedIndex == 1 ? widget.onAddProspect : selectedIndex == 2 ? widget.onAddAgenda : null;
+    final addAction = selectedIndex == 1
+        ? widget.onAddProspect
+        : selectedIndex == 2
+        ? widget.onAddAgenda
+        : null;
     final compact = MediaQuery.sizeOf(context).width < 360 && addAction != null;
     final height = compact ? 52.0 : 64.0;
     return Row(
@@ -125,16 +129,23 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (addAction != null) ...[
-          _AddAgendaButton(onTap: addAction, size: height, label: selectedIndex == 1 ? 'Agregar prospecto' : 'Agendar nueva actividad'),
+          _AddAgendaButton(
+            onTap: addAction,
+            size: height,
+            label: selectedIndex == 1
+                ? 'Agregar prospecto'
+                : 'Agendar nueva actividad',
+          ),
           SizedBox(width: compact ? 6 : 8),
         ],
         Flexible(
           child: _NavigationSurface(
             height: height,
-            width: 240,
+            width: 252,
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              spacing: compact ? 2 : 4,
 
               children: List.generate(itemsSelected.length, (index) {
                 final itemsSelec = itemsSelected[index];
@@ -156,7 +167,9 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                   ),
                 );
 
-                return isSelected ? Expanded(child: option) : SizedBox(width: compact ? 40 : 35, child: option);
+                return isSelected
+                    ? Expanded(child: option)
+                    : SizedBox(width: compact ? 40 : 35, child: option);
               }),
             ),
           ),
@@ -332,7 +345,11 @@ class _AddAgendaButton extends StatelessWidget {
   final double size;
   final String label;
 
-  const _AddAgendaButton({required this.onTap, this.size = 64, this.label = 'Agendar nueva actividad'});
+  const _AddAgendaButton({
+    required this.onTap,
+    this.size = 64,
+    this.label = 'Agendar nueva actividad',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +359,7 @@ class _AddAgendaButton extends StatelessWidget {
       onTap: onTap,
       semanticLabel: label,
       child: const Center(
-        child: Icon(Icons.add_rounded, color: AppColors.primaryColor, size: 38),
+        child: Icon(Iconsax.add_copy, color: AppColors.primaryColor, size: 40),
       ),
     );
   }

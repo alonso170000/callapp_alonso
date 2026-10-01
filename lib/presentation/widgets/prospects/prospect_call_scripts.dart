@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/resources/styles/styles.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_script_components.dart';
@@ -38,10 +40,10 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
     final current = _current;
     final hasCards = current.responses.any((response) => response.icon != null);
     final branchColor = switch (current.tone) {
-      CallScriptTone.positive => const Color(0xFF006B4F),
-      CallScriptTone.negative => const Color(0xFFB42336),
-      CallScriptTone.discovery => const Color(0xFF0056C9),
-      CallScriptTone.investment => const Color(0xFF009FB7),
+      CallScriptTone.positive => AppColors.scriptPositive,
+      CallScriptTone.negative => AppColors.scriptNegative,
+      CallScriptTone.discovery => AppColors.scriptBlue,
+      CallScriptTone.investment => AppColors.scriptCyan,
       CallScriptTone.neutral => null,
     };
     final index = widget.script.steps.indexOf(current);
@@ -49,7 +51,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
 
     return ProspectDetailPanel(
       title: widget.script.title,
-      color: const Color(0xFF786B20),
+      color: AppColors.scriptPanel,
       nested: true,
       initiallyExpanded: true,
       child: Container(
@@ -78,7 +80,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                     ),
                     iconSize: 20,
                     onPressed: () => setState(() => _history.removeLast()),
-                    color: const Color(0xFF786B20),
+                    color: AppColors.scriptPanel,
                     icon: const Icon(Iconsax.arrow_left_copy),
                   ),
                 Expanded(
@@ -88,7 +90,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                     style: const TextStyle(
                       fontSize: 17,
                       height: 1.3,
-                      color: Color(0xFF665000),
+                      color: AppColors.scriptHeading,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -109,7 +111,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                   children: [
                     const Icon(
                       Iconsax.tick_circle_copy,
-                      color: Color(0xFF0056C9),
+                      color: AppColors.scriptBlue,
                       size: 18,
                     ),
                     const SizedBox(width: 7),
@@ -130,7 +132,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                   style: const TextStyle(fontSize: 15),
                 ),
               )
-            else if (branchColor == null)
+            else if (branchColor == null || current.instructionAfterContent)
               _speech(current.content),
             if (current.instruction.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -139,38 +141,49 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                 discovery: current.tone == CallScriptTone.discovery,
               ),
             ],
-            if (branchColor != null) ...[
+            if (branchColor != null && !current.instructionAfterContent) ...[
               if (current.instruction.isNotEmpty) const SizedBox(height: 8),
               _speech(current.content),
             ],
+            if (current.continuation != null) ...[
+              const SizedBox(height: 8),
+              _speech(current.continuation!),
+            ],
+            if (current.finalInstruction != null) ...[
+              const SizedBox(height: 8),
+              CallScriptNote(text: current.finalInstruction!),
+            ],
             if (current.benefits.isNotEmpty) ...[
               const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) => Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.scriptBenefits,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: current.benefits
                       .map(
-                        (benefit) => SizedBox(
-                          width: constraints.maxWidth < 420
-                              ? constraints.maxWidth
-                              : (constraints.maxWidth - 12) / 2,
+                        (benefit) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Icon(
                                 Iconsax.tick_circle_copy,
-                                size: 20,
-                                color: Color(0xFF0056C9),
+                                size: 17,
+                                color: AppColors.scriptCheck,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 5),
                               Expanded(
                                 child: Text(
                                   benefit,
                                   style: const TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 18,
-                                    color: Color(0xFF0056C9),
+                                    fontFamily: 'SulphurPoint',
+                                    fontSize: 14,
+                                    color: AppColors.scriptBenefitText,
                                   ),
                                 ),
                               ),
@@ -182,13 +195,30 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                 ),
               ),
             ],
+            if (current.services.isNotEmpty) ...[
+              const Padding(padding: EdgeInsets.symmetric(vertical: 6)),
+              if (current.servicesIntroduction != null) ...[
+                _speech(current.servicesIntroduction!),
+                const SizedBox(height: 12),
+              ],
+              CallScriptColumns(
+                children: current.services
+                    .map(
+                      (group) => CallScriptServiceCard(
+                        title: group.title,
+                        items: group.items,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
             if (current.showContinue) ...[
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: callScriptButtonStyle(
-                    branchColor ?? const Color(0xFF008A98),
+                    AppColors.scriptBlue,
                   ),
                   onPressed: () {
                     if (current.nextStep case final next?) {
@@ -205,7 +235,6 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                     }
                   },
                   label: const Text('SEGUIR LEYENDO'),
-                  icon: const Icon(Iconsax.arrow_right_copy, size: 18),
                   iconAlignment: IconAlignment.end,
                 ),
               ),
@@ -218,11 +247,12 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                   runSpacing: 8,
                   children: current.responses.asMap().entries.map((entry) {
                     final response = entry.value;
-                    final color = hasCards
-                        ? const Color(0xFF0056C9)
+                    final color =
+                        hasCards || current.tone == CallScriptTone.discovery
+                        ? AppColors.scriptBlue
                         : entry.key == 0
-                        ? const Color(0xFF006B4F)
-                        : const Color(0xFFB42336);
+                        ? AppColors.scriptPositive
+                        : AppColors.scriptNegative;
                     return SizedBox(
                       width: constraints.maxWidth < (hasCards ? 360 : 300)
                           ? constraints.maxWidth
@@ -278,7 +308,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  style: callScriptButtonStyle(const Color(0xFF008A98)),
+                  style: callScriptButtonStyle(AppColors.scriptBlue),
                   onPressed: () => _advance(widget.script.steps[index + 1]),
                   child: const Text('SIGUIENTE'),
                 ),

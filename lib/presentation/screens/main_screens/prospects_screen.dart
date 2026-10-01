@@ -186,7 +186,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                           ),
                         ),
                         onPressed: _showFilters,
-                        icon: const Icon(Icons.tune_rounded, size: 20),
+                        icon: const Icon(
+                          Icons.tune_rounded,
+                          color: AppColors.accentColor,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -218,7 +222,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                             fontFamily: 'SulphurPoint',
                             fontSize: 12,
                             color: _status == filter
-                                ? Colors.white
+                                ? AppColors.accentColor
                                 : const Color(0xFF3B8C83),
                           ),
                         ),
@@ -245,7 +249,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       'MOSTRANDO ${prospects.length} PROSPECTOS',
                       style: const TextStyle(
                         fontFamily: 'BebasNeue',
-                        fontSize: 16,
+                        fontSize: 18,
                         color: AppColors.primaryColor,
                       ),
                     ),
@@ -326,7 +330,15 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       _status = 'Todos';
                       _advanced = ProspectFilters();
                     }),
-                    child: const Text('Limpiar filtros'),
+                    child: Text(
+                      'Limpiar filtros',
+                      style: TextStyle(
+                        color: AppColors.primaryColor,
+                        fontFamily: 'SulphurPoint',
+                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                      ),
+                    ),
                   ),
                 ],
               ),

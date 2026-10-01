@@ -320,7 +320,7 @@ Estados disponibles:
 - Abrir el detalle del prospecto.
 - Editar la actividad.
 - Marcar la actividad como completada.
-- Reprogramar la actividad.
+- Cancelar la actividad.
 - Eliminar la actividad.
 
 8.5 Agregar una actividad o tarea

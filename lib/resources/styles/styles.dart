@@ -171,3 +171,13 @@ const profileHeading = TextStyle(
   fontSize: 20,
   color: AppColors.primaryColor,
 );
+
+ButtonStyle callScriptButtonStyle(Color color) => FilledButton.styleFrom(
+  backgroundColor: color,
+  foregroundColor: Colors.white,
+  minimumSize: const Size(0, 44),
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  textStyle: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  side: BorderSide(color: color),
+);

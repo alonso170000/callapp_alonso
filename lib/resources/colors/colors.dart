@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  // Paleta compartida de los guiones de llamada.
+  static const Color scriptPanel = Color(0xFF786B20);
+  static const Color scriptBackground = Color(0xFFFFFBC6);
+  static const Color scriptSpeech = Color(0xFF8B8329);
+  static const Color scriptNote = Color(0xFFF3E6A0);
+  static const Color scriptServiceHeader = Color(0xFF62352D);
+  static const Color scriptHeading = Color(0xFF665000);
+  static const Color scriptPositive = Color(0xFF006B4F);
+  static const Color scriptNegative = Color(0xFFB42336);
+  static const Color scriptBlue = Color(0xFF0056C9);
+  static const Color scriptCyan = Color(0xFF009FB7);
+  static const Color scriptAction = Color(0xFF008A98);
+  static const Color scriptBenefits = Color(0xFFA9F6AC);
+  static const Color scriptIncludes = Color(0xFF9BF5EB);
+  static const Color scriptCheck = Color(0xFF006B61);
+  static const Color scriptBenefitText = Color(0xFF243C32);
+  static const Color scriptNoteText = Color(0xFF413402);
+
   static const Color loginBackground = Color(0xFFE0FFF9);
   static const Color loginField = Color(0xFF439D98);
   static const Color primaryColor = Color.fromRGBO(5, 100, 95, 1);

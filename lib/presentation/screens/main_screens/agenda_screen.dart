@@ -203,7 +203,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               onComplete: () => _completeActivity(activity, detailContext),
               onReschedule: () => _showActionMessage(
-                'La reprogramación estará disponible al conectar el servicio.',
+                'La cancelación estará disponible al conectar el servicio.',
                 detailContext,
               ),
             ),
@@ -329,8 +329,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: InputChip(
+                    backgroundColor: AppColors.primaryColor,
+                    labelStyle: const TextStyle(
+                      color: AppColors.whiteColor,
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
                     label: const Text('Filtros activos'),
                     onDeleted: () => setState(() => _filters = AgendaFilters()),
+                    deleteIconColor: AppColors.whiteColor,
                   ),
                 ),
               if (visible.isEmpty)
@@ -355,7 +363,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           _date = DateUtils.dateOnly(DateTime.now());
                           _filters = AgendaFilters();
                         }),
-                        child: const Text('Volver a hoy'),
+                        child: const Text(
+                          'Volver a hoy',
+                          style: TextStyle(
+                            color: AppColors.primaryColor,
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ],
                   ),
