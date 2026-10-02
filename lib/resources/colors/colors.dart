@@ -38,6 +38,7 @@ class AppColors {
   // Paleta principal para la pantalla Home.
   static const Color homeBackground = Color(0xFFDDF9F1);
   static const Color homeDeepTeal = Color(0xFF00756B);
+  static const Color agendaProspectBackground = Color(0xFF004A43);
   static const Color homeWarmText = Color(0xFFFFD982);
   static const Color homeGreenCard = Color(0xFF85F5A6);
   static const Color homeYellowCard = Color(0xFFFFF47A);

@@ -98,30 +98,29 @@ class AgendaActivityDetail extends StatelessWidget {
 
   Widget _infoCard(String value, String label, String detail, Color color) =>
       Container(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+        constraints: const BoxConstraints(minHeight: 142),
+        padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Align(
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
                 alignment: Alignment.bottomLeft,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 42,
-                      fontWeight: FontWeight.w700,
-                      height: 0.9,
-                    ),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontFamily: 'SulphurPoint',
+                    fontSize: 38,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
                   ),
                 ),
               ),
@@ -135,8 +134,7 @@ class AgendaActivityDetail extends StatelessWidget {
                 color: AppColors.primaryColor,
                 fontFamily: 'SulphurPoint',
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
-                height: 1,
+                height: 1.2,
               ),
             ),
             const SizedBox(height: 3),
@@ -147,9 +145,9 @@ class AgendaActivityDetail extends StatelessWidget {
               style: const TextStyle(
                 color: Colors.black,
                 fontFamily: 'SulphurPoint',
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
-                height: 0.95,
+                height: 1.15,
               ),
             ),
           ],
@@ -159,7 +157,7 @@ class AgendaActivityDetail extends StatelessWidget {
   Widget _prospectCard() => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: AppColors.primaryColor,
+      color: AppColors.agendaProspectBackground,
       borderRadius: BorderRadius.circular(18),
     ),
     child: Column(
@@ -167,13 +165,13 @@ class AgendaActivityDetail extends StatelessWidget {
         Row(
           children: [
             CircleAvatar(
-              radius: 22,
+              radius: 18,
               backgroundColor: const Color(0xFFE75AC7),
               child: ClipOval(
                 child: Image.asset(
                   'lib/resources/images/Frame.png',
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   fit: BoxFit.cover,
                   excludeFromSemantics: true,
                 ),
@@ -196,6 +194,8 @@ class AgendaActivityDetail extends StatelessWidget {
                   ),
                   Text(
                     activity.lastContact,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
                       fontFamily: 'SulphurPoint',
@@ -253,7 +253,7 @@ class AgendaActivityDetail extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                padding: const EdgeInsets.only(right: 5),
+                padding: EdgeInsetsGeometry.zero,
                 child: IconButton(
                   tooltip: 'Ver prospecto',
                   onPressed: onOpenProspect,
@@ -306,142 +306,157 @@ class AgendaActivityDetail extends StatelessWidget {
     color: AppColors.homeBackground,
     child: Column(
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(10, 13, 16, 16),
-          decoration: const BoxDecoration(
-            color: AppColors.homeDeepTeal,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Cerrar detalle',
-                onPressed: onClose,
-                color: Colors.white,
-                icon: const Icon(Icons.arrow_back_ios_new),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Column(
+              children: [
+                Stack(
                   children: [
-                    const Text(
-                      'DETALLE DE ACTIVIDAD',
-                      style: TextStyle(
-                        color: Color(0xFFA8E6DA),
-                        fontFamily: 'SulphurPoint',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 44,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
                     ),
-                    Text(
-                      activity.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'BebasNeue',
-                        fontSize: 27,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              IconButton(
+                                tooltip: 'Cerrar detalle',
+                                onPressed: onClose,
+                                color: Colors.white,
+                                icon: const Icon(Icons.arrow_back_ios_new),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      activity.title,
+                                      textAlign: TextAlign.right,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'BebasNeue',
+                                        fontSize: 25,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 9,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _statusColor,
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: Text(
+                                        activity.status.label,
+                                        style: const TextStyle(
+                                          color: AppColors.textDarkColor,
+                                          fontFamily: 'BebasNeue',
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _prospectCard(),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _statusColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  activity.status.label,
-                  style: const TextStyle(
-                    color: AppColors.primaryColor,
-                    fontFamily: 'BebasNeue',
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-            child: Column(
-              children: [
-                _prospectCard(),
-                const SizedBox(height: 18),
-                _sectionTitle('CUÁNDO Y DÓNDE'),
-                SizedBox(
-                  height: 150,
-                  child: Row(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: _infoCard(
-                          '${activity.date.day}',
-                          'Fecha',
-                          '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
-                          AppColors.homeBlueSection,
+                      const SizedBox(height: 18),
+                      _sectionTitle('CUÁNDO Y DÓNDE'),
+                      IntrinsicHeight(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _infoCard(
+                                '${activity.date.day}',
+                                'Fecha',
+                                '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
+                                AppColors.homeBlueSection,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _infoCard(
+                                _time.split(' ').first,
+                                'Hora',
+                                _time.split(' ').last,
+                                AppColors.homeYellowCard,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _infoCard(
-                          _time.split(' ').first,
-                          'Hora',
-                          _time.split(' ').last,
-                          AppColors.homeYellowCard,
+                      const SizedBox(height: 10),
+                      IntrinsicHeight(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _infoCard(
+                                activity.location.toUpperCase(),
+                                'Ubicación',
+                                'Lugar de la actividad',
+                                AppColors.homeOrangeSection,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _infoCard(
+                                '${activity.reminderMinutes}',
+                                'Recordatorio',
+                                'minutos antes',
+                                AppColors.homeGreenCard,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _sectionTitle('DESCRIPCIÓN'),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          activity.description,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 15,
+                            height: 1.35,
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 150,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _infoCard(
-                          activity.location.toUpperCase(),
-                          'Ubicación',
-                          'Lugar de la actividad',
-                          AppColors.homeOrangeSection,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _infoCard(
-                          '${activity.reminderMinutes}',
-                          'Recordatorio',
-                          'minutos antes',
-                          AppColors.homeGreenCard,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _sectionTitle('DESCRIPCIÓN'),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    activity.description,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 15,
-                      height: 1.35,
-                    ),
                   ),
                 ),
               ],

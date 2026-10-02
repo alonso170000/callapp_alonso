@@ -141,8 +141,8 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
         Flexible(
           child: _NavigationSurface(
             height: height,
-            width: 252,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            width: 258,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               spacing: compact ? 2 : 4,

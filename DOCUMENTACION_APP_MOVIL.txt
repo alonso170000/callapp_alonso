@@ -7,11 +7,16 @@ CallApp será una aplicación móvil de apoyo para asesores de ventas. Su propó
 
 La aplicación está desarrollada en Flutter y está pensada principalmente para dispositivos móviles. La interfaz utiliza textos en español, navegación inferior y pantallas adaptables a distintos tamaños de teléfono.
 
+Criterio de lectura (revisión del 2 de octubre de 2026):
+Este documento describe la interfaz actual y el alcance previsto. Las funciones marcadas como pendientes y los requisitos de la versión productiva aún no están implementados. Las recomendaciones futuras no representan decisiones cerradas de producto.
+
 Nota sobre el estado actual:
 - La interfaz y los flujos principales funcionan como prototipo frontend.
 - Actualmente se utilizan datos de demostración almacenados dentro de la aplicación.
 - Todavía no existe conexión con una API, base de datos, servicio de autenticación, telefonía, mensajería, correo, notificaciones push o sincronización remota.
 - Las funciones que dependen de esos servicios se muestran en la interfaz, pero algunas solo presentan mensajes informativos.
+- Los cambios se mantienen en memoria mientras permanece la vista o el shell correspondiente; no se conservan al reiniciar la aplicación.
+- Inicio, Prospectos, Agenda y Perfil utilizan datos locales independientes. El alta de prospectos no alimenta el selector de Agenda y la edición del perfil no actualiza los encabezados.
 
 
 2. TIPOS DE USUARIO
@@ -43,7 +48,11 @@ La pantalla principal utiliza una barra de navegación inferior con cuatro pesta
 3. Agenda.
 4. Perfil.
 
-Las cuatro pestañas conservan su estado al cambiar entre ellas. La barra también incluye un buscador visual de prospectos.
+Las cuatro pestañas conservan su estado mediante un IndexedStack dentro de /home; no tienen rutas independientes. Actualmente la aplicación inicia directamente en /home sin comprobar una sesión.
+
+El detalle de prospecto se abre como pantalla independiente. Desde la lista se envía el registro del prospecto; al acceder directamente por teléfono solo se consultan los datos demo. Un registro recién creado no se recupera por enlace directo sin recibir ese registro.
+
+La barra muestra el texto horizontal junto al icono solo en la pestaña seleccionada; las demás muestran iconos centrados. Incluye un buscador visual y un botón + funcional en Prospectos y Agenda.
 
 
 4. MÓDULO DE AUTENTICACIÓN
@@ -52,10 +61,10 @@ Objetivo:
 Permitir que el asesor acceda de manera segura a la aplicación.
 
 Funciones incluidas en la interfaz:
-- Campo de usuario o correo electrónico.
+- Campo de correo electrónico; no admite un nombre de usuario sin formato de correo.
 - Campo de contraseña.
 - Opción para mostrar u ocultar la contraseña.
-- Opción "Recuérdame".
+- Opción "Recuérdame" con selección local, sin persistencia de sesión o credenciales.
 - Botón "Ingresar".
 - Validación de campos obligatorios.
 - Validación de formato de correo.
@@ -93,7 +102,9 @@ Contenido y funciones:
 - Sección "Llamadas atrasadas".
 - Tarjetas con nombre, estado, horario, avatar y color identificador.
 - Accesos visuales a las tareas prioritarias del asesor.
-- Botón visual para agregar o atender nuevos prospectos cuando corresponda.
+- Botón visual para agregar en "Prospectos nuevos".
+- Las tarjetas, flechas y el botón de agregar de Inicio todavía no tienen acciones conectadas. El alta funcional se abre desde la barra inferior en Prospectos.
+- Las métricas y grupos de Inicio son ejemplos independientes de la lista de Prospectos y la Agenda.
 
 Funciones futuras:
 - Métricas obtenidas en tiempo real.
@@ -165,6 +176,19 @@ Consultar, buscar, ordenar y filtrar los prospectos asignados al asesor.
 - Nombre.
 
 
+6.6 Alta de prospectos
+- Botón + de la barra inferior cuando está seleccionada la pestaña Prospectos.
+- Formulario en un panel inferior desplazable y adaptado al teclado.
+- Nombre, email, ciudad, teléfono, empresa, ocupación, procedencia, estado y comentarios.
+- Calificación: Decisión, Disposición, Dinero, Pasó a TO y Discovery Completo.
+- Producto, descripción del lote, dimensión en m² y precio completo del lote.
+- Fecha y hora del próximo contacto.
+- Validación de campos obligatorios, formato de email, teléfono de 10 a 15 dígitos y números no negativos sin comas.
+- Cancelar o cerrar descarta la captura. Guardar agrega el registro a la lista local y muestra "Prospecto agregado.".
+- Guardar limpia la búsqueda y los filtros para mostrar el nuevo registro.
+- Pendiente: persistencia, identificador estable, detección de duplicados y vinculación con las demás secciones.
+
+
 7. DETALLE DEL PROSPECTO
 ------------------------
 Objetivo:
@@ -188,10 +212,9 @@ Concentrar toda la información y las acciones relacionadas con un prospecto.
 - Nota de seguimiento.
 
 7.2 Acciones rápidas
-- Enviar correo con plantilla ya definida.
-- Convertir a cliente.
-- Iniciar una llamada.
-- Solicitar eliminación del prospecto.
+- Los accesos de mensaje, datos y llamada abren un panel con nombre, teléfono y correo, con opción de copiar el teléfono.
+- La eliminación muestra un aviso informativo y conserva el registro.
+- Pendiente: envío de correo con plantilla, mensajería, llamadas reales, conversión a cliente y eliminación con confirmación y permisos.
 
 7.3 Secciones configurables del detalle
 El usuario puede mostrar u ocultar las siguientes secciones:
@@ -222,7 +245,8 @@ El usuario puede mostrar u ocultar las siguientes secciones:
 - Nombre, teléfono y correo.
 - Ciudad, empresa y ocupación.
 - Procedencia o campaña.
-- Guardar un resumen de los cambios en el historial de la sesión.
+- Guardar un resumen de los cambios en el historial de la vista.
+- La edición conserva valores dentro del formulario; no modifica el registro original, el encabezado ni la lista de Prospectos.
 
 7.7 Guiones de llamada
 - Mostrar guiones divididos por pasos.
@@ -240,9 +264,11 @@ El usuario puede mostrar u ocultar las siguientes secciones:
 - Fecha y hora de cada comentario.
 - Resultado del contacto: contestó, no contestó o cita programada.
 - Resumen de discovery.
-- Historial de correos enviados.
+- Historial informativo de correos demo, con fecha y plantilla, sin botones de envío ni otras acciones.
 - Registro de horas y días en que el prospecto respondió o rechazó llamadas.
-- Registros creados durante la sesión actual.
+- Registros creados mientras permanece abierto el detalle; salir y volver a abrirlo no los recupera.
+- El historial y los guiones utilizan ejemplos compartidos, no información obtenida por prospecto desde un servicio.
+- La cuadrícula de llamadas cruza las 24 horas con los siete días de la semana.
 
 
 8. MÓDULO DE AGENDA
@@ -258,9 +284,11 @@ Organizar las actividades del asesor y facilitar su ejecución.
 - Opción para volver a la fecha actual.
 - Selector semanal.
 - Calendario mensual.
+- En semana y mes se selecciona un día; la lista muestra actividades de ese día, no de todo el periodo.
+- La semana inicia en lunes; el mes muestra días contiguos atenuados.
 
 8.2 Actividades
-Tipos contemplados:
+Tipos contemplados en datos y filtros (incluyen también Llamada):
 - Seguimiento.
 - Tarea.
 - Visita presencial.
@@ -279,13 +307,14 @@ Datos de una actividad:
 
 Estados disponibles:
 - Completada.
-- Atrasada.
+- Atrasada (el modelo muestra la etiqueta ATRASADO).
 - Pendiente.
+- Cancelada.
 
 8.3 Filtros y resultados
 - Abrir los filtros desde el botón "Filtrar actividades".
 - Cerrar la ventana de filtros sin aplicar cambios mediante el botón X.
-- Filtrar por uno o varios tipos de actividad:
+- Filtrar por uno o varios tipos de actividad, incluyendo Llamada:
   * Seguimiento.
   * Visita presencial.
   * Tarea.
@@ -302,50 +331,49 @@ Estados disponibles:
   * Todo el día.
   * Mañana.
   * Tarde.
+- Mañana corresponde a horas anteriores a las 12:00; Tarde, desde las 12:00.
 - Combinar simultáneamente filtros de tipo, estado, prospecto y horario.
-- Mostrar en el botón principal la cantidad de coincidencias antes de aplicar los filtros, por ejemplo: "VER 12 RESULTADOS".
+- Mostrar la cantidad real de coincidencias del día seleccionado antes de aplicar los filtros: "VER N RESULTADOS".
 - Aplicar los filtros y regresar a la agenda.
 - Mostrar una etiqueta o indicador cuando existan filtros activos.
 - Permitir limpiar todos los filtros y recuperar la selección predeterminada.
 - Mantener el filtro elegido al cambiar entre las vistas de día, semana y mes, hasta que el usuario lo limpie.
 - Ordenar las actividades visibles cronológicamente.
 - Mostrar un estado vacío si no existen actividades para la fecha o filtros elegidos.
-- La selección inicial debe incluir todos los tipos, todos los estados, todos los prospectos y todo el día.
+- La selección inicial incluye todos los tipos, todos los estados, todos los prospectos y todo el día.
+- Cerrar el panel sin aplicar descarta sus cambios; limpiar restablece los controles del panel y aplicar confirma la selección.
+- Crear una actividad restablece los filtros y selecciona la fecha de la nueva actividad.
 
 8.4 Detalle de actividad
-- Consultar todos los datos de la actividad.
-- Cerrar el detalle.
-- Enviar mensaje al prospecto.
-- Llamar al prospecto.
-- Abrir el detalle del prospecto.
-- Editar la actividad.
-- Marcar la actividad como completada.
-- Cancelar la actividad.
-- Eliminar la actividad.
+- Consultar los datos y cerrar el detalle.
+- Completar actualiza el estado local, cierra el detalle y muestra "Actividad completada.".
+- Mensaje y llamada solo muestran avisos informativos.
+- Ver prospecto, editar y cancelar muestran avisos de funcionalidad pendiente.
+- Eliminar todavía no está disponible. Las secciones 8.6 a 8.8 describen requisitos pendientes.
 
 8.5 Agregar una actividad o tarea
 - Incluir un botón visible para crear una nueva actividad desde la agenda.
-- Abrir una ventana o formulario titulado "Nueva actividad".
+- Abrir un panel inferior titulado "Nueva actividad", desplazable y adaptado al teclado.
 - Permitir cerrar el formulario con el botón X sin guardar cambios.
 - Solicitar los siguientes campos:
-  * Tipo: Seguimiento, Visita presencial, Tarea o Recordatorio personal.
-  * Prospecto: selección de un prospecto o la opción "Ninguno".
+  * Tipo: Visita presencial, Llamada, Seguimiento o Tarea. Recordatorio personal existe en filtros, pero aún no en este formulario.
+  * Prospecto: Ninguno o Alan Dorantes en el selector demo actual; pendiente cargar la lista real.
   * Estado inicial: Pendiente, Atrasada, Completada o Cancelada. Por defecto será "Pendiente".
-  * Lugar: Lote, Oficina, Videollamada, Otro o Sin ubicación.
+  * Lugar: Lote, Oficina, Videollamada u Otro. Sin ubicación existe en el modelo, pero no en el selector actual.
   * Fecha.
   * Hora.
   * Recordatorio: sin recordatorio o con anticipación de 5, 15, 30 o 60 minutos.
   * Descripción.
-- Si el tipo elegido es "Recordatorio personal", el prospecto puede permanecer en "Ninguno".
-- Para una actividad comercial, se debe permitir relacionar un prospecto existente.
+- Actualmente se permite Ninguno para cualquiera de los tipos del formulario. Pendiente incorporar Recordatorio personal y definir restricciones por tipo.
+- Pendiente ampliar el selector para relacionar los prospectos existentes de la lista.
 - La fecha se seleccionará mediante calendario y la hora mediante selector de hora.
 - La descripción debe admitir texto de varias líneas.
 - El botón "Cancelar" debe cerrar el formulario sin crear la actividad.
-- El botón "Guardar" debe validar la información y crear la actividad.
+- Guardar crea la actividad local con las selecciones actuales; aún no exige descripción ni valida reglas comerciales.
 - Después de guardar, la nueva actividad debe aparecer inmediatamente en el día, semana o mes correspondiente.
-- Mostrar un mensaje de confirmación, por ejemplo: "Actividad creada correctamente".
+- Mostrar el mensaje de confirmación "Actividad agendada.".
 
-Validaciones para agregar una actividad:
+Validaciones pendientes para completar el formulario (tipo, estado, fecha y hora ya tienen valores iniciales):
 - El tipo es obligatorio.
 - El estado es obligatorio.
 - La fecha y la hora son obligatorias.
@@ -355,7 +383,7 @@ Validaciones para agregar una actividad:
 - No se debe crear la misma actividad dos veces si el usuario presiona Guardar repetidamente.
 - Si ocurre un error al guardar, se debe conservar la información capturada y ofrecer la opción de reintentar.
 
-8.6 Editar y reprogramar una actividad
+8.6 Editar y reprogramar una actividad (pendiente)
 - Abrir el formulario con la información actual de la actividad.
 - Permitir modificar tipo, prospecto, estado, lugar, fecha, hora, recordatorio y descripción.
 - Reprogramar una actividad cambiando su fecha u hora.
@@ -363,7 +391,7 @@ Validaciones para agregar una actividad:
 - Permitir cancelar la edición sin modificar la información original.
 - Mostrar confirmación después de guardar los cambios.
 
-8.7 Eliminar una actividad o tarea
+8.7 Eliminar una actividad o tarea (pendiente)
 - Incluir la opción "Eliminar actividad" dentro del detalle o menú de acciones de la actividad.
 - Mostrar una confirmación antes de eliminar para evitar pérdidas accidentales.
 - La confirmación debe indicar el nombre o descripción de la actividad y su fecha.
@@ -380,7 +408,7 @@ Validaciones para agregar una actividad:
 - En la versión conectada, la eliminación debe registrarse para auditoría con usuario, fecha y actividad eliminada.
 - Se recomienda usar eliminación lógica en el servidor para permitir recuperación administrativa y conservar la trazabilidad.
 
-8.8 Cancelar una actividad sin eliminarla
+8.8 Cancelar una actividad sin eliminarla (pendiente)
 - Cambiar el estado de la actividad a "Cancelada" cuando deba conservarse en el historial.
 - Una actividad cancelada seguirá disponible al activar el filtro "Cancelada".
 - Cancelar y eliminar son acciones diferentes: cancelar conserva el registro; eliminar lo retira de la agenda visible.
@@ -414,12 +442,12 @@ Administrar la información básica y preferencias del asesor.
 - Opción prevista para tema oscuro.
 
 9.3 Sincronización
-- Mostrar el estado de la última sincronización.
+- Mostrar una fecha de sincronización demo; no acredita sincronización real.
 - Acción para sincronizar datos cuando se conecte el servicio.
 
 9.4 Sesión y versión
 - Consultar notificaciones.
-- Cerrar sesión y regresar al inicio de sesión.
+- Cerrar sesión navega al login; todavía no invalida tokens ni una sesión autenticada.
 - Mostrar versión de la aplicación y año actual.
 
 
@@ -431,11 +459,15 @@ Administrar la información básica y preferencias del asesor.
 - Campo "Buscar prospecto...".
 - Opción para limpiar la búsqueda.
 - Cierre del buscador y regreso a la navegación normal.
+- Abrir y cerrar el buscador selecciona Inicio. El texto todavía no está conectado a resultados; la búsqueda funcional está en Prospectos.
+- Pendiente conectar la búsqueda global con la lista y el detalle.
 - Etiquetas y ayudas accesibles para acciones representadas únicamente con iconos.
 
 
 11. DATOS QUE MANEJARÁ LA APLICACIÓN
 -------------------------------------
+Este inventario describe datos previstos para la versión conectada, no un esquema de base de datos implementado. Los modelos locales no contienen todos los identificadores, relaciones o campos de auditoría. Agenda relaciona al prospecto por texto y la ruta de detalle usa teléfono; la integración deberá usar identificadores estables.
+
 11.1 Usuario o asesor
 - Identificador.
 - Nombre completo.
@@ -465,7 +497,9 @@ Administrar la información básica y preferencias del asesor.
 - Empresa.
 - Ocupación.
 - Origen o campaña.
-- Notas.
+- Notas y comentarios.
+- Producto, descripción de lote, dimensión en m² y precio completo.
+- Decisión, disposición, dinero, paso a TO y discovery completo.
 
 11.3 Actividad
 - Identificador.
@@ -514,7 +548,7 @@ Administrar la información básica y preferencias del asesor.
 - Manejo de conectividad y reintentos.
 
 
-13. REGLAS GENERALES DE FUNCIONAMIENTO
+13. REGLAS GENERALES DE FUNCIONAMIENTO (REQUISITOS DEL PRODUCTO)
 --------------------------------------
 - Un prospecto inexistente debe mostrar el mensaje "Prospecto no encontrado".
 - Los formularios no deben guardarse si contienen información inválida.
@@ -534,7 +568,7 @@ Administrar la información básica y preferencias del asesor.
 - Respeto de áreas seguras del dispositivo.
 - Desplazamiento en pantallas con contenido extenso.
 - Paleta principal en verde profundo con colores de apoyo para estados y secciones.
-- Tipografía Bebas Neue para títulos destacados.
+- Tipografía Bebas Neue para títulos destacados y botones.
 - Tipografía Sulphur Point para contenido y formularios.
 - Contraste suficiente entre texto y fondo.
 - Ayudas descriptivas para botones con iconos.
@@ -543,7 +577,7 @@ Administrar la información básica y preferencias del asesor.
 - Prevención de desbordamientos al aumentar el tamaño del texto.
 
 
-15. SEGURIDAD Y PRIVACIDAD
+15. SEGURIDAD Y PRIVACIDAD (PENDIENTE PARA PRODUCCIÓN)
 --------------------------
 - Comunicación cifrada mediante HTTPS.
 - Tokens almacenados en almacenamiento seguro del dispositivo.
@@ -569,7 +603,7 @@ Recomendaciones para una versión posterior:
 
 17. PRUEBAS Y CONTROL DE CALIDAD
 --------------------------------
-La aplicación debe comprobar como mínimo:
+Esta lista reúne verificaciones requeridas; no implica que todas estén automatizadas o hayan pasado. Las funciones pendientes deberán comprobarse al implementarlas. La aplicación debe comprobar como mínimo:
 - Inicio de sesión con datos válidos e inválidos.
 - Validaciones de correo, contraseña, teléfono y campos obligatorios.
 - Cambio correcto entre las cuatro pestañas.
@@ -579,7 +613,7 @@ La aplicación debe comprobar como mínimo:
 - Ordenamiento y limpieza de filtros.
 - Estado sin resultados.
 - Apertura de un prospecto válido e inválido.
-- Formularios de seguimiento, discovery y datos del prospecto.
+- Alta de prospectos y formularios de seguimiento, discovery y datos del prospecto.
 - Visualización del historial y guiones.
 - Navegación diaria, semanal y mensual de la agenda.
 - Creación de actividades con campos válidos y manejo de errores.
@@ -600,7 +634,7 @@ La aplicación debe comprobar como mínimo:
 ------------------------------------------
 - Framework: Flutter.
 - Lenguaje: Dart.
-- Navegación: go_router.
+- Navegación: go_router para login, home y detalle de prospecto; IndexedStack para pestañas y Navigator para el detalle de actividad.
 - Estado actual: estado local con StatefulWidget, controladores y callbacks.
 - Pantallas: lib/presentation/screens/.
 - Componentes reutilizables: lib/presentation/widgets/.
@@ -608,7 +642,7 @@ La aplicación debe comprobar como mínimo:
 - Validadores: lib/presentation/validators/.
 - Colores y estilos: lib/resources/.
 - Pruebas: test/.
-- Plataformas configuradas: Android, iOS, Web, Windows, Linux y macOS, aunque el objetivo principal es android móvil.
+- Plataformas configuradas: Android, iOS, Web, Windows, Linux y macOS, aunque el objetivo principal es Android móvil; su configuración no acredita validación en todas las plataformas.
 
 Cuando se conecten fuentes reales de datos será necesario agregar una capa de servicios o repositorios y una estrategia de estado compartido, manteniendo separada la interfaz de usuario de la integración externa.
 
@@ -621,7 +655,9 @@ Etapa 1 - Prototipo visual (estado actual):
 - Formularios y validaciones locales.
 - Datos de demostración.
 - Búsqueda, filtros y ordenamiento local.
-- Agenda y perfil con estado local.
+- Alta de prospectos, creación y finalización de actividades con estado local.
+- Perfil y preferencias locales; historial dentro de la vista de detalle.
+- Pendientes del prototipo: accesos de Inicio, búsqueda global, vínculo Agenda-Prospectos, edición/reprogramación/cancelación/eliminación de actividades y validaciones comerciales de Agenda.
 
 Etapa 2 - Producto mínimo funcional:
 - Autenticación real.
