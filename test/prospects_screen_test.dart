@@ -57,7 +57,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Iconsax.profile_2user_copy));
     await tester.pumpAndSettle();
-    expect(find.text('TUS PROSPECTOS'), findsOneWidget);
+    expect(find.text('MIS PROSPECTOS'), findsOneWidget);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Iconsax.home_2_copy));

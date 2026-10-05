@@ -41,7 +41,7 @@ class AgendaMonthCalendar extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontFamily: 'SulphurPoint',
-                        fontSize: 12,
+                        fontSize: 16,
                         color: AppColors.primaryColor,
                       ),
                     ),
@@ -90,7 +90,7 @@ class AgendaMonthCalendar extends StatelessWidget {
                                   '${date.day}',
                                   style: TextStyle(
                                     fontFamily: 'SulphurPoint',
-                                    fontSize: 14,
+                                    fontSize: 18,
                                     color: selected
                                         ? Colors.white
                                         : AppColors.primaryColor.withValues(

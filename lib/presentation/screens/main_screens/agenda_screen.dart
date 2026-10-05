@@ -266,6 +266,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     style: IconButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
                       foregroundColor: AppColors.homeWarmText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     tooltip: 'Periodo anterior',
                     onPressed: () => _move(-1),
@@ -282,6 +285,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     style: IconButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
                       foregroundColor: AppColors.homeWarmText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     tooltip: 'Periodo siguiente',
                     onPressed: () => _move(1),

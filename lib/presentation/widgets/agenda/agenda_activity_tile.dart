@@ -35,8 +35,9 @@ class AgendaActivityTile extends StatelessWidget {
               '$time\n${activity.date.hour < 12 ? 'AM' : 'PM'}',
               style: const TextStyle(
                 fontFamily: 'SulphurPoint',
+                fontWeight: FontWeight.w700,
                 color: AppColors.primaryColor,
-                fontSize: 14,
+                fontSize: 18,
                 height: 1,
               ),
             ),

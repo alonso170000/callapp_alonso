@@ -142,7 +142,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
               children: [
                 const HomeHeader(
                   userName: 'Leonardo Pérez',
-                  title: 'TUS PROSPECTOS',
+                  title: 'MIS PROSPECTOS',
                 ),
                 const SizedBox(height: 22),
                 TextField(
