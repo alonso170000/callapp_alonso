@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -114,10 +115,15 @@ class _UserAvatar extends StatelessWidget {
                 color: AppColors.homeDeepTeal,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.notifications_rounded,
-                color: AppColors.homeWarmText,
-                size: 18,
+              child: IconButton(
+                tooltip: 'Notificaciones',
+                padding: EdgeInsets.zero,
+                onPressed: () => showNotificationsSheet(context),
+                icon: const Icon(
+                  Icons.notifications_rounded,
+                  color: AppColors.homeWarmText,
+                  size: 18,
+                ),
               ),
             ),
           ),

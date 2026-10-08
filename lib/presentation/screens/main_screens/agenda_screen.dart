@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_filters_sheet.dart';
 import 'package:flutter/material.dart';
@@ -253,7 +254,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
           sliver: SliverList.list(
             children: [
-              const HomeHeader(userName: 'Leonardo Pérez', title: 'MI AGENDA'),
+              HomeHeader(
+                userName: AuthService.instance.userName,
+                title: 'MI AGENDA',
+              ),
               const SizedBox(height: 20),
               AgendaPeriodSelector(
                 selected: _period,

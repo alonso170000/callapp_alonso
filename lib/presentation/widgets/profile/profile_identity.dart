@@ -5,7 +5,8 @@ import 'package:callerapp_frontend/presentation/models/profile_models.dart';
 
 class ProfileIdentity extends StatelessWidget {
   final ProfileData profile;
-  const ProfileIdentity({super.key, required this.profile});
+  final String? role;
+  const ProfileIdentity({super.key, required this.profile, this.role});
 
   Widget _badge(String text, {double size = 17, Color color = Colors.white}) =>
       Container(
@@ -46,7 +47,11 @@ class ProfileIdentity extends StatelessWidget {
         children: [
           _badge(profile.name),
           _badge(profile.email),
-          _badge(profile.phone, color: AppColors.homeWarmText),
+          _badge(profile.phone, color: AppColors.secondaryColor),
+          _badge(
+            role?.trim().isNotEmpty == true ? role!.trim() : 'No disponible',
+            color: AppColors.homeBadge,
+          ),
         ],
       ),
     ],

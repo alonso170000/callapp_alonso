@@ -21,14 +21,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(button);
     await tester.pumpAndSettle();
-    expect(find.text('El correo es obligatorio.'), findsOneWidget);
+    expect(find.text('El usuario es obligatorio.'), findsOneWidget);
     expect(find.text('La contraseña es obligatoria.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Password visibility and remember me respond to input', (
-    tester,
-  ) async {
+  testWidgets('Password visibility responds to input', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
     await tester.pumpAndSettle();
     final toggle = find.byTooltip('Mostrar contraseña');
@@ -37,10 +35,6 @@ void main() {
     await tester.pumpAndSettle();
     final password = tester.widget<TextField>(find.byType(TextField).last);
     expect(password.obscureText, isFalse);
-    await tester.ensureVisible(find.byType(Checkbox));
-    await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
     expect(tester.takeException(), isNull);
   });
 }

@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
@@ -9,7 +10,14 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen
 // usar go_router nos ayuda a nosotros no tengamos que hacer configuraciones especiales si queremos usarlo en la web
 // creamos la configuracion global del router y esto define como navegamos entre pantallas
 final appRouter = GoRouter(
-  initialLocation: '/home',
+  initialLocation: '/login',
+  refreshListenable: AuthService.instance,
+  redirect: (context, state) {
+    final authenticated = AuthService.instance.isAuthenticated;
+    if (!authenticated && state.matchedLocation != '/login') return '/login';
+    if (authenticated && state.matchedLocation == '/login') return '/home';
+    return null;
+  },
 
   // errorBuilder: (context, state) =>
   //     NotFoundScreen(onGoHome: () => context.go('/')),

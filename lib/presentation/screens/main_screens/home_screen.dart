@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 20, 16, 118),
                         sliver: SliverList.list(
                           children: [
-                            const HomeHeader(userName: 'Leonardo Pérez'),
+                            HomeHeader(userName: AuthService.instance.userName),
                             const SizedBox(height: 18),
                             WeeklyProgressStrip(days: demoWeeklyProgress),
                             const SizedBox(height: 18),

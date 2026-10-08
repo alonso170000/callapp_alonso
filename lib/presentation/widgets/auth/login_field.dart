@@ -46,7 +46,7 @@ class LoginField extends StatelessWidget {
           enableSuggestions: !password,
           keyboardType: password
               ? TextInputType.visiblePassword
-              : TextInputType.emailAddress,
+              : TextInputType.text,
           textInputAction: password
               ? TextInputAction.done
               : TextInputAction.next,

@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
@@ -140,8 +141,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const HomeHeader(
-                  userName: 'Leonardo Pérez',
+                HomeHeader(
+                  userName: AuthService.instance.userName,
                   title: 'MIS PROSPECTOS',
                 ),
                 const SizedBox(height: 22),
@@ -255,13 +256,62 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     ),
                     PopupMenuButton<String>(
                       tooltip: 'Ordenar prospectos',
+                      color: AppColors.primaryColor,
+                      surfaceTintColor: Colors.transparent,
+                      elevation: 8,
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.homeDeepTeal),
+                      ),
                       initialValue: _advanced.sort,
                       onSelected: (value) =>
                           setState(() => _advanced.sort = value),
                       itemBuilder: (_) => ProspectFilters.sorts
                           .map(
-                            (value) =>
-                                PopupMenuItem(value: value, child: Text(value)),
+                            (value) => PopupMenuItem(
+                              value: value,
+                              padding: EdgeInsets.zero,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: 48,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                color: value == _advanced.sort
+                                    ? AppColors.homeWarmText
+                                    : AppColors.primaryColor,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        value,
+                                        style: TextStyle(
+                                          fontFamily: 'SulphurPoint',
+                                          fontSize: 15,
+                                          fontWeight: value == _advanced.sort
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: value == _advanced.sort
+                                              ? AppColors.primaryColor
+                                              : AppColors.homeWarmText,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Icon(
+                                      value == _advanced.sort
+                                          ? Icons.check_rounded
+                                          : null,
+                                      size: 20,
+                                      color: AppColors.primaryColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           )
                           .toList(),
                       child: Container(

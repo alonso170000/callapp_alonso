@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/presentation/widgets/auth/login_illustration.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/auth/login_field.dart';
@@ -20,7 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _rememberMe = false;
+  bool _submitting = false;
+  String? _error;
   bool _obscurePassword = true;
 
   @override
@@ -30,11 +32,30 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submit() async {
+    if (_submitting || !_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    // Conserva la navegación del prototipo hasta conectar la autenticación.
-    context.goNamed(HomeScreen.name);
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await AuthService.instance.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+      if (mounted) context.goNamed(HomeScreen.name);
+    } on AuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'No se pudo iniciar sesión. Intenta nuevamente.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -137,50 +158,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                   password: true,
                                 ),
                                 const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      child: Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (value) => setState(
-                                          () => _rememberMe = value ?? false,
-                                        ),
-                                        activeColor: AppColors.primaryColor,
-                                        checkColor: Colors.white,
-                                        side: const BorderSide(
-                                          color: AppColors.primaryColor,
-                                          width: 1.6,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        semanticLabel: 'Recuérdame',
+                                if (_error != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: Text(
+                                      _error!,
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
                                       ),
+                                      semanticsLabel: _error,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: GestureDetector(
-                                        onTap: () => setState(
-                                          () => _rememberMe = !_rememberMe,
-                                        ),
-                                        child: const Text(
-                                          'Recuérdame',
-                                          style: TextStyle(
-                                            fontFamily: 'SulphurPoint',
-                                            fontSize: 16,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
                                 const SizedBox(height: 12),
                                 FilledButton(
-                                  onPressed: _submit,
+                                  onPressed: _submitting ? null : _submit,
                                   style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.primaryColor,
                                     foregroundColor: Colors.white,
@@ -193,7 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontSize: 24,
                                     ),
                                   ),
-                                  child: const Text('INGRESAR'),
+                                  child: Text(
+                                    _submitting ? 'CONECTANDO…' : 'INGRESAR',
+                                  ),
                                 ),
                               ],
                             ),

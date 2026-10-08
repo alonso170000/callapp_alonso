@@ -1,5 +1,7 @@
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/edit_profile_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/models/profile_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/profile_widgets.dart';
@@ -13,9 +15,20 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  ProfileData _profile = demoProfile;
+  late ProfileData _profile;
   bool _notifications = true;
   int _reminder = 15;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = AuthService.instance;
+    _profile = ProfileData(
+      name: auth.userName,
+      phone: auth.phone ?? 'No disponible',
+      email: auth.email ?? 'No disponible',
+    );
+  }
 
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -33,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _ => _profile.copyWith(email: result),
       },
     );
+    _message('Cambio guardado solo en esta sesión.');
   }
 
   Future<void> _chooseReminder() async {
@@ -82,13 +96,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: AppColors.primaryColor,
               foregroundColor: AppColors.homeWarmText,
             ),
-            onPressed: () => _message('No tienes notificaciones nuevas.'),
-            icon: const Icon(Icons.notifications_rounded),
+            onPressed: () => showNotificationsSheet(context),
+            icon: const Icon(Iconsax.notification),
           ),
         ],
       ),
       const SizedBox(height: 16),
-      ProfileIdentity(profile: _profile),
+      ProfileIdentity(
+        profile: _profile,
+        role: AuthService.instance.activeDevelopment?['rol'] as String?,
+      ),
       const SizedBox(height: 26),
       ProfileSection(
         title: 'DATOS PERSONALES',
@@ -121,8 +138,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       const SizedBox(height: 18),
       ProfileSection(
-        title: 'CONFIGURACIÓN',
+        title: 'NOTIFICACIONES',
         children: [
+          ProfileSettingRow(
+            title: 'BANDEJA DE NOTIFICACIONES',
+            value: 'Consultar avisos',
+            titleColor: AppColors.profileConfiguracion,
+            icon: Icons.chevron_right,
+            actionLabel: 'Abrir notificaciones',
+            onPressed: () => showNotificationsSheet(context),
+          ),
           ProfileSettingRow(
             title: 'NOTIFICACIONES',
             value: _notifications ? 'Activado' : 'Desactivado',
@@ -139,6 +164,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             actionLabel: 'Cambiar recordatorios',
             onPressed: _chooseReminder,
           ),
+        ],
+      ),
+      const SizedBox(height: 18),
+      ProfileSection(
+        title: 'CONFIGURACIÓN',
+        children: [
           ProfileSettingRow(
             title: 'APARIENCIA',
             value: 'Claro',
@@ -174,7 +205,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               borderRadius: BorderRadius.circular(9),
             ),
           ),
-          onPressed: () => context.go('/login'),
+          onPressed: () {
+            AuthService.instance.logout();
+            context.go('/login');
+          },
           child: const Text(
             'CERRAR SESIÓN',
             style: TextStyle(fontFamily: 'BebasNeue', fontSize: 19),

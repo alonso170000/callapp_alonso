@@ -94,6 +94,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
             children: [
               Row(
                 children: [
+                  const SizedBox(width: 48),
                   const Expanded(
                     child: Text(
                       'Nueva actividad',
@@ -245,6 +246,7 @@ class _AgendaDropdown<T> extends StatelessWidget {
         isExpanded: true,
         initialValue: value,
         dropdownColor: AppColors.primaryColor,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded),
         iconEnabledColor: AppColors.homeBackground,
         style: const TextStyle(
           color: AppColors.homeBackground,
