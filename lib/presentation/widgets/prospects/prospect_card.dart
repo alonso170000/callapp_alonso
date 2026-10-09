@@ -89,12 +89,30 @@ class ProspectCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: prospect.avatarColor,
-                  child: Image.asset(
-                    'lib/resources/images/Frame.png',
-                    width: 28,
-                    height: 28,
-                    excludeFromSemantics: true,
-                  ),
+                  child: prospect.id != null
+                      ? ClipOval(
+                          child: prospect.avatarUrl == null
+                              ? const Icon(
+                                  Icons.person,
+                                  color: AppColors.homeWarmText,
+                                )
+                              : Image.network(
+                                  prospect.avatarUrl!,
+                                  width: 28,
+                                  height: 28,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => const Icon(
+                                    Icons.person,
+                                    color: AppColors.homeWarmText,
+                                  ),
+                                ),
+                        )
+                      : Image.asset(
+                          'lib/resources/images/Frame.png',
+                          width: 28,
+                          height: 28,
+                          excludeFromSemantics: true,
+                        ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -113,7 +131,9 @@ class ProspectCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        prospect.daysSinceContact == 0
+                        prospect.id != null
+                            ? 'Seguimiento no disponible'
+                            : prospect.daysSinceContact == 0
                             ? 'Sin contacto'
                             : 'Llamada · Hace ${prospect.daysSinceContact} ${prospect.daysSinceContact == 1 ? 'día' : 'días'}',
                         style: const TextStyle(
@@ -199,7 +219,12 @@ class ProspectCard extends StatelessWidget {
       tooltip: message
           ? 'Mensaje a ${prospect.name}'
           : 'Llamar a ${prospect.name}',
-      onPressed: () => _contact(context, message),
+      onPressed:
+          (message
+              ? prospect.phone.isEmpty && prospect.email.isEmpty
+              : prospect.phone.isEmpty)
+          ? null
+          : () => _contact(context, message),
       style: IconButton.styleFrom(
         backgroundColor: color,
         foregroundColor: AppColors.primaryColor,

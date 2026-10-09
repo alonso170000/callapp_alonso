@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ProspectRecord {
+  final int? id;
+  final String? avatarUrl;
   final String name;
   final String phone;
   final String email;
@@ -28,6 +30,8 @@ class ProspectRecord {
   final String origin;
 
   const ProspectRecord({
+    this.id,
+    this.avatarUrl,
     this.comments,
     this.product = '',
     this.lotDescription = '',

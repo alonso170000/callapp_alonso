@@ -1,4 +1,6 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_summary_sheet.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
@@ -18,19 +20,57 @@ class ProspectsController {
 
 class ProspectsScreen extends StatefulWidget {
   final ProspectsController? controller;
-  const ProspectsScreen({super.key, this.controller});
+  final Future<List<ProspectRecord>> Function()? loadProspects;
+  const ProspectsScreen({super.key, this.controller, this.loadProspects});
 
   @override
   State<ProspectsScreen> createState() => _ProspectsScreenState();
 }
 
 class _ProspectsScreenState extends State<ProspectsScreen> {
-  final _records = List<ProspectRecord>.of(demoProspects);
+  final _records = <ProspectRecord>[];
+  final _service = ProspectsService();
+  bool _loading = false;
+  String? _error;
+  int _request = 0;
+
+  Future<void> _load() async {
+    final request = ++_request;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final records = await (widget.loadProspects?.call() ?? _service.fetch());
+      if (!mounted || request != _request) return;
+      setState(() {
+        _records.clear();
+        _records.addAll(records);
+      });
+    } on ProspectsException catch (error) {
+      if (mounted && request == _request) {
+        setState(() => _error = error.message);
+      }
+    } finally {
+      if (mounted && request == _request) setState(() => _loading = false);
+    }
+  }
+
+  void _sessionChanged() {
+    ++_request;
+    _records.clear();
+    _search.clear();
+    _status = 'Todos';
+    _advanced = ProspectFilters();
+    _load();
+  }
 
   @override
   void initState() {
     super.initState();
     widget.controller?._open = _addProspect;
+    AuthService.instance.addListener(_sessionChanged);
+    _load();
   }
 
   @override
@@ -62,8 +102,9 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       _status = 'Todos';
       _advanced = ProspectFilters();
     });
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Prospecto agregado.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Prospecto agregado solo en esta sesión.')),
+    );
   }
 
   static const _filters = [
@@ -84,6 +125,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   void dispose() {
     widget.controller?._open = null;
     _search.dispose();
+    AuthService.instance.removeListener(_sessionChanged);
+    _service.dispose();
     super.dispose();
   }
 
@@ -143,7 +186,13 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
               children: [
                 HomeHeader(
                   userName: AuthService.instance.userName,
-                  title: 'MIS PROSPECTOS',
+                  title:
+                      AuthService.instance.activeDevelopment?['rol']
+                              ?.toString()
+                              .toLowerCase() ==
+                          'admin'
+                      ? 'PROSPECTOS DEL DESARROLLO'
+                      : 'MIS PROSPECTOS',
                 ),
                 const SizedBox(height: 22),
                 TextField(
@@ -277,8 +326,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                                   minHeight: 48,
                                 ),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+                                  horizontal: 14,
+                                  vertical: 14,
                                 ),
                                 color: value == _advanced.sort
                                     ? AppColors.homeWarmText
@@ -290,23 +339,15 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                                         value,
                                         style: TextStyle(
                                           fontFamily: 'SulphurPoint',
-                                          fontSize: 15,
+                                          fontSize: 18,
                                           fontWeight: value == _advanced.sort
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                           color: value == _advanced.sort
                                               ? AppColors.primaryColor
-                                              : AppColors.homeWarmText,
+                                              : AppColors.homeBackground,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Icon(
-                                      value == _advanced.sort
-                                          ? Icons.check_rounded
-                                          : null,
-                                      size: 20,
-                                      color: AppColors.primaryColor,
                                     ),
                                   ],
                                 ),
@@ -354,7 +395,39 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
             ),
           ),
         ),
-        if (prospects.isEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: _loading
+                ? const LinearProgressIndicator(color: AppColors.primaryColor)
+                : _error != null
+                ? Column(
+                    children: [
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'SulphurPoint',
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  )
+                : Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _load,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Actualizar prospectos'),
+                    ),
+                  ),
+          ),
+        ),
+        if (prospects.isEmpty && !_loading && _error == null)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -402,10 +475,19 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
               padding: const EdgeInsets.only(bottom: 10),
               child: ProspectCard(
                 prospect: prospects[index],
-                onTap: () => context.push(
-                  '/prospectos/${prospects[index].phone}',
-                  extra: prospects[index],
-                ),
+                onTap: prospects[index].id != null
+                    ? () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        showDragHandle: true,
+                        backgroundColor: AppColors.homeBackground,
+                        builder: (_) =>
+                            ProspectSummarySheet(prospect: prospects[index]),
+                      )
+                    : () => context.push(
+                        '/prospectos/${prospects[index].phone}',
+                        extra: prospects[index],
+                      ),
               ),
             ),
           ),

@@ -171,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       semanticsLabel: _error,
                                     ),
                                   ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 28),
                                 FilledButton(
                                   onPressed: _submitting ? null : _submit,
                                   style: FilledButton.styleFrom(

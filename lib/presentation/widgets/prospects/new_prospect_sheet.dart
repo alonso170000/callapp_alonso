@@ -32,8 +32,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     'Decisión': false,
     'Disposición': false,
     'Dinero': false,
-    'Pasó a TO': false,
-    'Discovery Completo': false,
+    'Pasó a TO': false
   };
   String _origin = 'Facebook', _status = 'Nuevo';
   DateTime _date = DateUtils.dateOnly(DateTime.now());
@@ -82,7 +81,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         willingness: _qualification['Disposición']!,
         money: _qualification['Dinero']!,
         passedToTO: _qualification['Pasó a TO']!,
-        discoveryComplete: _qualification['Discovery Completo']!,
+
       ),
     );
   }

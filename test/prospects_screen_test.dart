@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
@@ -11,7 +12,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: ProspectsScreen())),
+      MaterialApp(
+        home: Scaffold(
+          body: ProspectsScreen(loadProspects: () async => demoProspects),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
   }
@@ -65,7 +70,12 @@ void main() {
     expect(find.text('BIENVENIDO'), findsOneWidget);
     await tester.tap(find.byIcon(Iconsax.profile_2user_copy));
     await tester.pumpAndSettle();
-    expect(find.text('MOSTRANDO 1 PROSPECTOS'), findsOneWidget);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Nuevo'))
+          .selected,
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 

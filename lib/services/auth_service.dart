@@ -31,6 +31,7 @@ class AuthService extends ChangeNotifier {
   String get userName => _userName ?? 'Usuario';
   Map<String, dynamic>? activeDevelopment;
   String? get token => _token;
+  String get baseUrl => _baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
   bool get isAuthenticated => _token != null;
 
   Future<void> login(String username, String password) async {

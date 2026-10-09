@@ -391,7 +391,6 @@ class ProspectHistory extends StatelessWidget {
               _summaryField('Disposición', discoverySummary.disposition),
               _summaryField('Dinero', discoverySummary.money),
               _summaryField('Pasó a TO', discoverySummary.transferredTo),
-              _summaryField('Discovery Completo', discoverySummary.completed),
             ],
           ),
         ),
