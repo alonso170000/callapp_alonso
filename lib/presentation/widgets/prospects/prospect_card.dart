@@ -40,20 +40,26 @@ class ProspectCard extends StatelessWidget {
               SelectableText(prospect.phone),
               if (message) SelectableText(prospect.email),
               const SizedBox(height: 12),
-              const Text(
-                'Contacto de ejemplo',
+              Text(
+                prospect.id == null
+                    ? 'Contacto de ejemplo'
+                    : 'Datos de contacto',
                 style: TextStyle(color: Colors.black54),
               ),
               TextButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: prospect.phone));
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Número copiado')),
-                    );
-                  }
-                },
+                onPressed: prospect.phone.isEmpty
+                    ? null
+                    : () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: prospect.phone),
+                        );
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Número copiado')),
+                          );
+                        }
+                      },
                 icon: const Icon(Icons.copy),
                 label: const Text('Copiar teléfono'),
               ),
@@ -76,10 +82,10 @@ class ProspectCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.primaryColor,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +93,7 @@ class ProspectCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  radius: 16,
+                  radius: 18,
                   backgroundColor: prospect.avatarColor,
                   child: prospect.id != null
                       ? ClipOval(
@@ -125,20 +131,23 @@ class ProspectCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'BebasNeue',
-                          fontSize: 21,
+                          fontSize: 23,
                           height: 1.05,
                           color: AppColors.homeWarmText,
                         ),
                       ),
                       Text(
-                        prospect.id != null
-                            ? 'Seguimiento no disponible'
+                        prospect.id != null && prospect.lastCallAt == null
+                            ? 'Sin llamadas registradas'
+                            : prospect.lastCallAt != null &&
+                                  prospect.daysSinceContact == 0
+                            ? 'Llamada · Hoy'
                             : prospect.daysSinceContact == 0
                             ? 'Sin contacto'
                             : 'Llamada · Hace ${prospect.daysSinceContact} ${prospect.daysSinceContact == 1 ? 'día' : 'días'}',
                         style: const TextStyle(
                           fontFamily: 'SulphurPoint',
-                          fontSize: 10,
+                          fontSize: 11,
                           color: Color(0xFFB0E4DB),
                         ),
                       ),

@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_card.dart';
 
 void main() {
   Future<AuthService> login() async {
@@ -59,6 +60,69 @@ void main() {
     expect(record.nextContact, isNull);
     expect(record.assignedAt, isNotNull);
   });
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets('Extended API card shows actual follow-up at $width', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final now = DateTime.now();
+      final last = DateTime(now.year, now.month, now.day - 2, 10);
+      final next = DateTime(now.year, now.month, now.day + 1, 14, 30);
+      final service = ProspectsService(
+        auth: await login(),
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [
+                {
+                  'id': 16,
+                  'nombre': 'Luis Antonio',
+                  'estatus': 'Cotización',
+                  'telefono_normalizado': '529980000001',
+                  'correo': 'luis@example.com',
+                  'prioridad': 'caliente',
+                  'comentario': 'Llamada de seguimiento pendiente.',
+                  'ultima_llamada_at': last.toUtc().toIso8601String(),
+                  'proximo_contacto_at': next.toUtc().toIso8601String(),
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          ),
+        ),
+      );
+      addTearDown(service.dispose);
+      final record = (await service.fetch()).single;
+      expect(record.phone, '529980000001');
+      expect(record.email, 'luis@example.com');
+      expect(record.nextContact, next);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ProspectCard(prospect: record),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Llamada · Hace 2 días'), findsOneWidget);
+      expect(find.text('COTIZACIÓN'), findsOneWidget);
+      expect(find.text('CALIENTE'), findsOneWidget);
+      expect(find.text('Llamada de seguimiento pendiente.'), findsOneWidget);
+      expect(find.text('02:30 PM'), findsOneWidget);
+      await tester.tap(find.byTooltip('Llamar a Luis Antonio'));
+      await tester.pumpAndSettle();
+      expect(find.text('529980000001'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   test('Empty response stays empty', () async {
     final service = ProspectsService(

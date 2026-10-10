@@ -17,7 +17,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     //.router hace que cambie su forma de navegacion a una mas moderna en su manejo automatico de rutas
     return MaterialApp.router(
-      routerConfig: appRouter, //sistema de rutas que utilizaremos
+      routerConfig: appRouter, 
       debugShowCheckedModeBanner: false,
       locale: const Locale('es', 'MX'),
       supportedLocales: const [Locale('es', 'MX')],

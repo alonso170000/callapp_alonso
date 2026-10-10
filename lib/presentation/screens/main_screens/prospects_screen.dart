@@ -83,7 +83,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   }
 
   Future<void> _addProspect() async {
-    final record = await showModalBottomSheet<ProspectRecord>(
+    final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -95,16 +95,16 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       clipBehavior: Clip.antiAlias,
       builder: (_) => const NewProspectSheet(),
     );
-    if (!mounted || record == null) return;
+    if (!mounted || created != true) return;
     setState(() {
-      _records.insert(0, record);
       _search.clear();
       _status = 'Todos';
       _advanced = ProspectFilters();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Prospecto agregado solo en esta sesión.')),
+      const SnackBar(content: Text('Prospecto registrado correctamente.')),
     );
+    await _load();
   }
 
   static const _filters = [

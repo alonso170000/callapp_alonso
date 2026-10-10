@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/validators/prospect_validators.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class NewProspectSheet extends StatefulWidget {
-  const NewProspectSheet({super.key});
+  const NewProspectSheet({super.key, this.service});
+  final ProspectsService? service;
 
   @override
   State<NewProspectSheet> createState() => _NewProspectSheetState();
@@ -20,70 +21,110 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       'Teléfono',
       'Empresa donde trabaja',
       'Ocupación',
-      'Comentarios del prospecto',
-      'Producto',
-      'Descripción de Lote',
+      'Comentarios acerca del prospecto',
     ])
       name: TextEditingController(),
-    'Dimensión en m² (sin comas)': TextEditingController(text: '0'),
-    'Precio completo del lote': TextEditingController(text: '0'),
   };
   final _qualification = <String, bool>{
     'Decisión': false,
     'Disposición': false,
     'Dinero': false,
-    'Pasó a TO': false
+    'Pasó a TO': false,
   };
-  String _origin = 'Facebook', _status = 'Nuevo';
-  DateTime _date = DateUtils.dateOnly(DateTime.now());
-  int _hour = 0, _minute = 0;
+  late final ProspectsService _service;
+  List<Map<String, dynamic>> _origins = [], _statuses = [];
+  int? _origin, _status;
+  bool _loading = true, _saving = false;
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    _service = widget.service ?? ProspectsService();
+    _loadCatalogs();
+  }
+
+  Future<void> _loadCatalogs() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final catalogs = await Future.wait([
+        _service.catalog('canales'),
+        _service.catalog('estatus-prospecto'),
+      ]);
+      if (!mounted) return;
+      if (catalogs.any((items) => items.isEmpty)) {
+        throw const ProspectsException(
+          'No hay orígenes o estatus disponibles.',
+        );
+      }
+      setState(() {
+        _origins = catalogs[0];
+        _statuses = catalogs[1];
+        _origin = _origins.first['id'] as int;
+        _status =
+            (_statuses
+                        .where(
+                          (s) =>
+                              (s['nombre'] as String).toLowerCase() == 'nuevo',
+                        )
+                        .firstOrNull ??
+                    _statuses.first)['id']
+                as int;
+      });
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   void dispose() {
     for (final controller in _fields.values) {
       controller.dispose();
     }
+    if (widget.service == null) _service.dispose();
     super.dispose();
   }
 
-  void _save() {
-    if (!_form.currentState!.validate()) return;
+  Future<void> _save() async {
+    if (_saving ||
+        _origin == null ||
+        _status == null ||
+        !_form.currentState!.validate()) {
+      return;
+    }
     String text(String name) => _fields[name]!.text.trim();
-    Navigator.pop(
-      context,
-      ProspectRecord(
-        name: text('Nombre'),
-        email: text('Email'),
-        city: text('Ciudad'),
-        phone: text('Teléfono'),
-        company: text('Empresa donde trabaja'),
-        occupation: text('Ocupación'),
-        origin: _origin,
-        status: _status,
-        temperature: 'Sin calificar',
-        avatarColor: const Color(0xFF94E5EF),
-        statusColor: const Color(0xFF67D9EC),
-        daysSinceContact: 0,
-        assignedAt: DateTime.now(),
-        nextContact: DateTime(
-          _date.year,
-          _date.month,
-          _date.day,
-          _hour,
-          _minute,
-        ),
-        comments: text('Comentarios del prospecto'),
-        product: text('Producto'),
-        lotDescription: text('Descripción de Lote'),
-        dimension: double.parse(text('Dimensión en m² (sin comas)')),
-        fullPrice: double.parse(text('Precio completo del lote')),
-        decision: _qualification['Decisión']!,
-        willingness: _qualification['Disposición']!,
-        money: _qualification['Dinero']!,
-        passedToTO: _qualification['Pasó a TO']!,
-
-      ),
-    );
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await _service.create({
+        'nombre': text('Nombre'),
+        'correo': text('Email'),
+        'telefono_normalizado': text('Teléfono').replaceAll(RegExp(r'\D'), ''),
+        'ciudad': text('Ciudad'),
+        'nombre_compania': text('Empresa donde trabaja'),
+        'ocupacion': text('Ocupación'),
+        'comentario': text('Comentarios acerca del prospecto'),
+        'canal_id': _origin,
+        'estatus_id': _status,
+        'calificacion': [
+          if (_qualification['Decisión']!) 'decision',
+          if (_qualification['Disposición']!) 'disposicion',
+          if (_qualification['Dinero']!) 'dinero',
+          if (_qualification['Pasó a TO']!) 'paso_to',
+        ],
+      });
+      if (mounted) Navigator.pop(context, true);
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   InputDecoration _decoration(String label) => const InputDecoration(
@@ -150,19 +191,6 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     ),
   );
 
-  Widget _dateTimeButton(String label, VoidCallback onPressed) => FilledButton(
-    style: FilledButton.styleFrom(
-      backgroundColor: AppColors.primaryColor,
-      foregroundColor: AppColors.homeBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-      textStyle: const TextStyle(
-        fontFamily: 'SulphurPoint',
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    onPressed: onPressed,
-    child: Text(label),
-  );
   Widget _heading(String title) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 2),
     child: Text(
@@ -241,7 +269,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                 ),
                 IconButton(
                   tooltip: 'Cerrar',
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _saving ? null : () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded, size: 30),
                 ),
               ],
@@ -266,21 +294,35 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                     _field('Empresa donde trabaja'),
                     _field('Ocupación'),
                     _heading('Origen y Estado'),
-                    _dropdown('Origen', _origin, [
-                      'Facebook',
-                      'WhatsApp',
-                      'Referido',
-                      'Sitio web',
-                    ], (v) => _origin = v),
-                    _dropdown('Status*', _status, [
-                      'Nuevo',
-                      'Contactado y validado',
-                      'Seguimiento',
-                      'Cotización',
-                      'Negociación',
-                      'Venta realizada',
-                      'Atrasados',
-                    ], (v) => _status = v),
+                    if (_loading) const LinearProgressIndicator(),
+                    if (_origins.isNotEmpty && _statuses.isNotEmpty) ...[
+                      _dropdown<int>(
+                        'Origen*',
+                        _origin!,
+                        _origins.map((v) => v['id'] as int).toList(),
+                        (v) => _origin = v,
+                        format: (id) =>
+                            _origins.firstWhere((v) => v['id'] == id)['nombre']
+                                as String,
+                      ),
+                      _dropdown<int>(
+                        'Status*',
+                        _status!,
+                        _statuses.map((v) => v['id'] as int).toList(),
+                        (v) => _status = v,
+                        format: (id) =>
+                            _statuses.firstWhere((v) => v['id'] == id)['nombre']
+                                as String,
+                      ),
+                    ],
+                    if (_error != null) ...[
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      if (_origins.isEmpty)
+                        TextButton(
+                          onPressed: _loadCatalogs,
+                          child: const Text('Reintentar'),
+                        ),
+                    ],
                     _heading('Califica tu lead'),
                     for (final label in _qualification.keys)
                       _QualificationToggle(
@@ -290,54 +332,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                             setState(() => _qualification[label] = value),
                       ),
                     const SizedBox(height: 16),
-                    _field('Comentarios del prospecto', lines: 3),
-                    _heading('Información del Producto'),
-                    _field('Producto', required: true),
-                    _field('Descripción de Lote'),
-                    _field('Dimensión en m² (sin comas)', numeric: true),
-                    _field('Precio completo del lote', numeric: true),
-                    _heading('Siguiente llamada programada'),
-                    _labeled(
-                      'Fecha/hora',
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _dateTimeButton(
-                            '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}',
-                            () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: _date,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
-                              );
-                              if (mounted && date != null) {
-                                setState(() => _date = date);
-                              }
-                            },
-                          ),
-                          _dateTimeButton(
-                            '${(_hour % 12 == 0 ? 12 : _hour % 12)}:${_minute.toString().padLeft(2, '0')} ${_hour < 12 ? 'AM' : 'PM'}',
-                            () async {
-                              final time = await showTimePicker(
-                                context: context,
-                                initialTime: TimeOfDay(
-                                  hour: _hour,
-                                  minute: _minute,
-                                ),
-                              );
-                              if (mounted && time != null) {
-                                setState(() {
-                                  _hour = time.hour;
-                                  _minute = time.minute;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                    _field('Comentarios acerca del prospecto', lines: 3),
                   ],
                 ),
               ),
@@ -365,7 +360,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                       ),
                       textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _saving ? null : () => Navigator.pop(context),
                     child: const Text('Cancelar'),
                   ),
                 ),
@@ -373,7 +368,9 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                 Expanded(
                   child: FilledButton(
                     key: const ValueKey('save-prospect'),
-                    onPressed: _save,
+                    onPressed: _saving || _loading || _origin == null
+                        ? null
+                        : _save,
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF008FA0),
                       foregroundColor: Colors.white,
@@ -382,7 +379,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                       ),
                       textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                     ),
-                    child: const Text('Guardar'),
+                    child: Text(_saving ? 'Guardando…' : 'Guardar'),
                   ),
                 ),
               ],

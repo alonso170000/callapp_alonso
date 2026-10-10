@@ -28,6 +28,11 @@ class ProspectSummarySheet extends StatelessWidget {
               'Estatus': prospect.status,
               'Ciudad': prospect.city,
               'Canal': prospect.origin,
+              'Teléfono': prospect.phone.isEmpty
+                  ? 'Sin teléfono'
+                  : prospect.phone,
+              'Correo': prospect.email.isEmpty ? 'Sin correo' : prospect.email,
+              'Prioridad': prospect.temperature,
               'Asignación': date == null
                   ? 'Sin fecha de asignación'
                   : '${date.day}/${date.month}/${date.year}',
@@ -43,8 +48,8 @@ class ProspectSummarySheet extends StatelessWidget {
                   ),
                 ),
               ),
-            const Text(
-              'La información de contacto y seguimiento aún no está disponible.',
+            Text(
+              prospect.note,
               style: TextStyle(
                 fontFamily: 'SulphurPoint',
                 color: AppColors.primaryColor,
