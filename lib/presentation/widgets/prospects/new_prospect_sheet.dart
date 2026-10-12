@@ -22,6 +22,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       'Empresa donde trabaja',
       'Ocupación',
       'Comentarios acerca del prospecto',
+      'Descripción del primer seguimiento',
     ])
       name: TextEditingController(),
   };
@@ -33,7 +34,19 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   };
   late final ProspectsService _service;
   List<Map<String, dynamic>> _origins = [], _statuses = [];
+  List<Map<String, dynamic>> _lots = [];
   int? _origin, _status;
+  int _lot = 0;
+  String _priority = 'tibio';
+  bool _firstFollowUp = false;
+  String _activityType = 'seguimiento';
+  String _contactMedium = 'llamada';
+  String _location = 'Lote';
+  int _reminderMinutes = 15;
+  DateTime _activityDate = DateUtils.dateOnly(
+    DateTime.now().add(const Duration(days: 1)),
+  );
+  TimeOfDay _activityTime = const TimeOfDay(hour: 12, minute: 30);
   bool _loading = true, _saving = false;
   String? _error;
   @override
@@ -52,16 +65,23 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       final catalogs = await Future.wait([
         _service.catalog('canales'),
         _service.catalog('estatus-prospecto'),
+        _service.availableLots(),
       ]);
       if (!mounted) return;
-      if (catalogs.any((items) => items.isEmpty)) {
+      if (catalogs[0].isEmpty || catalogs[1].isEmpty) {
         throw const ProspectsException(
           'No hay orígenes o estatus disponibles.',
+        );
+      }
+      if (_service.activeDevelopment?['id'] is! int) {
+        throw const ProspectsException(
+          'No hay un desarrollo activo en la sesión.',
         );
       }
       setState(() {
         _origins = catalogs[0];
         _statuses = catalogs[1];
+        _lots = catalogs[2];
         _origin = _origins.first['id'] as int;
         _status =
             (_statuses
@@ -102,6 +122,13 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       _error = null;
     });
     try {
+      final scheduledAt = DateTime(
+        _activityDate.year,
+        _activityDate.month,
+        _activityDate.day,
+        _activityTime.hour,
+        _activityTime.minute,
+      );
       await _service.create({
         'nombre': text('Nombre'),
         'correo': text('Email'),
@@ -112,6 +139,24 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         'comentario': text('Comentarios acerca del prospecto'),
         'canal_id': _origin,
         'estatus_id': _status,
+        'prioridad': _priority,
+        if (_lot != 0) 'lote_id': _lot,
+        if (_firstFollowUp)
+          'primer_seguimiento': {
+            'tipo': _activityType,
+            'programada_at': scheduledAt.toIso8601String(),
+            'recordatorio_at': scheduledAt
+                .subtract(Duration(minutes: _reminderMinutes))
+                .toIso8601String(),
+            if (_activityType != 'visita_presencial' ||
+                text('Descripción del primer seguimiento').isNotEmpty)
+              'descripcion': text('Descripción del primer seguimiento'),
+            if (_activityType == 'visita_presencial')
+              'ubicacion': _location == 'Lote' && _lot != 0
+                  ? 'Lote ${_lotLabel(_lot)}'
+                  : _location,
+            if (_activityType == 'seguimiento') 'medio': _contactMedium,
+          },
         'calificacion': [
           if (_qualification['Decisión']!) 'decision',
           if (_qualification['Disposición']!) 'disposicion',
@@ -190,6 +235,37 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
           : null,
     ),
   );
+
+  Widget _dateTimeButton(String label, VoidCallback onPressed) => FilledButton(
+    style: FilledButton.styleFrom(
+      backgroundColor: AppColors.primaryColor,
+      foregroundColor: AppColors.homeBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+    ),
+    onPressed: onPressed,
+    child: Text(label),
+  );
+
+  String _lotLabel(int id) =>
+      '${_lots.firstWhere((lot) => lot['id'] == id)['numero_lote']}';
+
+  Future<void> _selectActivityDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _activityDate,
+      firstDate: DateUtils.dateOnly(DateTime.now()),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+    if (mounted && selected != null) setState(() => _activityDate = selected);
+  }
+
+  Future<void> _selectActivityTime() async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _activityTime,
+    );
+    if (mounted && selected != null) setState(() => _activityTime = selected);
+  }
 
   Widget _heading(String title) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 2),
@@ -314,6 +390,18 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                             _statuses.firstWhere((v) => v['id'] == id)['nombre']
                                 as String,
                       ),
+                      _dropdown<String>(
+                        'Prioridad*',
+                        _priority,
+                        const ['caliente', 'tibio', 'frio'],
+                        (value) => _priority = value,
+                        format: (value) => switch (value) {
+                          'caliente' => 'Caliente',
+                          'tibio' => 'Tibio',
+                          'frio' => 'Frío',
+                          _ => value,
+                        },
+                      ),
                     ],
                     if (_error != null) ...[
                       Text(_error!, style: const TextStyle(color: Colors.red)),
@@ -333,6 +421,100 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                       ),
                     const SizedBox(height: 16),
                     _field('Comentarios acerca del prospecto', lines: 3),
+                    _heading('Información de interés'),
+                    if (_service.activeDevelopment?['id'] is int)
+                      _dropdown<int>(
+                        'Desarrollo*',
+                        _service.activeDevelopment!['id'] as int,
+                        [_service.activeDevelopment!['id'] as int],
+                        (_) {},
+                        format: (_) =>
+                            _service.activeDevelopment!['nombre']?.toString() ??
+                            'Desarrollo activo',
+                      ),
+                    _dropdown<int>(
+                      'Lote',
+                      _lot,
+                      [0, ..._lots.map((lot) => lot['id'] as int)],
+                      (value) => _lot = value,
+                      format: (id) => id == 0
+                          ? 'Sin lote seleccionado'
+                          : 'Lote ${_lotLabel(id)}',
+                    ),
+                    Row(
+                      children: [
+                        Expanded(child: _heading('Primer seguimiento')),
+                        Switch(
+                          key: const ValueKey('first-follow-up'),
+                          value: _firstFollowUp,
+                          onChanged: (value) =>
+                              setState(() => _firstFollowUp = value),
+                        ),
+                      ],
+                    ),
+                    if (_firstFollowUp) ...[
+                      _dropdown<String>(
+                        'Tipo*',
+                        _activityType,
+                        const ['seguimiento', 'visita_presencial', 'tarea'],
+                        (value) => _activityType = value,
+                        format: (value) => switch (value) {
+                          'seguimiento' => 'Seguimiento',
+                          'visita_presencial' => 'Visita presencial',
+                          'tarea' => 'Tarea',
+                          _ => value,
+                        },
+                      ),
+                      if (_activityType == 'seguimiento')
+                        _dropdown<String>(
+                          'Medio de contacto*',
+                          _contactMedium,
+                          const ['llamada', 'whatsapp', 'facebook', 'correo'],
+                          (value) => _contactMedium = value,
+                          format: (value) => switch (value) {
+                            'llamada' => 'Llamada',
+                            'whatsapp' => 'WhatsApp',
+                            'facebook' => 'Facebook',
+                            'correo' => 'Correo',
+                            _ => value,
+                          },
+                        ),
+                      if (_activityType == 'visita_presencial')
+                        _dropdown<String>('Lugar*', _location, const [
+                          'Lote',
+                          'Oficina',
+                          'Otro',
+                        ], (value) => _location = value),
+                      _labeled(
+                        'Fecha y hora*',
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _dateTimeButton(
+                              '${_activityDate.day.toString().padLeft(2, '0')}/${_activityDate.month.toString().padLeft(2, '0')}/${_activityDate.year}',
+                              _selectActivityDate,
+                            ),
+                            _dateTimeButton(
+                              _activityTime.format(context),
+                              _selectActivityTime,
+                            ),
+                          ],
+                        ),
+                      ),
+                      _dropdown<int>(
+                        'Recordatorio*',
+                        _reminderMinutes,
+                        const [5, 15, 30, 60],
+                        (value) => _reminderMinutes = value,
+                        format: (value) => '$value minutos antes',
+                      ),
+                      _field(
+                        'Descripción del primer seguimiento',
+                        required: _activityType != 'visita_presencial',
+                        lines: 3,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -411,7 +593,7 @@ class _QualificationToggle extends StatelessWidget {
         onTap: () => onChanged(!value),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 0),
           child: Row(
             children: [
               Expanded(
@@ -430,14 +612,14 @@ class _QualificationToggle extends StatelessWidget {
                 child: Center(
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    width: 48,
-                    height: 22,
-                    padding: const EdgeInsets.all(3),
+                    width: 52,
+                    height: 28,
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: value
                           ? const Color(0xFF4EA58B)
                           : const Color(0xFFA94E52),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: AnimatedAlign(
                       duration: const Duration(milliseconds: 180),

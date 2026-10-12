@@ -19,6 +19,7 @@ class ProspectsService {
       _auth = auth ?? AuthService.instance;
   final http.Client _client;
   final AuthService _auth;
+  Map<String, dynamic>? get activeDevelopment => _auth.activeDevelopment;
 
   Future<Map<String, dynamic>> _request(
     String path, {
@@ -80,6 +81,19 @@ class ProspectsService {
           (row) => row is! Map || row['id'] is! int || row['nombre'] is! String,
         )) {
       throw const ProspectsException('El catálogo recibido no es válido.');
+    }
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> availableLots() async {
+    final data = await _request('catalogs/lotes');
+    final rows = data['data'];
+    if (rows is! List ||
+        rows.any(
+          (row) =>
+              row is! Map || row['id'] is! int || row['numero_lote'] is! int,
+        )) {
+      throw const ProspectsException('El catálogo de lotes no es válido.');
     }
     return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }

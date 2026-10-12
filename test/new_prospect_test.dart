@@ -21,8 +21,10 @@ void main() {
         var posts = 0;
         final auth = AuthService(
           client: MockClient(
-            (_) async =>
-                http.Response('{"status":"success","token":"test"}', 200),
+            (_) async => http.Response(
+              '{"status":"success","token":"test","desarrollo_activo":{"id":4,"nombre":"Runa"}}',
+              200,
+            ),
           ),
         );
         await auth.login('agente', 'password');
@@ -31,6 +33,12 @@ void main() {
           client: MockClient((request) async {
             expect(request.headers['Authorization'], 'Bearer test');
             if (request.method == 'GET') {
+              if (request.url.path.endsWith('lotes')) {
+                return http.Response(
+                  '{"success":true,"data":[{"id":7,"numero_lote":23,"dimensiones_m2":"300.00","tipo":"comercial","precio":"500000.00","estatus":"disponible"}]}',
+                  200,
+                );
+              }
               final channel = request.url.path.endsWith('canales');
               return http.Response(
                 jsonEncode({
@@ -48,9 +56,18 @@ void main() {
             final body = jsonDecode(request.body) as Map;
             expect(body['canal_id'], 9);
             expect(body['estatus_id'], 22);
+            expect(body['prioridad'], 'caliente');
             expect(body['nombre'], 'Ana Nueva');
             expect(body['telefono_normalizado'], '9981234567');
             expect(body['calificacion'], isEmpty);
+            expect(body['lote_id'], isNull);
+            expect(body['primer_seguimiento']['tipo'], 'seguimiento');
+            expect(body['primer_seguimiento']['medio'], 'llamada');
+            expect(
+              body['primer_seguimiento']['descripcion'],
+              'Enviar información del desarrollo',
+            );
+            expect(body['primer_seguimiento']['recordatorio_at'], isNotNull);
             expect(body.containsKey('agente_id'), isFalse);
             posts++;
             if (posts == 1) {
@@ -103,6 +120,28 @@ void main() {
           await tester.ensureVisible(field);
           await tester.enterText(field, entry.value);
         }
+        await tester.ensureVisible(find.text('Tibio'));
+        await tester.tap(find.text('Tibio'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Caliente').last);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('first-follow-up')),
+        );
+        await tester.tap(find.byKey(const ValueKey('first-follow-up')));
+        await tester.pumpAndSettle();
+        expect(find.text('Medio de contacto*'), findsOneWidget);
+        expect(find.text('Recordatorio*'), findsOneWidget);
+        expect(find.text('Sin recordatorio'), findsNothing);
+        final description = find.byKey(
+          const ValueKey('prospect-Descripción del primer seguimiento'),
+        );
+        await tester.ensureVisible(description);
+        await tester.enterText(
+          description,
+          'Enviar información del desarrollo',
+        );
+        await tester.ensureVisible(find.byKey(const ValueKey('save-prospect')));
         await tester.tap(find.byKey(const ValueKey('save-prospect')));
         await tester.pumpAndSettle();
         expect(posts, 1);
