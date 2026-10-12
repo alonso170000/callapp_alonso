@@ -85,7 +85,7 @@ class AgendaActivityTile extends StatelessWidget {
                             activity.status.label,
                             style: const TextStyle(
                               fontFamily: 'SulphurPoint',
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -142,10 +142,10 @@ class AgendaActivityTile extends StatelessWidget {
                                   tag,
                                   style: TextStyle(
                                     fontFamily: 'BebasNeue',
-                                    fontSize: 13,
+                                    fontSize: 16,
                                     color: tag == 'CALIENTE'
                                         ? Colors.white
-                                        : AppColors.primaryColor,
+                                        : AppColors.textDarkColor,
                                   ),
                                 ),
                               ),

@@ -1,5 +1,6 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
@@ -11,7 +12,8 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 class HomeScreen extends StatefulWidget {
   static const name = 'home-screen';
 
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.loadActivities});
+  final Future<List<AgendaActivity>> Function()? loadActivities;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -96,7 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   ProspectsScreen(controller: _prospectsController),
-                  AgendaScreen(controller: _agendaController),
+                  AgendaScreen(
+                    controller: _agendaController,
+                    loadActivities: widget.loadActivities,
+                  ),
                   const ProfileScreen(),
                 ],
               ),

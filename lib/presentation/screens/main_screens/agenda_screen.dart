@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_filters_sheet.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AgendaController {
   VoidCallback? _openNewActivity;
@@ -17,8 +19,9 @@ class AgendaController {
 
 class AgendaScreen extends StatefulWidget {
   final AgendaController? controller;
+  final Future<List<AgendaActivity>> Function()? loadActivities;
 
-  const AgendaScreen({super.key, this.controller});
+  const AgendaScreen({super.key, this.controller, this.loadActivities});
 
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
@@ -49,7 +52,41 @@ class _AgendaScreenState extends State<AgendaScreen> {
     'DOMINGO',
   ];
   DateTime _date = DateUtils.dateOnly(DateTime.now());
-  late final List<AgendaActivity> _activities = demoAgendaActivities(_date);
+  final List<AgendaActivity> _activities = [];
+  final _service = AgendaService();
+  bool _loading = false;
+  String? _error;
+  int _request = 0;
+
+  Future<void> _load() async {
+    final request = ++_request;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final activities =
+          await (widget.loadActivities?.call() ?? _service.fetch());
+      if (!mounted || request != _request) return;
+      setState(() {
+        _activities.clear();
+        _activities.addAll(activities);
+      });
+    } on AgendaException catch (error) {
+      if (mounted && request == _request) {
+        setState(() => _error = error.message);
+      }
+    } finally {
+      if (mounted && request == _request) setState(() => _loading = false);
+    }
+  }
+
+  void _sessionChanged() {
+    _activities.clear();
+    _filters = AgendaFilters();
+    _load();
+  }
+
   AgendaPeriod _period = AgendaPeriod.day;
   AgendaFilters _filters = AgendaFilters();
 
@@ -57,6 +94,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void initState() {
     super.initState();
     widget.controller?._openNewActivity = _showNewActivityDialog;
+    AuthService.instance.addListener(_sessionChanged);
+    _load();
   }
 
   @override
@@ -71,11 +110,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
   @override
   void dispose() {
     widget.controller?._openNewActivity = null;
+    AuthService.instance.removeListener(_sessionChanged);
+    _service.dispose();
     super.dispose();
   }
 
   Future<void> _showNewActivityDialog() async {
-    final activity = await showModalBottomSheet<AgendaActivity>(
+    final scheduled = await showModalBottomSheet<DateTime>(
       context: context,
       barrierColor: Colors.black54,
       isScrollControlled: true,
@@ -88,13 +129,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
       clipBehavior: Clip.antiAlias,
       builder: (context) => NewAgendaActivityDialog(initialDate: _date),
     );
-    if (!mounted || activity == null) return;
+    if (!mounted || scheduled == null) return;
     setState(() {
-      _activities.add(activity);
-      _date = DateUtils.dateOnly(activity.date);
+      _date = DateUtils.dateOnly(scheduled);
       _filters = AgendaFilters();
     });
     _showActionMessage('Actividad agendada.');
+    await _load();
   }
 
   Future<void> _showFilters() async {
@@ -221,6 +262,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   void _completeActivity(AgendaActivity activity, BuildContext detailContext) {
+    if (activity.id != null) {
+      _showActionMessage(
+        'Completar actividades aún no está conectado al servidor.',
+        detailContext,
+      );
+      return;
+    }
     if (activity.status != AgendaStatus.completed) {
       final index = _activities.indexOf(activity);
       if (index != -1) {
@@ -259,6 +307,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 title: 'MI AGENDA',
               ),
               const SizedBox(height: 20),
+              if (_loading)
+                const LinearProgressIndicator(color: AppColors.primaryColor),
+              if (_error != null) ...[
+                Text(_error!, textAlign: TextAlign.center),
+                TextButton(onPressed: _load, child: const Text('Reintentar')),
+              ],
               AgendaPeriodSelector(
                 selected: _period,
                 onSelected: (period) => setState(() => _period = period),
@@ -333,6 +387,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                     onPressed: _showFilters,
                   ),
+                  IconButton(
+                    tooltip: 'Actualizar agenda',
+                    onPressed: _loading ? null : _load,
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
                 ],
               ),
               if (_filters.active)
@@ -351,14 +413,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     deleteIconColor: AppColors.whiteColor,
                   ),
                 ),
-              if (visible.isEmpty)
+              if (visible.isEmpty && !_loading && _error == null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Column(
                     children: [
                       const Icon(
-                        Icons.event_available_outlined,
-                        size: 44,
+                        Iconsax.calendar_2_copy,
+                        size: 52,
                         color: AppColors.primaryColor,
                       ),
                       const SizedBox(height: 12),

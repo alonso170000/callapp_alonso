@@ -33,7 +33,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: AgendaScreen())),
+        MaterialApp(
+          home: Scaffold(
+            body: AgendaScreen(
+              loadActivities: () async =>
+                  demoAgendaActivities(DateUtils.dateOnly(DateTime.now())),
+            ),
+          ),
+        ),
       );
       await tester.tap(find.byTooltip('Filtrar actividades'));
       await tester.pumpAndSettle();

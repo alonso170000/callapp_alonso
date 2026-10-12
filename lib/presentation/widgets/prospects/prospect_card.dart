@@ -76,7 +76,7 @@ class ProspectCard extends StatelessWidget {
     String two(int value) => value.toString().padLeft(2, '0');
     final temperatureColor = switch (prospect.temperature) {
       'Caliente' => const Color(0xFFFF535C),
-      'Tibio' => const Color(0xFFFFCC44),
+      'Tibio' => const Color.fromARGB(255, 229, 177, 32),
       _ => const Color(0xFF25C3E0),
     };
     return GestureDetector(
@@ -104,8 +104,8 @@ class ProspectCard extends StatelessWidget {
                                 )
                               : Image.network(
                                   prospect.avatarUrl!,
-                                  width: 28,
-                                  height: 28,
+                                  width: 32,
+                                  height: 32,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, _, _) => const Icon(
                                     Icons.person,
@@ -147,7 +147,7 @@ class ProspectCard extends StatelessWidget {
                             : 'Llamada · Hace ${prospect.daysSinceContact} ${prospect.daysSinceContact == 1 ? 'día' : 'días'}',
                         style: const TextStyle(
                           fontFamily: 'SulphurPoint',
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Color(0xFFB0E4DB),
                         ),
                       ),
@@ -177,7 +177,7 @@ class ProspectCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: 'SulphurPoint',
-                fontSize: 13,
+                fontSize: 14,
                 height: 1.2,
                 color: Colors.white,
               ),
@@ -254,7 +254,7 @@ class ProspectCard extends StatelessWidget {
         text,
         style: TextStyle(
           fontFamily: 'BebasNeue',
-          fontSize: 13,
+          fontSize: 16,
           height: 1.1,
           color: foreground,
         ),

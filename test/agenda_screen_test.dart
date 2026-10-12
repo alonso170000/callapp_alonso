@@ -21,7 +21,13 @@ void main() {
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: AgendaScreen(controller: controller)),
+          home: Scaffold(
+            body: AgendaScreen(
+              controller: controller,
+              loadActivities: () async =>
+                  demoAgendaActivities(DateUtils.dateOnly(DateTime.now())),
+            ),
+          ),
         ),
       );
       controller.openNewActivity();
@@ -39,8 +45,11 @@ void main() {
       await tester.ensureVisible(save);
       await tester.tap(save);
       await tester.pumpAndSettle();
-      expect(find.byType(BottomSheet), findsNothing);
-      expect(find.text('MOSTRANDO 4 ACTIVIDADES'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.text('Selecciona un prospecto'), findsOneWidget);
+      await tester.tap(find.text('CANCELAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('MOSTRANDO 3 ACTIVIDADES'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -52,7 +61,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          loadActivities: () async =>
+              demoAgendaActivities(DateUtils.dateOnly(DateTime.now())),
+        ),
+      ),
+    );
     expect(find.bySemanticsLabel('Agendar nueva actividad'), findsNothing);
 
     await tester.tap(find.byIcon(Iconsax.calendar_2_copy));
@@ -74,10 +90,14 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('save-new-activity')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(NewAgendaActivityDialog), findsNothing);
-    expect(find.text('MOSTRANDO 4 ACTIVIDADES'), findsOneWidget);
-    expect(find.text('Actividad agendada.'), findsOneWidget);
+    expect(find.byType(NewAgendaActivityDialog), findsOneWidget);
+    expect(find.text('Selecciona un prospecto'), findsOneWidget);
+    await tester.tap(find.text('CANCELAR'));
+    await tester.pumpAndSettle();
+    expect(find.text('MOSTRANDO 3 ACTIVIDADES'), findsOneWidget);
 
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Iconsax.home_2_copy));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Agendar nueva actividad'), findsNothing);
@@ -118,7 +138,14 @@ void main() {
       tester.view.physicalSize = Size(width, 844);
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
-      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            loadActivities: () async =>
+                demoAgendaActivities(DateUtils.dateOnly(DateTime.now())),
+          ),
+        ),
+      );
       await tester.tap(find.byIcon(Iconsax.calendar_2_copy));
       await tester.pumpAndSettle();
       expect(find.text('MI AGENDA'), findsOneWidget);

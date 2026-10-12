@@ -428,9 +428,13 @@ class AgendaActivityDetail extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: _infoCard(
-                                '${activity.reminderMinutes}',
+                                activity.hasReminder
+                                    ? '${activity.reminderMinutes}'
+                                    : 'Sin recordatorio',
                                 'Recordatorio',
-                                'minutos antes',
+                                activity.hasReminder
+                                    ? 'minutos antes'
+                                    : 'No programado',
                                 AppColors.homeGreenCard,
                               ),
                             ),

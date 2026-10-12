@@ -11,6 +11,9 @@ enum AgendaStatus {
 }
 
 class AgendaActivity {
+  final int? id;
+  final int? prospectId;
+  final String? type;
   final String title;
   final String prospect;
   final String description;
@@ -19,9 +22,13 @@ class AgendaActivity {
   final List<String> tags;
   final String location;
   final int reminderMinutes;
+  final bool hasReminder;
   final String lastContact;
 
   const AgendaActivity({
+    this.id,
+    this.prospectId,
+    this.type,
     required this.title,
     required this.prospect,
     required this.description,
@@ -30,10 +37,14 @@ class AgendaActivity {
     this.tags = const [],
     this.location = 'Sin ubicación',
     this.reminderMinutes = 15,
+    this.hasReminder = true,
     this.lastContact = 'Llamada · Hace 1 día',
   });
 
   AgendaActivity copyWith({AgendaStatus? status}) => AgendaActivity(
+    id: id,
+    prospectId: prospectId,
+    type: type,
     title: title,
     prospect: prospect,
     description: description,
@@ -42,6 +53,7 @@ class AgendaActivity {
     tags: tags,
     location: location,
     reminderMinutes: reminderMinutes,
+    hasReminder: hasReminder,
     lastContact: lastContact,
   );
 }

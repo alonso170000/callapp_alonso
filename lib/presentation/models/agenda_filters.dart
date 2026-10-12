@@ -37,7 +37,9 @@ class AgendaFilters {
 
   bool matches(AgendaActivity activity) =>
       selectedTypes.any(
-        (type) => type.toUpperCase() == activity.title.toUpperCase(),
+        (type) =>
+            type.toUpperCase() ==
+            (activity.type ?? activity.title).toUpperCase(),
       ) &&
       statuses.contains(activity.status) &&
       (prospect == null || prospect == activity.prospect) &&
