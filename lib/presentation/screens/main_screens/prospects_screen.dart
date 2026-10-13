@@ -13,9 +13,14 @@ import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widg
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectsController {
+  void Function(Set<int>, String)? _show;
+  void showFromHome(Set<int> ids, String label) => _show?.call(ids, label);
   VoidCallback? _open;
   void openNewProspect() => _open?.call();
-  void dispose() => _open = null;
+  void dispose() {
+    _open = null;
+    _show = null;
+  }
 }
 
 class ProspectsScreen extends StatefulWidget {
@@ -61,7 +66,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     _records.clear();
     _search.clear();
     _status = 'Todos';
-    _advanced = ProspectFilters();
+    _advanced = ProspectFilters.forSeller();
     _load();
   }
 
@@ -69,6 +74,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   void initState() {
     super.initState();
     widget.controller?._open = _addProspect;
+    widget.controller?._show = _showFromHome;
     AuthService.instance.addListener(_sessionChanged);
     _load();
   }
@@ -78,8 +84,23 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._open = null;
+      oldWidget.controller?._show = null;
       widget.controller?._open = _addProspect;
+      widget.controller?._show = _showFromHome;
     }
+  }
+
+  void _showFromHome(Set<int> ids, String label) {
+    setState(() {
+      _search.clear();
+      _status = 'Todos';
+      _advanced = ProspectFilters(
+        prospectIds: ids,
+        sourceLabel: label,
+        sort: 'Asignación más reciente',
+      );
+    });
+    _load();
   }
 
   Future<void> _addProspect() async {
@@ -99,7 +120,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     setState(() {
       _search.clear();
       _status = 'Todos';
-      _advanced = ProspectFilters();
+      _advanced = ProspectFilters.forSeller();
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Prospecto registrado correctamente.')),
@@ -119,11 +140,12 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   ];
   final _search = TextEditingController();
   String _status = 'Todos';
-  ProspectFilters _advanced = ProspectFilters();
+  ProspectFilters _advanced = ProspectFilters.forSeller();
 
   @override
   void dispose() {
     widget.controller?._open = null;
+    widget.controller?._show = null;
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
     _service.dispose();
@@ -139,16 +161,20 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
 
   List<ProspectRecord> get _visible => _filtered(_advanced);
   List<ProspectRecord> _filtered(ProspectFilters filters) {
+    final now = DateTime.now();
     final query = _normalize(_search.text.trim());
     final result = _records
         .where(
           (p) =>
-              (_status == 'Todos' || p.status == _status) &&
-              filters.matches(p, DateTime.now()) &&
+              (_status == 'Todos' ||
+                  (_status == 'Atrasados'
+                      ? p.nextContact != null && p.nextContact!.isBefore(now)
+                      : _normalize(p.status.trim()) == _normalize(_status))) &&
+              filters.matches(p, now) &&
               _normalize('${p.name} ${p.phone} ${p.email}').contains(query),
         )
         .toList();
-    result.sort(filters.compare);
+    result.sort((a, b) => filters.compare(a, b, now: now));
     return result;
   }
 
@@ -228,7 +254,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         tooltip: 'Filtrar prospectos',
                         style: IconButton.styleFrom(
                           backgroundColor: AppColors.primaryColor,
-                          foregroundColor: !_advanced.active
+                          foregroundColor:
+                              !_advanced.active || _advanced.isSellerDefault
                               ? Colors.white
                               : AppColors.accentColor,
                           shape: RoundedRectangleBorder(
@@ -255,7 +282,9 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                           label: Text(filter),
                           selected: _status == filter,
                           showCheckmark: false,
-                          onSelected: (_) => setState(() => _status = filter),
+                          onSelected: (_) => setState(() {
+                            _status = filter;
+                          }),
                           selectedColor: AppColors.primaryColor,
                           backgroundColor: const Color(0xFFABF5E7),
                           side: BorderSide.none,
@@ -279,11 +308,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       )
                       .toList(),
                 ),
-                if (_advanced.active)
+                if (_advanced.active && !_advanced.isSellerDefault)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: InputChip(
-                      label: const Text('Filtros activos'),
+                      label: Text(_advanced.sourceLabel ?? 'Filtros activos'),
                       onDeleted: () =>
                           setState(() => _advanced = ProspectFilters()),
                     ),
@@ -299,7 +328,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       'MOSTRANDO ${prospects.length} PROSPECTOS',
                       style: const TextStyle(
                         fontFamily: 'BebasNeue',
-                        fontSize: 18,
+                        fontSize: 20,
                         color: AppColors.primaryColor,
                       ),
                     ),
@@ -451,7 +480,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     onPressed: () => setState(() {
                       _search.clear();
                       _status = 'Todos';
-                      _advanced = ProspectFilters();
+                      _advanced = ProspectFilters.forSeller();
                     }),
                     child: Text(
                       'Limpiar filtros',

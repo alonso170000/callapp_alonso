@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
@@ -133,19 +134,13 @@ class AgendaActivityTile extends StatelessWidget {
                                   horizontal: 7,
                                   vertical: 2,
                                 ),
-                                color: tag == 'CALIENTE'
-                                    ? const Color(0xFFFF4655)
-                                    : tag == 'LOTE'
-                                    ? AppColors.homeWarmText
-                                    : const Color(0xFFEAA4EE),
+                                color: ProspectTagColors.background(tag),
                                 child: Text(
                                   tag,
                                   style: TextStyle(
                                     fontFamily: 'BebasNeue',
                                     fontSize: 16,
-                                    color: tag == 'CALIENTE'
-                                        ? Colors.white
-                                        : AppColors.textDarkColor,
+                                    color: ProspectTagColors.foreground(tag),
                                   ),
                                 ),
                               ),

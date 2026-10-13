@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import 'prospect_avatar.dart';
 
@@ -32,25 +33,11 @@ class ProspectTile extends StatelessWidget {
             style: const TextStyle(
               color: Colors.black,
               fontFamily: 'SulphurPoint',
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               height: 0.95,
             ),
           ),
-          if (item.subtitle != null)
-            Text(
-              item.subtitle!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.black,
-                fontFamily: 'SulphurPoint',
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                height: 0.95,
-              ),
-            ),
           if (item.timeLabel != null) ...[
             const SizedBox(height: 4),
             Container(
@@ -92,7 +79,7 @@ class _CallBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: const Icon(
-        Icons.phone_in_talk_rounded,
+        Iconsax.call_calling_copy,
         color: Colors.black,
         size: 17,
       ),

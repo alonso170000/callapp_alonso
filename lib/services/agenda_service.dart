@@ -152,6 +152,7 @@ class AgendaService {
       id: id,
       prospectId: int.tryParse('${row['prospecto_id']}'),
       type: type,
+      medium: row['medio'] as String?,
       title: row['titulo'] as String? ?? type,
       prospect: row['prospecto_nombre'] as String? ?? 'Actividad personal',
       description: row['descripcion'] as String? ?? 'Sin descripción',

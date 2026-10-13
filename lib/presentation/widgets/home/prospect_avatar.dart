@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectAvatar extends StatelessWidget {
   final ProspectItem item;
@@ -8,43 +9,26 @@ class ProspectAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 56,
-      height: 56,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: item.avatarColor,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 10,
-            top: 3,
-            child: Container(width: 34, height: 64, color: item.accentColor),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                item.name.characters.first.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontFamily: 'SulphurPoint',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+    const fallback = Icon(
+      Icons.person,
+      color: AppColors.homeWarmText,
+      size: 32,
+    );
+    return SizedBox.square(
+      dimension: 56,
+      child: ClipOval(
+        child: ColoredBox(
+          color: item.avatarColor,
+          child: item.avatarUrl == null || item.avatarUrl!.isEmpty
+              ? fallback
+              : Image.network(
+                  item.avatarUrl!,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => fallback,
                 ),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 17,
-            top: 29,
-            child: Icon(Icons.sentiment_satisfied_alt, size: 25),
-          ),
-        ],
+        ),
       ),
     );
   }

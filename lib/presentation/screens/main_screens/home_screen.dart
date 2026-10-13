@@ -1,19 +1,20 @@
-import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
-import 'package:callerapp_frontend/presentation/models/home_models.dart';
-import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
+
 import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   static const name = 'home-screen';
 
-  const HomeScreen({super.key, this.loadActivities});
+  const HomeScreen({super.key, this.loadActivities, this.loadProspects});
   final Future<List<AgendaActivity>> Function()? loadActivities;
+  final Future<List<ProspectRecord>> Function()? loadProspects;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -44,60 +45,27 @@ class _HomeScreenState extends State<HomeScreen> {
               child: IndexedStack(
                 index: _selectedDestination,
                 children: [
-                  CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 118),
-                        sliver: SliverList.list(
-                          children: [
-                            HomeHeader(userName: AuthService.instance.userName),
-                            const SizedBox(height: 18),
-                            WeeklyProgressStrip(days: demoWeeklyProgress),
-                            const SizedBox(height: 18),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: MetricSummaryCard(
-                                    metric: demoDashboardMetrics[0],
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: MetricSummaryCard(
-                                    metric: demoDashboardMetrics[1],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            ProspectSection(
-                              title: 'Prospectos del día',
-                              color: AppColors.homeOrangeSection,
-                              prospects: demoTodayProspects,
-                              height: 166,
-                            ),
-                            const SizedBox(height: 20),
-                            ProspectSection(
-                              title: 'Prospectos nuevos',
-                              color: AppColors.homeBlueSection,
-                              prospects: demoNewProspects,
-                              showAddButton: true,
-                              height: 136,
-                            ),
-                            const SizedBox(height: 20),
-                            ProspectSection(
-                              title: 'Llamadas atrasadas',
-                              color: AppColors.homeRedSection,
-                              prospects: demoLateCalls,
-                              height: 136,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  HomeDashboard(
+                    active: _selectedDestination == 0,
+                    loadActivities: widget.loadActivities,
+                    loadProspects: widget.loadProspects,
+                    onAgenda: (date, ids, label) {
+                      _agendaController.showFromHome(date, ids, label);
+                      setState(() => _selectedDestination = 2);
+                    },
+                    onProspects: (ids, label) {
+                      _prospectsController.showFromHome(ids, label);
+                      setState(() => _selectedDestination = 1);
+                    },
+                    onAddProspect: () {
+                      setState(() => _selectedDestination = 1);
+                      _prospectsController.openNewProspect();
+                    },
                   ),
-                  ProspectsScreen(controller: _prospectsController),
+                  ProspectsScreen(
+                    controller: _prospectsController,
+                    loadProspects: widget.loadProspects,
+                  ),
                   AgendaScreen(
                     controller: _agendaController,
                     loadActivities: widget.loadActivities,
@@ -113,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SafeArea(
                 top: false,
                 child: NavigationBarWidget(
+                  destinationIndex: _selectedDestination,
                   onDestinationSelected: (index) =>
                       setState(() => _selectedDestination = index),
                   onAddAgenda: _agendaController.openNewActivity,

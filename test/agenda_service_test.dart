@@ -11,6 +11,33 @@ import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 
 void main() {
+  test(
+    '17:00 Cancun stays pending before 17:00 regardless of reminder time',
+    () {
+      final data = {
+        'id': 7,
+        'tipo': 'seguimiento',
+        'medio': 'llamada',
+        'estado': 'pendiente',
+        'programada_at': '2026-10-13T22:00:00.000Z',
+        'recordatorio_at': '2026-10-13T21:00:00.000Z',
+      };
+      final before = DateTime.parse('2026-10-13T16:59:00-05:00');
+      final activity = AgendaService.fromJson(data, now: before);
+      expect(activity.status, AgendaStatus.pending);
+      expect(
+        activity.date.toUtc(),
+        DateTime.parse('2026-10-13T17:00:00-05:00'),
+      );
+      expect(
+        AgendaService.fromJson(
+          data,
+          now: DateTime.parse('2026-10-13T17:01:00-05:00'),
+        ).status,
+        AgendaStatus.overdue,
+      );
+    },
+  );
   final now = DateTime(2026, 10, 12, 12);
   Map<String, dynamic> row(String state, DateTime date) => {
     'id': 8,
@@ -132,13 +159,14 @@ void main() {
                   throw const AgendaException('Error de conexión');
                 }
                 return [
-                  AgendaService.fromJson(
-                    row(
+                  AgendaService.fromJson({
+                    ...row(
                       'pendiente',
                       DateTime(today.year, today.month, today.day, 23, 59),
                     ),
-                    now: today,
-                  ),
+                    'tipo': 'seguimiento',
+                    'medio': 'llamada',
+                  }, now: today),
                 ];
               },
             ),

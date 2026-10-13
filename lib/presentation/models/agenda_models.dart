@@ -14,6 +14,7 @@ class AgendaActivity {
   final int? id;
   final int? prospectId;
   final String? type;
+  final String? medium;
   final String title;
   final String prospect;
   final String description;
@@ -29,6 +30,7 @@ class AgendaActivity {
     this.id,
     this.prospectId,
     this.type,
+    this.medium,
     required this.title,
     required this.prospect,
     required this.description,
@@ -45,6 +47,7 @@ class AgendaActivity {
     id: id,
     prospectId: prospectId,
     type: type,
+    medium: medium,
     title: title,
     prospect: prospect,
     description: description,

@@ -12,6 +12,7 @@ class ProspectSection extends StatelessWidget {
   final double height;
   final VoidCallback? onOpen;
   final VoidCallback? onAdd;
+  final ValueChanged<int>? onProspect;
 
   const ProspectSection({
     super.key,
@@ -22,6 +23,7 @@ class ProspectSection extends StatelessWidget {
     this.height = 166,
     this.onOpen,
     this.onAdd,
+    this.onProspect,
   });
 
   @override
@@ -32,7 +34,7 @@ class ProspectSection extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: height),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,8 +49,8 @@ class ProspectSection extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.black,
                         fontFamily: 'SulphurPoint',
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w500,
                         height: 1,
                       ),
                     ),
@@ -56,7 +58,7 @@ class ProspectSection extends StatelessWidget {
                   const HomeCardArrow(),
                 ],
               ),
-              const SizedBox(height: 10),
+              
               SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(0, 4, 8, 0),
                 scrollDirection: Axis.horizontal,
@@ -66,8 +68,12 @@ class ProspectSection extends StatelessWidget {
                   spacing: 9,
                   children: [
                     if (showAddButton) _AddProspectTile(onTap: onAdd),
-                    for (final prospect in prospects)
-                      ProspectTile(item: prospect),
+                    if (prospects.isEmpty) const Text('Sin prospectos'),
+                    for (var i = 0; i < prospects.length; i++)
+                      InkWell(
+                        onTap: onProspect == null ? null : () => onProspect!(i),
+                        child: ProspectTile(item: prospects[i]),
+                      ),
                   ],
                 ),
               ),

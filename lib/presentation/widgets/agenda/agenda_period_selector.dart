@@ -38,7 +38,7 @@ class AgendaPeriodSelector extends StatelessWidget {
                     ),
                     textStyle: const TextStyle(
                       fontFamily: 'SulphurPoint',
-                      fontSize: 15,
+                      fontSize: 18,
                     ),
                   ),
                   onPressed: () => onSelected(period),

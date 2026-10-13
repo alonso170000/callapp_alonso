@@ -44,6 +44,12 @@ void main() {
               expect(request.url.path, '/api/v1/activities');
               expect(request.headers['Authorization'], 'Bearer session');
               final body = jsonDecode(request.body) as Map;
+              final scheduled = DateTime.parse(body['programada_at']).toLocal();
+              expect(scheduled.isAfter(DateTime.now()), isTrue);
+              expect(
+                scheduled.difference(DateTime.now()),
+                lessThan(const Duration(minutes: 2)),
+              );
               expect(body['prospecto_id'], type == 'Tarea' ? null : 17);
               expect(
                 DateTime.parse(body['programada_at'])
@@ -86,9 +92,7 @@ void main() {
                       context: context,
                       isScrollControlled: true,
                       builder: (_) => NewAgendaActivityDialog(
-                        initialDate: DateTime.now().add(
-                          const Duration(days: 1),
-                        ),
+                        initialDate: DateTime.now(),
                         agendaService: agenda,
                         prospectsService: prospects,
                       ),

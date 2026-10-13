@@ -37,7 +37,14 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     super.initState();
     _agenda = widget.agendaService ?? AgendaService();
     _prospectsService = widget.prospectsService ?? ProspectsService();
-    final next = DateTime.now().add(const Duration(hours: 1));
+    final now = DateTime.now();
+    final next = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute + 1,
+    );
     _date = widget.initialDate.isAfter(next)
         ? DateUtils.dateOnly(widget.initialDate)
         : DateUtils.dateOnly(next);
@@ -84,7 +91,16 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   }
 
   Future<void> _selectTime() async {
-    final selected = await showTimePicker(context: context, initialTime: _time);
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _time,
+      initialEntryMode: TimePickerEntryMode.input,
+      helpText: 'Hora de la actividad (24 h)',
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
     if (selected != null && mounted) setState(() => _time = selected);
   }
 
@@ -98,7 +114,9 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
       _time.minute,
     );
     if (!scheduled.isAfter(DateTime.now())) {
-      setState(() => _error = 'Selecciona una fecha y hora futuras.');
+      setState(
+        () => _error = 'Puedes agendar hoy. Selecciona un minuto posterior a la hora actual.',
+      );
       return;
     }
     setState(() {
@@ -249,7 +267,8 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                             onPressed: _selectDate,
                           ),
                           _PickerButton(
-                            label: _time.format(context),
+                            label:
+                                '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
                             onPressed: _selectTime,
                           ),
                         ],

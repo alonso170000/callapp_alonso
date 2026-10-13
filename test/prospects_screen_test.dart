@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 
 void main() {
-  Future<void> openProspects(WidgetTester tester) async {
+  Future<void> openProspects(
+    WidgetTester tester, {
+    bool clearDefault = true,
+  }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -19,7 +23,60 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Filtros activos'), findsNothing);
+    if (clearDefault) {
+      await tester.tap(find.byTooltip('Filtrar prospectos'));
+      await tester.pumpAndSettle();
+      for (final priority in ['Frío', 'Sin calificar']) {
+        final field = find.widgetWithText(CheckboxListTile, priority);
+        await tester.ensureVisible(field);
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('VER 6 RESULTADOS'));
+      await tester.pumpAndSettle();
+    }
   }
+
+  testWidgets(
+    'Seller preset is visible and uses the same predicate as the list',
+    (tester) async {
+      await openProspects(tester, clearDefault: false);
+      final filters = ProspectFilters.forSeller();
+      final count = demoProspects
+          .where((p) => filters.matches(p, DateTime.now()))
+          .length;
+      expect(find.text('MOSTRANDO $count PROSPECTOS'), findsOneWidget);
+      await tester.tap(find.byTooltip('Filtrar prospectos'));
+      await tester.pumpAndSettle();
+      expect(find.text('Por atender'), findsNothing);
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, 'Caliente'),
+            )
+            .value,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, 'Tibio'),
+            )
+            .value,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, 'Frío'),
+            )
+            .value,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Search handles names without accents and phone numbers', (
     tester,
@@ -43,7 +100,10 @@ void main() {
     expect(find.text('No se encontraron prospectos'), findsOneWidget);
     await tester.tap(find.text('Limpiar filtros'));
     await tester.pumpAndSettle();
-    expect(find.text('MOSTRANDO 6 PROSPECTOS'), findsOneWidget);
+    final defaultCount = demoProspects
+        .where((p) => ProspectFilters.forSeller().matches(p, DateTime.now()))
+        .length;
+    expect(find.text('MOSTRANDO $defaultCount PROSPECTOS'), findsOneWidget);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
     await tester.pumpAndSettle();
     expect(find.text('JUAN UCH'), findsOneWidget);
@@ -87,7 +147,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Filtrar prospectos'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.widgetWithText(CheckboxListTile, 'Caliente'),
+    );
     await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
+    await tester.ensureVisible(find.widgetWithText(CheckboxListTile, 'Tibio'));
     await tester.tap(find.widgetWithText(CheckboxListTile, 'Tibio'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('VER 1 RESULTADOS'));

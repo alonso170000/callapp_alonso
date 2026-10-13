@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 enum CallProgressStatus { completed, pending, missed }
 
 class WeeklyCallProgress {
+  final DateTime? date;
   final String dayLabel;
   final int calls;
   final CallProgressStatus status;
   final bool isSelected;
 
   const WeeklyCallProgress({
+    this.date,
     required this.dayLabel,
     required this.calls,
     required this.status,
@@ -31,6 +33,7 @@ class DashboardMetric {
 
 class ProspectItem {
   final String name;
+  final String? avatarUrl;
   final String? subtitle;
   final String? timeLabel;
   final Color avatarColor;
@@ -38,6 +41,7 @@ class ProspectItem {
 
   const ProspectItem({
     required this.name,
+    this.avatarUrl,
     this.subtitle,
     this.timeLabel,
     required this.avatarColor,

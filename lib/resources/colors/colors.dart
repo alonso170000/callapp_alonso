@@ -142,6 +142,6 @@ class AppColors {
   static const LinearGradient navigationGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [Color.fromRGBO(83, 172, 154, 1), Color.fromRGBO(172, 239, 226, 1)],
+    colors: [Color.fromRGBO(172, 239, 226, 1), Color.fromRGBO(172, 239, 226, 1)],
   );
 }

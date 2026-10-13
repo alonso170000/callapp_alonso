@@ -8,6 +8,7 @@ class NavigationBarWidget extends StatefulWidget {
   final ValueChanged<int>? onDestinationSelected;
   final VoidCallback? onAddAgenda;
   final VoidCallback? onAddProspect;
+  final int? destinationIndex;
 
   const NavigationBarWidget({
     super.key,
@@ -16,6 +17,7 @@ class NavigationBarWidget extends StatefulWidget {
     this.onDestinationSelected,
     this.onAddAgenda,
     this.onAddProspect,
+    this.destinationIndex,
   });
 
   @override
@@ -49,7 +51,17 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   @override
   void initState() {
     super.initState();
+    selectedIndex = widget.destinationIndex ?? 0;
     _searchController.addListener(_onSearchTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant NavigationBarWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.destinationIndex != null &&
+        widget.destinationIndex != oldWidget.destinationIndex) {
+      selectedIndex = widget.destinationIndex!;
+    }
   }
 
   void _onSearchTextChanged() {

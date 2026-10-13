@@ -10,11 +10,17 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AgendaController {
+  void Function(DateTime, Set<int>, String)? _show;
+  void showFromHome(DateTime date, Set<int> ids, String label) =>
+      _show?.call(date, ids, label);
   VoidCallback? _openNewActivity;
 
   void openNewActivity() => _openNewActivity?.call();
 
-  void dispose() => _openNewActivity = null;
+  void dispose() {
+    _openNewActivity = null;
+    _show = null;
+  }
 }
 
 class AgendaScreen extends StatefulWidget {
@@ -48,7 +54,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     'MIÉRCOLES',
     'JUEVES',
     'VIERNES',
-    'SÁBADO',
+    'SÁBADO', 
     'DOMINGO',
   ];
   DateTime _date = DateUtils.dateOnly(DateTime.now());
@@ -94,6 +100,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void initState() {
     super.initState();
     widget.controller?._openNewActivity = _showNewActivityDialog;
+    widget.controller?._show = _showFromHome;
     AuthService.instance.addListener(_sessionChanged);
     _load();
   }
@@ -103,16 +110,32 @@ class _AgendaScreenState extends State<AgendaScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._openNewActivity = null;
+      oldWidget.controller?._show = null;
       widget.controller?._openNewActivity = _showNewActivityDialog;
+      widget.controller?._show = _showFromHome;
     }
   }
 
   @override
   void dispose() {
     widget.controller?._openNewActivity = null;
+    widget.controller?._show = null;
     AuthService.instance.removeListener(_sessionChanged);
     _service.dispose();
     super.dispose();
+  }
+
+  void _showFromHome(DateTime date, Set<int> ids, String label) {
+    setState(() {
+      _date = DateUtils.dateOnly(date);
+      _period = AgendaPeriod.day;
+      _filters = AgendaFilters(
+        activityIds: ids,
+        sourceLabel: label,
+        selectedTypes: {...AgendaFilters.types, 'Llamada'},
+      );
+    });
+    _load();
   }
 
   Future<void> _showNewActivityDialog() async {
@@ -183,7 +206,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   };
 
   String _dayLabel(DateTime date) =>
-      '${_days[date.weekday - 1]}, ${date.day} DE ${_months[date.month - 1]}';
+      '${_days[date.weekday - 1]}, ${date.day} DE ${_months[date.month - 1]}, ${date.year}';
 
   String get _periodLabel {
     if (_period == AgendaPeriod.day) return _dayLabel(_date);
@@ -408,7 +431,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
-                    label: const Text('Filtros activos'),
+                    label: Text(_filters.sourceLabel ?? 'Filtros activos'),
                     onDeleted: () => setState(() => _filters = AgendaFilters()),
                     deleteIconColor: AppColors.whiteColor,
                   ),

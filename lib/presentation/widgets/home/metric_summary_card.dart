@@ -45,7 +45,7 @@ class MetricSummaryCard extends StatelessWidget {
                     color: Colors.black,
                     fontFamily: 'SulphurPoint',
                     fontSize: 23,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                     height: 0.9,
                   ),
                 ),

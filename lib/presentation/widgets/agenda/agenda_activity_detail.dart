@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -234,13 +235,17 @@ class AgendaActivityDetail extends StatelessWidget {
                           horizontal: 9,
                           vertical: 3,
                         ),
-                        color: const Color(0xFFEAA4EE),
+                        color: ProspectTagColors.background(
+                          activity.tags.first,
+                        ),
                         child: Text(
                           activity.tags.first,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textDarkColor,
+                          style: TextStyle(
+                            color: ProspectTagColors.foreground(
+                              activity.tags.first,
+                            ),
                             fontFamily: 'BebasNeue',
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

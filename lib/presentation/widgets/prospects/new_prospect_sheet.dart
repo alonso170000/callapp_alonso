@@ -37,7 +37,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   List<Map<String, dynamic>> _lots = [];
   int? _origin, _status;
   int _lot = 0;
-  String _priority = 'tibio';
+  String _priority = 'caliente';
   bool _firstFollowUp = false;
   String _activityType = 'seguimiento';
   String _contactMedium = 'llamada';

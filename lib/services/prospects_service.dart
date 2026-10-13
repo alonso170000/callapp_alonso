@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -189,17 +191,14 @@ class ProspectsService {
         _ => 'Sin calificar',
       },
       avatarColor: AppColors.homeDeepTeal,
-      statusColor: switch (status.toLowerCase()) {
-        'cotización' => const Color(0xFFB69BF5),
-        'nuevo' => AppColors.homeBlueSection,
-        'negociación' => AppColors.homeOrangeSection,
-        'venta realizada' => AppColors.homeGreenCard,
-        _ => AppColors.homeWarmText,
-      },
+      statusColor: ProspectTagColors.status(status),
       city: row['ciudad'] as String? ?? 'Sin registro de ciudad',
       origin: row['canal'] as String? ?? 'Sin canal',
       assignedAt: DateTime.tryParse('${row['fecha_asignacion']}')?.toLocal(),
       lastCallAt: lastCall,
+      lastContactResult:
+          row['ultimo_contacto_resultado'] as String? ??
+          (lastCall == null ? 'Sin contacto' : 'Sin información'),
       nextContact: DateTime.tryParse('${row['proximo_contacto_at']}')
           ?.toLocal(),
       daysSinceContact: lastCall == null

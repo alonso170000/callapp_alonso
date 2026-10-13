@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -74,11 +75,7 @@ class ProspectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = prospect.appointment ?? prospect.nextContact;
     String two(int value) => value.toString().padLeft(2, '0');
-    final temperatureColor = switch (prospect.temperature) {
-      'Caliente' => const Color(0xFFFF535C),
-      'Tibio' => const Color.fromARGB(255, 229, 177, 32),
-      _ => const Color(0xFF25C3E0),
-    };
+    final temperatureColor = ProspectTagColors.priority(prospect.temperature);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -236,7 +233,7 @@ class ProspectCard extends StatelessWidget {
           : () => _contact(context, message),
       style: IconButton.styleFrom(
         backgroundColor: color,
-        foregroundColor: AppColors.primaryColor,
+        foregroundColor: AppColors.textDarkColor,
         minimumSize: const Size(34, 34),
         maximumSize: const Size(34, 34),
         padding: EdgeInsets.zero,

@@ -128,7 +128,13 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                   children: [
                     _title('Próximo contacto'),
                     _options(
-                      ['Hoy', 'Mañana', 'Esta semana', 'Sin programar'],
+                      [
+                        'Atrasados',
+                        'Hoy',
+                        'Mañana',
+                        'Esta semana',
+                        'Sin programar',
+                      ],
                       _draft.nextContact,
                       (value) => setState(() => _draft.nextContact = value),
                     ),
@@ -149,6 +155,14 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                     if (_draft.range != null)
                       TextButton(
                         onPressed: () => _assignment('Rango personalizado'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primaryColor,
+                          textStyle: const TextStyle(
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         child: Text(
                           '${_draft.range!.start.day}/${_draft.range!.start.month}/${_draft.range!.start.year} - ${_draft.range!.end.day}/${_draft.range!.end.month}/${_draft.range!.end.year}',
                         ),
@@ -180,7 +194,8 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    onPressed: () => setState(() => _draft = ProspectFilters()),
+                    onPressed: () =>
+                        setState(() => _draft = ProspectFilters.forSeller()),
                     child: const Text(
                       'LIMPIAR FILTROS',
                       style: TextStyle(fontFamily: 'BebasNeue', fontSize: 18),

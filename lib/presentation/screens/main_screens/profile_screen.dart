@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       name: auth.userName,
       phone: auth.phone ?? 'No disponible',
       email: auth.email ?? 'No disponible',
+      rol: auth.activeDevelopment?['rol'] as String? ?? 'No disponible',
     );
   }
 
@@ -133,6 +134,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Iconsax.edit_2_copy,
             actionLabel: 'Editar correo',
             onPressed: () => _edit('Correo', _profile.email),
+          ),
+          ProfileSettingRow(
+            title: 'ROL',
+            value: _profile.rol,
+            titleColor: AppColors.profileDatos,
+            icon: Iconsax.edit_2_copy,
+            actionLabel: 'Editar rol',
+            onPressed: () => _edit('Rol', _profile.rol),
           ),
         ],
       ),

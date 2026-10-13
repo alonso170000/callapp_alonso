@@ -4,14 +4,31 @@ import 'package:callerapp_frontend/presentation/models/home_models.dart';
 
 class WeeklyProgressStrip extends StatelessWidget {
   final List<WeeklyCallProgress> days;
+  final ValueChanged<DateTime>? onSelected;
 
-  const WeeklyProgressStrip({super.key, required this.days});
+  const WeeklyProgressStrip({super.key, required this.days, this.onSelected});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: days
-          .map((day) => Expanded(child: _WeekDayChip(day: day)))
+          .map(
+            (day) => Expanded(
+              child: Semantics(
+                button: true,
+                selected: day.isSelected,
+                label: day.date == null
+                    ? day.dayLabel
+                    : '${day.date!.day}/${day.date!.month}/${day.date!.year}',
+                child: InkWell(
+                  onTap: day.date == null || onSelected == null
+                      ? null
+                      : () => onSelected!(day.date!),
+                  child: _WeekDayChip(day: day),
+                ),
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -53,7 +70,7 @@ class _WeekDayChip extends StatelessWidget {
           ),
           const SizedBox(height: 5),
           Text(
-            day.calls.toString(),
+            day.date?.day.toString() ?? '',
             style: TextStyle(
               color: day.isSelected ? Colors.white : Colors.black,
               fontFamily: 'SulphurPoint',
