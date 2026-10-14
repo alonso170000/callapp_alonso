@@ -168,6 +168,8 @@ void main() {
           )
           .first,
     );
+    await Scrollable.ensureVisible(tester.element(call), alignment: 0.5);
+    await tester.pumpAndSettle();
     await tester.tap(call);
     await tester.pumpAndSettle();
     expect(find.text('9980000006'), findsOneWidget);

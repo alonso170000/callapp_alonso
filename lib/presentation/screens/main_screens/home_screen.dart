@@ -7,7 +7,6 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_scre
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 
 import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   static const name = 'home-screen';
@@ -37,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: DecoratedBox(
-        decoration: const BoxDecoration(color: AppColors.homeBackground),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
         child: Stack(
           children: [
             SafeArea(
@@ -69,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   AgendaScreen(
                     controller: _agendaController,
                     loadActivities: widget.loadActivities,
+                    loadProspects: widget.loadProspects,
                   ),
                   const ProfileScreen(),
                 ],

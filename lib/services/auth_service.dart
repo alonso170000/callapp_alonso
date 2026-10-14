@@ -63,21 +63,46 @@ class AuthService extends ChangeNotifier {
             }),
           )
           .timeout(const Duration(seconds: 60));
+      // Report HTTP failures even when a proxy returns HTML rather than JSON.
+      final httpError = switch (response.statusCode) {
+        404 => 'No existe POST /api/v1/auth/login en este servidor. Revisa API_BASE_URL y el despliegue.',
+        408 => 'El servidor agotó el tiempo para procesar el login.',
+        429 => 'Se alcanzó el límite de intentos de inicio de sesión. Espera antes de volver a intentar.',
+        500 => 'El backend falló al procesar el login. Consulta los logs del servidor para conocer la causa.',
+        502 =>
+          'La puerta de enlace no recibió una respuesta válida del backend.',
+        503 => 'El servicio de autenticación no está disponible temporalmente.',
+        504 => 'La puerta de enlace agotó el tiempo esperando al backend.',
+        >= 500 => 'El servidor falló al procesar el inicio de sesión.',
+        _ => null,
+      };
+      if (httpError != null) {
+        throw AuthException('[HTTP ${response.statusCode}] $httpError');
+      }
       dynamic data;
       try {
         data = jsonDecode(utf8.decode(response.bodyBytes));
       } on FormatException {
-        throw const AuthException(
-          'El servidor no devolvió una respuesta válida. Revisa la URL del backend.',
+        throw AuthException(
+          response.statusCode == 401
+              ? '[HTTP 401] Usuario o contraseña incorrectos.'
+              : response.statusCode == 403
+              ? '[HTTP 403] El servidor denegó el acceso a esta cuenta.'
+              : '[AUTH_INVALID_RESPONSE · HTTP ${response.statusCode}] El servidor devolvió una respuesta que no es JSON válido.',
         );
       }
       if (response.statusCode != 200) {
         throw AuthException(
-          response.statusCode >= 500
-              ? 'El servidor no pudo iniciar sesión. Revisa los registros de Render y la conexión con Aiven.'
-              : data is Map && data['message'] is String
+          data is Map && data['message'] is String
               ? data['message'] as String
-              : 'No se pudo iniciar sesión (${response.statusCode}).',
+              : switch (response.statusCode) {
+                  400 => '[HTTP 400] El servidor rechazó los datos enviados. Revisa usuario y contraseña.',
+                  401 => '[HTTP 401] Usuario o contraseña incorrectos.',
+                  403 =>
+                    '[HTTP 403] El servidor denegó el acceso a esta cuenta.',
+                  _ =>
+                    '[HTTP ${response.statusCode}] El servidor rechazó el inicio de sesión.',
+                },
         );
       }
       if (data is! Map<String, dynamic> ||
@@ -85,7 +110,7 @@ class AuthService extends ChangeNotifier {
           data['token'] is! String ||
           (data['token'] as String).isEmpty) {
         throw const AuthException(
-          'La respuesta del servidor no contiene una sesión válida.',
+          '[AUTH_INVALID_SESSION] El servidor respondió HTTP 200, pero no incluyó una sesión válida.',
         );
       }
       _token = data['token'] as String;
@@ -102,11 +127,32 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
     } on TimeoutException {
       throw const AuthException(
-        'El servidor tardó demasiado en responder. Render puede estar iniciando; intenta nuevamente.',
+        '[AUTH_TIMEOUT] No se completó la respuesta de POST /api/v1/auth/login en 60 segundos. Comprueba la conexión y los logs del backend; la app no recibió un resultado del login.',
       );
-    } on http.ClientException {
+    } on http.ClientException catch (error) {
+      final detail = error.message.toLowerCase();
+      if (detail.contains('failed host lookup') ||
+          detail.contains('name resolution') ||
+          detail.contains('getaddrinfo')) {
+        throw const AuthException(
+          '[AUTH_DNS] No se pudo resolver el dominio del backend. Revisa tu conexión y API_BASE_URL.',
+        );
+      }
+      if (detail.contains('certificate') ||
+          detail.contains('handshake') ||
+          detail.contains('ssl') ||
+          detail.contains('tls')) {
+        throw const AuthException(
+          '[AUTH_TLS] Falló la conexión HTTPS con el backend. Revisa el certificado y la fecha del dispositivo.',
+        );
+      }
+      if (detail.contains('connection refused')) {
+        throw const AuthException(
+          '[AUTH_CONNECTION_REFUSED] El servidor rechazó la conexión. Comprueba que el servicio esté disponible.',
+        );
+      }
       throw const AuthException(
-        'No se pudo conectar con el servidor. Revisa tu conexión y la URL de Render.',
+        '[AUTH_CONNECTION] No se pudo completar la conexión con el backend. Revisa la red y la disponibilidad del servicio.',
       );
     }
   }

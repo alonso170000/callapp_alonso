@@ -1,6 +1,5 @@
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final String field;
@@ -25,7 +24,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    backgroundColor: AppColors.homeBackground,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     title: Text('Editar ${widget.field.toLowerCase()}'),
     content: Form(
       key: _form,

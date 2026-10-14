@@ -156,7 +156,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           );
     return RefreshIndicator(
       onRefresh: _load,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       color: AppColors.primaryColor,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -169,9 +169,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
               children: [
                 HomeHeader(userName: AuthService.instance.userName),
                 if (_loading)
-                  const LinearProgressIndicator(
+                  LinearProgressIndicator(
                     color: AppColors.primaryColor,
-                    backgroundColor: AppColors.homeBackground,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                   ),
                 const SizedBox(height: 6),
                 if (_error != null) ...[

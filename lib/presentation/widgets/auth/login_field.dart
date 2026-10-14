@@ -31,11 +31,11 @@ class LoginField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'SulphurPoint',
             fontSize: 20,
             height: 1.2,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 3),

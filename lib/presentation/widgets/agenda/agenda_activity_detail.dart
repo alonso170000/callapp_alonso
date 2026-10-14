@@ -3,9 +3,15 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 
-class AgendaActivityDetail extends StatelessWidget {
+import 'dart:async';
+
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+
+class AgendaActivityDetail extends StatefulWidget {
   final AgendaActivity activity;
   final VoidCallback onClose;
   final VoidCallback onMessage;
@@ -14,6 +20,8 @@ class AgendaActivityDetail extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onComplete;
   final VoidCallback onReschedule;
+  final VoidCallback? onDelete;
+  final Future<List<ProspectRecord>> Function()? loadProspects;
 
   const AgendaActivityDetail({
     super.key,
@@ -25,7 +33,78 @@ class AgendaActivityDetail extends StatelessWidget {
     required this.onEdit,
     required this.onComplete,
     required this.onReschedule,
+    this.onDelete,
+    this.loadProspects,
   });
+
+  @override
+  State<AgendaActivityDetail> createState() => _AgendaActivityDetailState();
+}
+
+class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
+  final _commentsKey = GlobalKey<ProspectCommentsPanelState>();
+  String? _avatarUrl;
+  bool _avatarLookupStarted = false;
+  Future<void> _loadAvatar() async {
+    if (_avatarLookupStarted || activity.prospectId == null) return;
+    _avatarLookupStarted = true;
+    final service = ProspectsService();
+    try {
+      final records = await (widget.loadProspects?.call() ?? service.fetch());
+      if (!mounted) return;
+      final matches = records.where((p) => p.id == activity.prospectId);
+      if (matches.isNotEmpty && matches.first.avatarUrl != null) {
+        setState(() => _avatarUrl = matches.first.avatarUrl);
+      }
+    } catch (_) {
+      // Keep the placeholder when the prospect cannot be retrieved.
+    } finally {
+      service.dispose();
+    }
+  }
+
+  AgendaActivity get activity => widget.activity;
+  bool get _showLocation =>
+      (activity.type ?? activity.title)
+          .replaceAll('_', ' ')
+          .trim()
+          .toLowerCase() ==
+      'visita presencial';
+  VoidCallback get onClose => widget.onClose;
+  VoidCallback get onMessage => widget.onMessage;
+  VoidCallback get onCall => widget.onCall;
+  VoidCallback get onOpenProspect => widget.onOpenProspect;
+  VoidCallback get onEdit => widget.onEdit;
+  VoidCallback get onComplete =>
+      activity.isFollowUp ? widget.onOpenProspect : widget.onComplete;
+  VoidCallback get onReschedule => widget.onReschedule;
+  Timer? _deleteTimer;
+  bool _deleteExpired = false;
+  bool get _canDelete =>
+      !_deleteExpired &&
+      widget.onDelete != null &&
+      activity.deleteUntil != null &&
+      DateTime.now().isBefore(activity.deleteUntil!);
+  @override
+  void initState() {
+    super.initState();
+    _avatarUrl = activity.prospectAvatarUrl;
+    if (_avatarUrl == null) _loadAvatar();
+    if (_canDelete) {
+      _deleteTimer = Timer(
+        activity.deleteUntil!.difference(DateTime.now()),
+        () {
+          if (mounted) setState(() => _deleteExpired = true);
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _deleteTimer?.cancel();
+    super.dispose();
+  }
 
   static const _months = [
     'enero',
@@ -88,8 +167,8 @@ class AgendaActivityDetail extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.primaryColor,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
           fontFamily: 'BebasNeue',
           fontSize: 21,
         ),
@@ -119,7 +198,7 @@ class AgendaActivityDetail extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.black,
                     fontFamily: 'SulphurPoint',
-                    fontSize: 38,
+                    fontSize: 44,
                     fontWeight: FontWeight.w700,
                     height: 1.05,
                   ),
@@ -169,13 +248,25 @@ class AgendaActivityDetail extends StatelessWidget {
               radius: 18,
               backgroundColor: const Color(0xFFE75AC7),
               child: ClipOval(
-                child: Image.asset(
-                  'lib/resources/images/Frame.png',
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
-                ),
+                child: _avatarUrl == null
+                    ? const Icon(Icons.person, color: AppColors.homeWarmText)
+                    : Image.network(
+                        _avatarUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) {
+                          if (!_avatarLookupStarted) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _loadAvatar();
+                            });
+                          }
+                          return const Icon(
+                            Icons.person,
+                            color: AppColors.homeWarmText,
+                          );
+                        },
+                      ),
               ),
             ),
             const SizedBox(width: 9),
@@ -248,7 +339,6 @@ class AgendaActivityDetail extends StatelessWidget {
                             ),
                             fontFamily: 'BebasNeue',
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
@@ -308,167 +398,194 @@ class AgendaActivityDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.homeBackground,
+    color: Theme.of(context).colorScheme.surface,
     child: Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 44,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          borderRadius: BorderRadius.circular(30),
+          child: RefreshIndicator(
+            notificationPredicate: (notification) =>
+                activity.isFollowUp &&
+                activity.prospectId != null &&
+                notification.depth == 0,
+            onRefresh: () =>
+                _commentsKey.currentState?.refresh() ?? Future<void>.value(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 44,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Column(
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              IconButton(
-                                tooltip: 'Cerrar detalle',
-                                onPressed: onClose,
-                                color: Colors.white,
-                                icon: const Icon(Icons.arrow_back_ios_new),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      activity.title,
-                                      textAlign: TextAlign.right,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'BebasNeue',
-                                        fontSize: 25,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 9,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _statusColor,
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
-                                      child: Text(
-                                        activity.status.label,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Cerrar detalle',
+                                  onPressed: onClose,
+                                  color: Colors.white,
+                                  icon: const Icon(Icons.arrow_back_ios_new),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        activity.title,
+                                        textAlign: TextAlign.right,
                                         style: const TextStyle(
-                                          color: AppColors.textDarkColor,
+                                          color: Colors.white,
                                           fontFamily: 'BebasNeue',
-                                          fontSize: 14,
+                                          fontSize: 25,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _statusColor,
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          activity.status.label,
+                                          style: const TextStyle(
+                                            color: AppColors.textDarkColor,
+                                            fontFamily: 'BebasNeue',
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _prospectCard(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 18),
-                      _sectionTitle('CUÁNDO Y DÓNDE'),
-                      IntrinsicHeight(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _infoCard(
-                                '${activity.date.day}',
-                                'Fecha',
-                                '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
-                                AppColors.homeBlueSection,
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _infoCard(
-                                _time.split(' ').first,
-                                'Hora',
-                                _time.split(' ').last,
-                                AppColors.homeYellowCard,
-                              ),
-                            ),
+                            const SizedBox(height: 20),
+                            _prospectCard(),
                           ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      IntrinsicHeight(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _infoCard(
-                                activity.location.toUpperCase(),
-                                'Ubicación',
-                                'Lugar de la actividad',
-                                AppColors.homeOrangeSection,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _infoCard(
-                                activity.hasReminder
-                                    ? '${activity.reminderMinutes}'
-                                    : 'Sin recordatorio',
-                                'Recordatorio',
-                                activity.hasReminder
-                                    ? 'minutos antes'
-                                    : 'No programado',
-                                AppColors.homeGreenCard,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      _sectionTitle('DESCRIPCIÓN'),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(15),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          activity.description,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 15,
-                            height: 1.35,
-                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 18),
+                        _sectionTitle(
+                          _showLocation ? 'CUÁNDO Y DÓNDE' : 'CUÁNDO',
+                        ),
+                        IntrinsicHeight(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _infoCard(
+                                  '${activity.date.day}',
+                                  'Fecha',
+                                  '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
+                                  AppColors.homeBlueSection,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _infoCard(
+                                  _time.split(' ').first,
+                                  'Hora',
+                                  _time.split(' ').last,
+                                  AppColors.homeYellowCard,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        IntrinsicHeight(
+                          child: Row(
+                            children: [
+                              if (_showLocation)
+                                Expanded(
+                                  child: _infoCard(
+                                    activity.location.toUpperCase(),
+                                    'Ubicación',
+                                    'Lugar de la actividad',
+                                    AppColors.homeOrangeSection,
+                                  ),
+                                ),
+                              if (_showLocation) const SizedBox(width: 10),
+                              Expanded(
+                                child: _infoCard(
+                                  activity.hasReminder
+                                      ? '${activity.reminderMinutes}'
+                                      : 'Sin recordatorio',
+                                  'Recordatorio',
+                                  activity.hasReminder
+                                      ? 'minutos antes'
+                                      : 'No programado',
+                                  AppColors.homeGreenCard,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        if (activity.isFollowUp) ...[
+                          if (activity.prospectId != null)
+                            ProspectCommentsPanel(
+                              key: _commentsKey,
+                              prospectId: activity.prospectId!,
+                            )
+                          else
+                            const Text(
+                              'Esta actividad no tiene un prospecto asociado.',
+                            ),
+                        ] else ...[
+                          _sectionTitle('DESCRIPCIÓN'),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              activity.description,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'SulphurPoint',
+                                fontSize: 15,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -493,6 +610,8 @@ class AgendaActivityDetail extends StatelessWidget {
                   label: Text(
                     activity.status == AgendaStatus.completed
                         ? 'COMPLETADA'
+                        : activity.isFollowUp
+                        ? 'ATENDER ACTIVIDAD'
                         : 'COMPLETAR ACTIVIDAD',
                     style: const TextStyle(
                       fontFamily: 'BebasNeue',
@@ -511,12 +630,13 @@ class AgendaActivityDetail extends StatelessWidget {
                     Iconsax.calendar_remove_copy,
                     onReschedule,
                   ),
-                  const SizedBox(width: 9),
-                  _secondaryAction(
-                    'Eliminar',
-                    Iconsax.trash_copy,
-                    onReschedule,
-                  ),
+                  if (_canDelete) const SizedBox(width: 9),
+                  if (_canDelete)
+                    _secondaryAction(
+                      'Eliminar',
+                      Iconsax.trash_copy,
+                      widget.onDelete!,
+                    ),
                 ],
               ),
             ],

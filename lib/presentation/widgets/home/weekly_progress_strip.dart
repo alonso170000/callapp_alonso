@@ -61,7 +61,9 @@ class _WeekDayChip extends StatelessWidget {
           Text(
             day.dayLabel,
             style: TextStyle(
-              color: day.isSelected ? Colors.white : Colors.black,
+              color: day.isSelected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
               fontFamily: 'SulphurPoint',
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -72,7 +74,9 @@ class _WeekDayChip extends StatelessWidget {
           Text(
             day.date?.day.toString() ?? '',
             style: TextStyle(
-              color: day.isSelected ? Colors.white : Colors.black,
+              color: day.isSelected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
               fontFamily: 'SulphurPoint',
               fontSize: 19,
               fontWeight: FontWeight.w800,

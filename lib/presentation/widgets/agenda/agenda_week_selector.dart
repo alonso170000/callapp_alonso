@@ -16,7 +16,7 @@ class AgendaWeekSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b', 'Dom'];
+    const labels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'SÃ¡b', 'Dom'];
     final start = DateTime(
       selectedDate.year,
       selectedDate.month,
@@ -34,7 +34,7 @@ class AgendaWeekSelector extends StatelessWidget {
             daily.every((item) => item.status == AgendaStatus.completed);
         final foreground = selected
             ? AppColors.homeBackground
-            : AppColors.primaryColor;
+            : Theme.of(context).colorScheme.primary;
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -59,7 +59,7 @@ class AgendaWeekSelector extends StatelessWidget {
                           labels[index],
                           style: TextStyle(
                             fontFamily: 'SulphurPoint',
-                            fontSize: 12,
+                            fontSize: 14,
                             color: foreground,
                           ),
                         ),

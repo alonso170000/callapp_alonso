@@ -27,86 +27,6 @@ class ProspectHistory extends StatelessWidget {
       '${value.day.toString().padLeft(2, '0')}/'
       '${value.month.toString().padLeft(2, '0')}/${value.year}';
 
-  String _time(DateTime value) {
-    final hour = value.hour > 12 ? value.hour - 12 : value.hour;
-    final suffix = value.hour >= 12 ? 'pm' : 'am';
-    return '${hour.toString().padLeft(2, '0')}:'
-        '${value.minute.toString().padLeft(2, '0')}$suffix';
-  }
-
-  Widget _resultBadge(ProspectContactResult result) {
-    final (label, color) = switch (result) {
-      ProspectContactResult.answered => ('Contestó', const Color(0xFF83F58F)),
-      ProspectContactResult.unanswered => (
-        'No Contestó',
-        const Color(0xFFFF9CA2),
-      ),
-      ProspectContactResult.appointment => (
-        'Cita programada',
-        const Color(0xFF8EE9F5),
-      ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        border: Border.all(color: const Color(0xFF75334F)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
-    );
-  }
-
-  Widget _commentCard(ProspectHistoryComment comment) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF0D1FF),
-      borderRadius: BorderRadius.circular(11),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEF86),
-                border: Border.all(color: const Color(0xFF776315)),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Iconsax.call_calling_copy, size: 15),
-            ),
-            ...comment.results.map(_resultBadge),
-          ],
-        ),
-        const SizedBox(height: 7),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: _fieldColor,
-            borderRadius: BorderRadius.circular(7),
-          ),
-          child: Text(
-            comment.comment,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          '${_date(comment.createdAt)}    ${_time(comment.createdAt)}',
-          style: const TextStyle(fontSize: 9),
-        ),
-      ],
-    ),
-  );
-
   Widget _summaryField(String label, String value) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
     child: Column(
@@ -365,7 +285,7 @@ class ProspectHistory extends StatelessWidget {
           child: Column(
             children: [
               for (var index = 0; index < comments.length; index++) ...[
-                _commentCard(comments[index]),
+                ProspectHistoryCommentCard(comment: comments[index]),
                 if (index < comments.length - 1) const SizedBox(height: 9),
               ],
             ],
@@ -423,4 +343,102 @@ class ProspectHistory extends StatelessWidget {
       ],
     ],
   );
+}
+
+class ProspectHistoryCommentCard extends StatelessWidget {
+  const ProspectHistoryCommentCard({super.key, required this.comment});
+  final ProspectHistoryComment comment;
+  static const _fieldColor = Color(0xFF9139A8);
+  String _date(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/'
+      '${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+  String _time(DateTime value) {
+    final hour = value.hour > 12 ? value.hour - 12 : value.hour;
+    final suffix = value.hour >= 12 ? 'pm' : 'am';
+    return '${hour.toString().padLeft(2, '0')}:'
+        '${value.minute.toString().padLeft(2, '0')}$suffix';
+  }
+
+  Widget _resultBadge(ProspectContactResult result) {
+    final (label, color) = switch (result) {
+      ProspectContactResult.answered => ('Contestó', const Color(0xFF83F58F)),
+      ProspectContactResult.unanswered => (
+        'No Contestó',
+        const Color(0xFFFF9CA2),
+      ),
+      ProspectContactResult.appointment => (
+        'Cita programada',
+        const Color(0xFF8EE9F5),
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: const Color(0xFF75334F)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+
+  Widget _commentCard(ProspectHistoryComment comment) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0D1FF),
+      borderRadius: BorderRadius.circular(11),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEF86),
+                border: Border.all(color: const Color(0xFF776315)),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(switch (comment.medium) {
+                'correo' => Icons.mail_outline,
+                'whatsapp' => Icons.chat_outlined,
+                'presencial' => Icons.people_outline,
+                'telefono' => Iconsax.call_calling_copy,
+                _ => Icons.message_outlined,
+              }, size: 15),
+            ),
+            ...comment.results.map(_resultBadge),
+          ],
+        ),
+        const SizedBox(height: 7),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: _fieldColor,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            comment.comment,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          '${_date(comment.createdAt)}    ${_time(comment.createdAt)}',
+          style: const TextStyle(fontSize: 9),
+        ),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => _commentCard(comment);
 }

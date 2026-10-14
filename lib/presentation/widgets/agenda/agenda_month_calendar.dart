@@ -93,9 +93,10 @@ class AgendaMonthCalendar extends StatelessWidget {
                                     fontSize: 18,
                                     color: selected
                                         ? Colors.white
-                                        : AppColors.primaryColor.withValues(
-                                            alpha: inMonth ? 1 : 0.35,
-                                          ),
+                                        : Theme.of(context).colorScheme.primary
+                                              .withValues(
+                                                alpha: inMonth ? 1 : 0.35,
+                                              ),
                                   ),
                                 ),
                                 const SizedBox(height: 2),

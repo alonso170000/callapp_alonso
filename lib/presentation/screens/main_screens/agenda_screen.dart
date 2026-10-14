@@ -8,6 +8,9 @@ import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.da
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:go_router/go_router.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -26,8 +29,14 @@ class AgendaController {
 class AgendaScreen extends StatefulWidget {
   final AgendaController? controller;
   final Future<List<AgendaActivity>> Function()? loadActivities;
+  final Future<List<ProspectRecord>> Function()? loadProspects;
 
-  const AgendaScreen({super.key, this.controller, this.loadActivities});
+  const AgendaScreen({
+    super.key,
+    this.controller,
+    this.loadActivities,
+    this.loadProspects,
+  });
 
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
@@ -54,7 +63,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     'MIÉRCOLES',
     'JUEVES',
     'VIERNES',
-    'SÁBADO', 
+    'SÁBADO',
     'DOMINGO',
   ];
   DateTime _date = DateUtils.dateOnly(DateTime.now());
@@ -145,7 +154,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -169,7 +178,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -244,11 +253,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (detailContext) => Scaffold(
-          backgroundColor: AppColors.homeBackground,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
             bottom: false,
             child: AgendaActivityDetail(
               activity: activity,
+              loadProspects: widget.loadProspects,
               onClose: () => Navigator.pop(detailContext),
               onMessage: () => _showActionMessage(
                 'Mensaje para ${activity.prospect}',
@@ -258,10 +268,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 'Llamada para ${activity.prospect}',
                 detailContext,
               ),
-              onOpenProspect: () => _showActionMessage(
-                'El detalle del prospecto estará disponible al conectar esta actividad.',
-                detailContext,
-              ),
+              onOpenProspect: () => _openProspect(activity, detailContext),
+              onDelete: () => _deleteActivity(activity, detailContext),
               onEdit: () => _showActionMessage(
                 'La edición estará disponible al conectar el servicio.',
                 detailContext,
@@ -276,6 +284,89 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ),
       ),
     );
+  }
+
+  bool _openingProspect = false;
+  final _deleting = <int>{};
+  Future<void> _openProspect(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    if (_openingProspect) return;
+    if (activity.prospectId == null) {
+      _showActionMessage(
+        'Esta actividad no tiene un prospecto asociado.',
+        detailContext,
+      );
+      return;
+    }
+    _openingProspect = true;
+    final service = ProspectsService();
+    try {
+      final prospects = await (widget.loadProspects?.call() ?? service.fetch());
+      if (!detailContext.mounted) return;
+      final matches = prospects.where((p) => p.id == activity.prospectId);
+      if (matches.isEmpty) {
+        _showActionMessage(
+          'El prospecto ya no está disponible en tu sesión.',
+          detailContext,
+        );
+        return;
+      }
+      final prospect = matches.first;
+      await detailContext.push(
+        '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
+        extra: prospect,
+      );
+    } on ProspectsException catch (error) {
+      if (detailContext.mounted) {
+        _showActionMessage(error.message, detailContext);
+      }
+    } finally {
+      service.dispose();
+      _openingProspect = false;
+    }
+  }
+
+  Future<void> _deleteActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    final id = activity.id;
+    if (id == null || !_deleting.add(id)) return;
+    try {
+      final confirmed = await showDialog<bool>(
+        context: detailContext,
+        builder: (context) => AlertDialog(
+          title: const Text('Eliminar actividad'),
+          content: const Text('¿Eliminar esta actividad creada por error?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Volver'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !detailContext.mounted) return;
+      await _service.delete(id);
+      if (!detailContext.mounted) return;
+      Navigator.pop(detailContext);
+      if (mounted) {
+        _showActionMessage('Actividad eliminada.');
+        await _load();
+      }
+    } on AgendaException catch (error) {
+      if (detailContext.mounted) {
+        _showActionMessage(error.message, detailContext);
+      }
+    } finally {
+      _deleting.remove(id);
+    }
   }
 
   void _showActionMessage(String message, [BuildContext? messageContext]) {
@@ -318,184 +409,195 @@ class _AgendaScreenState extends State<AgendaScreen> {
             .toList()
           ..sort((a, b) => a.date.compareTo(b.date));
 
-    return CustomScrollView(
-      key: const PageStorageKey('agenda-scroll'),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-          sliver: SliverList.list(
-            children: [
-              HomeHeader(
-                userName: AuthService.instance.userName,
-                title: 'MI AGENDA',
-              ),
-              const SizedBox(height: 20),
-              if (_loading)
-                const LinearProgressIndicator(color: AppColors.primaryColor),
-              if (_error != null) ...[
-                Text(_error!, textAlign: TextAlign.center),
-                TextButton(onPressed: _load, child: const Text('Reintentar')),
-              ],
-              AgendaPeriodSelector(
-                selected: _period,
-                onSelected: (period) => setState(() => _period = period),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      foregroundColor: AppColors.homeWarmText,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    tooltip: 'Periodo anterior',
-                    onPressed: () => _move(-1),
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Expanded(
-                    child: Text(
-                      _periodLabel,
-                      textAlign: TextAlign.center,
-                      style: agendaHeadingStyle,
-                    ),
-                  ),
-                  IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      foregroundColor: AppColors.homeWarmText,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    tooltip: 'Periodo siguiente',
-                    onPressed: () => _move(1),
-                    icon: const Icon(Icons.chevron_right),
-                  ),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        key: const PageStorageKey('agenda-scroll'),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            sliver: SliverList.list(
+              children: [
+                HomeHeader(
+                  userName: AuthService.instance.userName,
+                  title: 'MI AGENDA',
+                ),
+                const SizedBox(height: 20),
+                if (_loading)
+                  const LinearProgressIndicator(color: AppColors.primaryColor),
+                if (_error != null) ...[
+                  Text(_error!, textAlign: TextAlign.center),
+                  TextButton(onPressed: _load, child: const Text('Reintentar')),
                 ],
-              ),
-              if (_period == AgendaPeriod.month) ...[
-                const SizedBox(height: 16),
-                AgendaMonthCalendar(
-                  selectedDate: _date,
-                  activities: _activities,
-                  onSelected: (date) => setState(() => _date = date),
+                AgendaPeriodSelector(
+                  selected: _period,
+                  onSelected: (period) => setState(() => _period = period),
                 ),
-                const SizedBox(height: 16),
-              ],
-              if (_period == AgendaPeriod.week) ...[
-                const SizedBox(height: 16),
-                AgendaWeekSelector(
-                  selectedDate: _date,
-                  activities: _activities,
-                  onSelected: (date) => setState(() => _date = date),
-                ),
-                const SizedBox(height: 16),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'MOSTRANDO ${visible.length} ${visible.length == 1 ? 'ACTIVIDAD' : 'ACTIVIDADES'}',
-                      style: agendaHeadingStyle,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Filtrar actividades',
-                    icon: Icon(
-                      _filters.active ? Icons.filter_alt : Icons.tune,
-                      color: AppColors.primaryColor,
-                    ),
-                    onPressed: _showFilters,
-                  ),
-                  IconButton(
-                    tooltip: 'Actualizar agenda',
-                    onPressed: _loading ? null : _load,
-                    icon: const Icon(
-                      Icons.refresh,
-                      color: AppColors.primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              if (_filters.active)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: InputChip(
-                    backgroundColor: AppColors.primaryColor,
-                    labelStyle: const TextStyle(
-                      color: AppColors.whiteColor,
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    label: Text(_filters.sourceLabel ?? 'Filtros activos'),
-                    onDeleted: () => setState(() => _filters = AgendaFilters()),
-                    deleteIconColor: AppColors.whiteColor,
-                  ),
-                ),
-              if (visible.isEmpty && !_loading && _error == null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Iconsax.calendar_2_copy,
-                        size: 52,
-                        color: AppColors.primaryColor,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _period != AgendaPeriod.day
-                            ? 'No hay actividades para este día.'
-                            : 'No hay actividades para este periodo.',
-                        textAlign: TextAlign.center,
-                      ),
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _date = DateUtils.dateOnly(DateTime.now());
-                          _filters = AgendaFilters();
-                        }),
-                        child: const Text(
-                          'Volver a hoy',
-                          style: TextStyle(
-                            color: AppColors.primaryColor,
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.homeWarmText,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                    ],
+                      tooltip: 'Periodo anterior',
+                      onPressed: () => _move(-1),
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _periodLabel,
+                        textAlign: TextAlign.center,
+                        style: agendaHeadingStyle.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.homeWarmText,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      tooltip: 'Periodo siguiente',
+                      onPressed: () => _move(1),
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ],
+                ),
+                if (_period == AgendaPeriod.month) ...[
+                  const SizedBox(height: 16),
+                  AgendaMonthCalendar(
+                    selectedDate: _date,
+                    activities: _activities,
+                    onSelected: (date) => setState(() => _date = date),
                   ),
+                  const SizedBox(height: 16),
+                ],
+                if (_period == AgendaPeriod.week) ...[
+                  const SizedBox(height: 16),
+                  AgendaWeekSelector(
+                    selectedDate: _date,
+                    activities: _activities,
+                    onSelected: (date) => setState(() => _date = date),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'MOSTRANDO ${visible.length} ${visible.length == 1 ? 'ACTIVIDAD' : 'ACTIVIDADES'}',
+                        style: agendaHeadingStyle.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Filtrar actividades',
+                      icon: Icon(
+                        _filters.active ? Icons.filter_alt : Icons.tune,
+                        color: AppColors.primaryColor,
+                      ),
+                      onPressed: _showFilters,
+                    ),
+                    IconButton(
+                      tooltip: 'Actualizar agenda',
+                      onPressed: _loading ? null : _load,
+                      icon: const Icon(
+                        Icons.refresh,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+                if (_filters.active)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: InputChip(
+                      backgroundColor: AppColors.primaryColor,
+                      labelStyle: const TextStyle(
+                        color: AppColors.whiteColor,
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      label: Text(_filters.sourceLabel ?? 'Filtros activos'),
+                      onDeleted: () =>
+                          setState(() => _filters = AgendaFilters()),
+                      deleteIconColor: AppColors.whiteColor,
+                    ),
+                  ),
+                if (visible.isEmpty && !_loading && _error == null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Iconsax.calendar_2_copy,
+                          size: 52,
+                          color: AppColors.primaryColor,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _period != AgendaPeriod.day
+                              ? 'No hay actividades para este día.'
+                              : 'No hay actividades para este periodo.',
+                          textAlign: TextAlign.center,
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _date = DateUtils.dateOnly(DateTime.now());
+                            _filters = AgendaFilters();
+                          }),
+                          child: const Text(
+                            'Volver a hoy',
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontFamily: 'SulphurPoint',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            8,
-            16,
-            118 + MediaQuery.paddingOf(context).bottom,
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              118 + MediaQuery.paddingOf(context).bottom,
+            ),
+            sliver: SliverList.builder(
+              itemCount: visible.length,
+              itemBuilder: (context, index) {
+                final activity = visible[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: AgendaActivityTile(
+                    activity: activity,
+                    onTap: () => _showActivity(activity),
+                  ),
+                );
+              },
+            ),
           ),
-          sliver: SliverList.builder(
-            itemCount: visible.length,
-            itemBuilder: (context, index) {
-              final activity = visible[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: AgendaActivityTile(
-                  activity: activity,
-                  onTap: () => _showActivity(activity),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

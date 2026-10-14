@@ -370,7 +370,11 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                     _field('Empresa donde trabaja'),
                     _field('Ocupación'),
                     _heading('Origen y Estado'),
-                    if (_loading) const LinearProgressIndicator(),
+                    if (_loading)
+                      LinearProgressIndicator(
+                        color: AppColors.primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                      ),
                     if (_origins.isNotEmpty && _statuses.isNotEmpty) ...[
                       _dropdown<int>(
                         'Origen*',
@@ -441,16 +445,16 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                           ? 'Sin lote seleccionado'
                           : 'Lote ${_lotLabel(id)}',
                     ),
-                    Row(
-                      children: [
-                        Expanded(child: _heading('Primer seguimiento')),
-                        Switch(
-                          key: const ValueKey('first-follow-up'),
-                          value: _firstFollowUp,
-                          onChanged: (value) =>
-                              setState(() => _firstFollowUp = value),
-                        ),
-                      ],
+                    KeyedSubtree(
+                      key: const ValueKey('first-follow-up'),
+                      child: _dropdown<bool>(
+                        'Primer seguimiento',
+                        _firstFollowUp,
+                        const [false, true],
+                        (value) => _firstFollowUp = value,
+                        format: (value) =>
+                            value ? 'Sí, agregar seguimiento' : 'No, por ahora',
+                      ),
                     ),
                     if (_firstFollowUp) ...[
                       _dropdown<String>(
@@ -522,7 +526,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.homeBackground,
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
                 top: BorderSide(
                   color: AppColors.primaryColor.withValues(alpha: 0.12),
@@ -599,10 +603,10 @@ class _QualificationToggle extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'SulphurPoint',
                     fontSize: 16,
-                    color: AppColors.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),

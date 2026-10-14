@@ -14,7 +14,7 @@ class ProspectCard extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -74,6 +74,9 @@ class ProspectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = prospect.appointment ?? prospect.nextContact;
+    final dateColor = date != null && date.isBefore(DateTime.now())
+        ? const Color.fromARGB(255, 255, 159, 164)
+        : const Color(0xFFA8F5E4);
     String two(int value) => value.toString().padLeft(2, '0');
     final temperatureColor = ProspectTagColors.priority(prospect.temperature);
     return GestureDetector(
@@ -198,14 +201,12 @@ class ProspectCard extends StatelessWidget {
                 if (date != null)
                   _tag(
                     '${two(date.day)}-${two(date.month)}-${date.year}',
-                    const Color(0xFFA8F5E4),
+                    dateColor,
                   ),
                 if (date != null)
                   _tag(
                     '${two(date.hour % 12 == 0 ? 12 : date.hour % 12)}:${two(date.minute)} ${date.hour < 12 ? 'AM' : 'PM'}',
-                    prospect.status == 'Atrasados'
-                        ? const Color(0xFFFFA3A6)
-                        : const Color(0xFFA8F5E4),
+                    dateColor,
                   ),
               ],
             ),

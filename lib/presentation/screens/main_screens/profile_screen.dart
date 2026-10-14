@@ -7,6 +7,8 @@ import 'package:callerapp_frontend/presentation/models/profile_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/profile_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:callerapp_frontend/services/appearance_controller.dart';
+import 'package:callerapp_frontend/presentation/widgets/profile/appearance_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    AppearanceController.instance.addListener(_appearanceChanged);
     final auth = AuthService.instance;
     _profile = ProfileData(
       name: auth.userName,
@@ -30,6 +33,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       rol: auth.activeDevelopment?['rol'] as String? ?? 'No disponible',
     );
   }
+
+  void _appearanceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppearanceController.instance.removeListener(_appearanceChanged);
+    super.dispose();
+  }
+
+  void _chooseAppearance() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => AppearanceSheet(controller: AppearanceController.instance),
+  );
 
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -54,12 +74,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showModalBottomSheet<int>(
       context: context,
       showDragHandle: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('RECORDATORIOS', style: profileHeading),
+            Text(
+              'RECORDATORIOS',
+              style: profileHeading.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
             for (final minutes in [5, 15, 30, 60])
               ListTile(
                 title: Text('$minutes minutos antes'),
@@ -74,160 +99,174 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-    key: const PageStorageKey('profile-scroll'),
-    padding: EdgeInsets.fromLTRB(
-      28,
-      12,
-      28,
-      118 + MediaQuery.paddingOf(context).bottom,
-    ),
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: Text(
-              'MI PERFIL',
-              style: profileHeading.copyWith(fontSize: 30),
+  Widget build(BuildContext context) => RefreshIndicator(
+    onRefresh: AppearanceController.instance.reload,
+    child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      key: const PageStorageKey('profile-scroll'),
+      padding: EdgeInsets.fromLTRB(
+        28,
+        12,
+        28,
+        118 + MediaQuery.paddingOf(context).bottom,
+      ),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'MI PERFIL',
+                style: profileHeading.copyWith(
+                  fontSize: 30,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
             ),
-          ),
-          IconButton.filled(
-            tooltip: 'Notificaciones',
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: AppColors.homeWarmText,
+            IconButton.filled(
+              tooltip: 'Notificaciones',
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                foregroundColor: AppColors.homeWarmText,
+              ),
+              onPressed: () => showNotificationsSheet(context),
+              icon: const Icon(Iconsax.notification),
             ),
-            onPressed: () => showNotificationsSheet(context),
-            icon: const Icon(Iconsax.notification),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      ProfileIdentity(
-        profile: _profile,
-        role: AuthService.instance.activeDevelopment?['rol'] as String?,
-      ),
-      const SizedBox(height: 26),
-      ProfileSection(
-        title: 'DATOS PERSONALES',
-        children: [
-          ProfileSettingRow(
-            title: 'NOMBRE',
-            value: _profile.name,
-            titleColor: AppColors.profileDatos,
-            icon: Iconsax.edit_2_copy,
-            actionLabel: 'Editar nombre',
-            onPressed: () => _edit('Nombre', _profile.name),
-          ),
-          ProfileSettingRow(
-            title: 'TELÉFONO',
-            value: _profile.phone,
-            titleColor: AppColors.profileDatos,
-            icon: Iconsax.edit_2_copy,
-            actionLabel: 'Editar teléfono',
-            onPressed: () => _edit('Teléfono', _profile.phone),
-          ),
-          ProfileSettingRow(
-            title: 'CORREO',
-            value: _profile.email,
-            titleColor: AppColors.profileDatos,
-            icon: Iconsax.edit_2_copy,
-            actionLabel: 'Editar correo',
-            onPressed: () => _edit('Correo', _profile.email),
-          ),
-          ProfileSettingRow(
-            title: 'ROL',
-            value: _profile.rol,
-            titleColor: AppColors.profileDatos,
-            icon: Iconsax.edit_2_copy,
-            actionLabel: 'Editar rol',
-            onPressed: () => _edit('Rol', _profile.rol),
-          ),
-        ],
-      ),
-      const SizedBox(height: 18),
-      ProfileSection(
-        title: 'NOTIFICACIONES',
-        children: [
-          ProfileSettingRow(
-            title: 'BANDEJA DE NOTIFICACIONES',
-            value: 'Consultar avisos',
-            titleColor: AppColors.profileConfiguracion,
-            icon: Icons.chevron_right,
-            actionLabel: 'Abrir notificaciones',
-            onPressed: () => showNotificationsSheet(context),
-          ),
-          ProfileSettingRow(
-            title: 'NOTIFICACIONES',
-            value: _notifications ? 'Activado' : 'Desactivado',
-            titleColor: AppColors.profileConfiguracion,
-            icon: _notifications ? Icons.close : Icons.check,
-            actionLabel: 'Cambiar notificaciones',
-            onPressed: () => setState(() => _notifications = !_notifications),
-          ),
-          ProfileSettingRow(
-            title: 'RECORDATORIOS',
-            value: '$_reminder minutos antes',
-            titleColor: AppColors.profileConfiguracion,
-            icon: Icons.expand_more,
-            actionLabel: 'Cambiar recordatorios',
-            onPressed: _chooseReminder,
-          ),
-        ],
-      ),
-      const SizedBox(height: 18),
-      ProfileSection(
-        title: 'CONFIGURACIÓN',
-        children: [
-          ProfileSettingRow(
-            title: 'APARIENCIA',
-            value: 'Claro',
-            titleColor: AppColors.profileConfiguracion,
-            icon: Icons.dark_mode_outlined,
-            actionLabel: 'Apariencia',
-            onPressed: () => _message('El tema oscuro aún no está disponible.'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 18),
-      ProfileSection(
-        title: 'SINCRONIZACIÓN',
-        children: [
-          ProfileSettingRow(
-            title: 'ÚLTIMA SINCRONIZACIÓN',
-            value: 'Sin sincronizar',
-            titleColor: AppColors.profileSincronizacion,
-            icon: Icons.sync,
-            actionLabel: 'Sincronizar',
-            onPressed: () => _message(
-              'La sincronización estará disponible al conectar el servicio.',
+          ],
+        ),
+        const SizedBox(height: 16),
+        ProfileIdentity(
+          profile: _profile,
+          role: AuthService.instance.activeDevelopment?['rol'] as String?,
+        ),
+        const SizedBox(height: 26),
+        ProfileSection(
+          title: 'DATOS PERSONALES',
+          children: [
+            ProfileSettingRow(
+              title: 'NOMBRE',
+              value: _profile.name,
+              titleColor: AppColors.profileDatos,
+              icon: Iconsax.edit_2_copy,
+              actionLabel: 'Editar nombre',
+              onPressed: () => _edit('Nombre', _profile.name),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 28),
-      Center(
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFAA3034),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(9),
+            ProfileSettingRow(
+              title: 'TELÉFONO',
+              value: _profile.phone,
+              titleColor: AppColors.profileDatos,
+              icon: Iconsax.edit_2_copy,
+              actionLabel: 'Editar teléfono',
+              onPressed: () => _edit('Teléfono', _profile.phone),
             ),
-          ),
-          onPressed: () {
-            AuthService.instance.logout();
-            context.go('/login');
-          },
-          child: const Text(
-            'CERRAR SESIÓN',
-            style: TextStyle(fontFamily: 'BebasNeue', fontSize: 19),
+            ProfileSettingRow(
+              title: 'CORREO',
+              value: _profile.email,
+              titleColor: AppColors.profileDatos,
+              icon: Iconsax.edit_2_copy,
+              actionLabel: 'Editar correo',
+              onPressed: () => _edit('Correo', _profile.email),
+            ),
+            ProfileSettingRow(
+              title: 'ROL',
+              value: _profile.rol,
+              titleColor: AppColors.profileDatos,
+              icon: Iconsax.edit_2_copy,
+              actionLabel: 'Editar rol',
+              onPressed: () => _edit('Rol', _profile.rol),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        ProfileSection(
+          title: 'NOTIFICACIONES',
+          children: [
+            ProfileSettingRow(
+              title: 'BANDEJA DE NOTIFICACIONES',
+              value: 'Consultar avisos',
+              titleColor: AppColors.profileConfiguracion,
+              icon: Icons.chevron_right,
+              actionLabel: 'Abrir notificaciones',
+              onPressed: () => showNotificationsSheet(context),
+            ),
+            ProfileSettingRow(
+              title: 'NOTIFICACIONES',
+              value: _notifications ? 'Activado' : 'Desactivado',
+              titleColor: AppColors.profileConfiguracion,
+              icon: _notifications ? Icons.close : Icons.check,
+              actionLabel: 'Cambiar notificaciones',
+              onPressed: () => setState(() => _notifications = !_notifications),
+            ),
+            ProfileSettingRow(
+              title: 'RECORDATORIOS',
+              value: '$_reminder minutos antes',
+              titleColor: AppColors.profileConfiguracion,
+              icon: Icons.expand_more,
+              actionLabel: 'Cambiar recordatorios',
+              onPressed: _chooseReminder,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        ProfileSection(
+          title: 'CONFIGURACIÓN',
+          children: [
+            ProfileSettingRow(
+              title: 'APARIENCIA',
+              value: AppearanceController.instance.appearance.label,
+              titleColor: AppColors.profileConfiguracion,
+              icon: Icons.dark_mode_outlined,
+              actionLabel: 'Apariencia',
+              onPressed: _chooseAppearance,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        ProfileSection(
+          title: 'SINCRONIZACIÓN',
+          children: [
+            ProfileSettingRow(
+              title: 'ÚLTIMA SINCRONIZACIÓN',
+              value: 'Sin sincronizar',
+              titleColor: AppColors.profileSincronizacion,
+              icon: Icons.sync,
+              actionLabel: 'Sincronizar',
+              onPressed: () => _message(
+                'La sincronización estará disponible al conectar el servicio.',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 28),
+        Center(
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFAA3034),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(9),
+              ),
+            ),
+            onPressed: () {
+              AuthService.instance.logout();
+              context.go('/login');
+            },
+            child: const Text(
+              'CERRAR SESIÓN',
+              style: TextStyle(fontFamily: 'BebasNeue', fontSize: 19),
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 5),
-      Center(
-        child: Text('${DateTime.now().year} V1.0.0', style: profileHeading),
-      ),
-    ],
+        const SizedBox(height: 5),
+        Center(
+          child: Text(
+            '${DateTime.now().year} V1.0.0',
+            style: profileHeading.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

@@ -15,7 +15,6 @@ class ProspectFilters {
     'No contestó',
     'Cita programada',
     'Sin contacto',
-    'Sin información',
   ];
   static const sorts = [
     'Atención prioritaria',

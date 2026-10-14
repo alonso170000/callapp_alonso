@@ -1,6 +1,5 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_summary_sheet.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
@@ -109,7 +108,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -183,7 +182,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     final selection = await showModalBottomSheet<ProspectFilters>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -201,327 +200,313 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   @override
   Widget build(BuildContext context) {
     final prospects = _visible;
-    return CustomScrollView(
-      key: const PageStorageKey('prospects-list'),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                HomeHeader(
-                  userName: AuthService.instance.userName,
-                  title:
-                      AuthService.instance.activeDevelopment?['rol']
-                              ?.toString()
-                              .toLowerCase() ==
-                          'admin'
-                      ? 'PROSPECTOS DEL DESARROLLO'
-                      : 'MIS PROSPECTOS',
-                ),
-                const SizedBox(height: 22),
-                TextField(
-                  controller: _search,
-                  onChanged: (_) => setState(() {}),
-                  style: const TextStyle(
-                    fontFamily: 'SulphurPoint',
-                    fontSize: 14,
-                    color: AppColors.primaryColor,
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        key: const PageStorageKey('prospects-list'),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HomeHeader(
+                    userName: AuthService.instance.userName,
+                    title:
+                        AuthService.instance.activeDevelopment?['rol']
+                                ?.toString()
+                                .toLowerCase() ==
+                            'admin'
+                        ? 'PROSPECTOS DEL DESARROLLO'
+                        : 'MIS PROSPECTOS',
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por nombre, teléfono o email...',
-                    hintStyle: const TextStyle(
+                  const SizedBox(height: 22),
+                  TextField(
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    style: const TextStyle(
                       fontFamily: 'SulphurPoint',
-                      fontSize: 13,
-                      color: Color(0xFF5CABA4),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFC5E9E3),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
-                    ),
-                    prefixIcon: const Icon(
-                      Iconsax.search_normal_1_copy,
+                      fontSize: 14,
                       color: AppColors.primaryColor,
-                      size: 23,
                     ),
-                    suffixIcon: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: IconButton.filled(
-                        tooltip: 'Filtrar prospectos',
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          foregroundColor:
-                              !_advanced.active || _advanced.isSellerDefault
-                              ? Colors.white
-                              : AppColors.accentColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre, teléfono o email...',
+                      hintStyle: const TextStyle(
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 13,
+                        color: Color(0xFF5CABA4),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFC5E9E3),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(
+                        Iconsax.search_normal_1_copy,
+                        color: AppColors.primaryColor,
+                        size: 23,
+                      ),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: IconButton.filled(
+                          tooltip: 'Filtrar prospectos',
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            foregroundColor:
+                                !_advanced.active || _advanced.isSellerDefault
+                                ? Colors.white
+                                : AppColors.accentColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        ),
-                        onPressed: _showFilters,
-                        icon: const Icon(
-                          Icons.tune_rounded,
-                          color: AppColors.accentColor,
-                          size: 20,
+                          onPressed: _showFilters,
+                          icon: const Icon(
+                            Icons.tune_rounded,
+                            color: AppColors.accentColor,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: _filters
-                      .map(
-                        (filter) => ChoiceChip(
-                          label: Text(filter),
-                          selected: _status == filter,
-                          showCheckmark: false,
-                          onSelected: (_) => setState(() {
-                            _status = filter;
-                          }),
-                          selectedColor: AppColors.primaryColor,
-                          backgroundColor: const Color(0xFFABF5E7),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _filters
+                        .map(
+                          (filter) => ChoiceChip(
+                            label: Text(filter),
+                            selected: _status == filter,
+                            showCheckmark: false,
+                            onSelected: (_) => setState(() {
+                              _status = filter;
+                            }),
+                            selectedColor: AppColors.primaryColor,
+                            backgroundColor: const Color(0xFFABF5E7),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            labelPadding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                            ),
+                            labelStyle: TextStyle(
+                              fontFamily: 'SulphurPoint',
+                              fontSize: 12,
+                              color: _status == filter
+                                  ? AppColors.accentColor
+                                  : const Color(0xFF3B8C83),
+                            ),
                           ),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 5,
+                        )
+                        .toList(),
+                  ),
+                  if (_advanced.active && !_advanced.isSellerDefault)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: InputChip(
+                        label: Text(
+                          _advanced.sourceLabel ?? 'Filtros activos',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        backgroundColor: AppColors.primaryColor,
+                        labelStyle: const TextStyle(
+                          fontFamily: 'SulphurPoint',
+                          color: AppColors.homeBackground,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        deleteIcon: const Icon(Icons.close_rounded, size: 18),
+                        deleteIconColor: AppColors.homeBackground,
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        onDeleted: () =>
+                            setState(() => _advanced = ProspectFilters()),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        'MOSTRANDO ${prospects.length} PROSPECTOS',
+                        style: const TextStyle(
+                          fontFamily: 'BebasNeue',
+                          fontSize: 20,
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        tooltip: 'Ordenar prospectos',
+                        color: AppColors.primaryColor,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 8,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: const BorderSide(color: AppColors.homeDeepTeal),
+                        ),
+                        initialValue: _advanced.sort,
+                        onSelected: (value) =>
+                            setState(() => _advanced.sort = value),
+                        itemBuilder: (_) => ProspectFilters.sorts
+                            .map(
+                              (value) => PopupMenuItem(
+                                value: value,
+                                padding: EdgeInsets.zero,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 48,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
+                                  color: value == _advanced.sort
+                                      ? AppColors.homeWarmText
+                                      : AppColors.primaryColor,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          value,
+                                          style: TextStyle(
+                                            fontFamily: 'SulphurPoint',
+                                            fontSize: 18,
+                                            fontWeight: value == _advanced.sort
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: value == _advanced.sort
+                                                ? AppColors.primaryColor
+                                                : AppColors.homeBackground,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
                           ),
-                          labelStyle: TextStyle(
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 12,
-                            color: _status == filter
-                                ? AppColors.accentColor
-                                : const Color(0xFF3B8C83),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFABF5E7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Ordenar por ${_advanced.sort.toLowerCase()}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'SulphurPoint',
+                                    fontSize: 12,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: AppColors.primaryColor,
+                                size: 18,
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                      .toList(),
-                ),
-                if (_advanced.active && !_advanced.isSellerDefault)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: InputChip(
-                      label: Text(_advanced.sourceLabel ?? 'Filtros activos'),
-                      onDeleted: () =>
-                          setState(() => _advanced = ProspectFilters()),
-                    ),
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 12),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+          
+          if (prospects.isEmpty && !_loading && _error == null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 40,
+                ),
+                child: Column(
                   children: [
-                    Text(
-                      'MOSTRANDO ${prospects.length} PROSPECTOS',
-                      style: const TextStyle(
-                        fontFamily: 'BebasNeue',
-                        fontSize: 20,
+                    const Icon(
+                      Iconsax.search_normal_1_copy,
+                      size: 40,
+                      color: AppColors.primaryColor,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No se encontraron prospectos',
+                      style: TextStyle(
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 18,
                         color: AppColors.primaryColor,
                       ),
                     ),
-                    PopupMenuButton<String>(
-                      tooltip: 'Ordenar prospectos',
-                      color: AppColors.primaryColor,
-                      surfaceTintColor: Colors.transparent,
-                      elevation: 8,
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: AppColors.homeDeepTeal),
-                      ),
-                      initialValue: _advanced.sort,
-                      onSelected: (value) =>
-                          setState(() => _advanced.sort = value),
-                      itemBuilder: (_) => ProspectFilters.sorts
-                          .map(
-                            (value) => PopupMenuItem(
-                              value: value,
-                              padding: EdgeInsets.zero,
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  minHeight: 48,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
-                                ),
-                                color: value == _advanced.sort
-                                    ? AppColors.homeWarmText
-                                    : AppColors.primaryColor,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        value,
-                                        style: TextStyle(
-                                          fontFamily: 'SulphurPoint',
-                                          fontSize: 18,
-                                          fontWeight: value == _advanced.sort
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          color: value == _advanced.sort
-                                              ? AppColors.primaryColor
-                                              : AppColors.homeBackground,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFABF5E7),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Ordenar por ${_advanced.sort.toLowerCase()}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontFamily: 'SulphurPoint',
-                                  fontSize: 12,
-                                  color: AppColors.primaryColor,
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.keyboard_arrow_down,
-                              color: AppColors.primaryColor,
-                              size: 18,
-                            ),
-                          ],
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _search.clear();
+                        _status = 'Todos';
+                        _advanced = ProspectFilters.forSeller();
+                      }),
+                      child: Text(
+                        'Limpiar filtros',
+                        style: TextStyle(
+                          color: AppColors.primaryColor,
+                          fontFamily: 'SulphurPoint',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-              ],
+              ),
             ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _loading
-                ? const LinearProgressIndicator(color: AppColors.primaryColor)
-                : _error != null
-                ? Column(
-                    children: [
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'SulphurPoint',
-                          color: AppColors.primaryColor,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _load,
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  )
-                : Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _load,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Actualizar prospectos'),
-                    ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 118),
+            sliver: SliverList.builder(
+              itemCount: prospects.length,
+              itemBuilder: (_, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ProspectCard(
+                  prospect: prospects[index],
+                  onTap: () => context.push(
+                    '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
+                    extra: prospects[index],
                   ),
-          ),
-        ),
-        if (prospects.isEmpty && !_loading && _error == null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: Column(
-                children: [
-                  const Icon(
-                    Iconsax.search_normal_1_copy,
-                    size: 40,
-                    color: AppColors.primaryColor,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No se encontraron prospectos',
-                    style: TextStyle(
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 18,
-                      color: AppColors.primaryColor,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _search.clear();
-                      _status = 'Todos';
-                      _advanced = ProspectFilters.forSeller();
-                    }),
-                    child: Text(
-                      'Limpiar filtros',
-                      style: TextStyle(
-                        color: AppColors.primaryColor,
-                        fontFamily: 'SulphurPoint',
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 118),
-          sliver: SliverList.builder(
-            itemCount: prospects.length,
-            itemBuilder: (_, index) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ProspectCard(
-                prospect: prospects[index],
-                onTap: prospects[index].id != null
-                    ? () => showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        showDragHandle: true,
-                        backgroundColor: AppColors.homeBackground,
-                        builder: (_) =>
-                            ProspectSummarySheet(prospect: prospects[index]),
-                      )
-                    : () => context.push(
-                        '/prospectos/${prospects[index].phone}',
-                        extra: prospects[index],
-                      ),
-              ),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

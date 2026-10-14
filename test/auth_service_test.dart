@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,77 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  for (final status in [404, 408, 429, 500, 502, 503, 504]) {
+    test(
+      'Preserves HTTP $status diagnostics when server returns HTML',
+      () async {
+        final auth = AuthService(
+          baseUrl: 'https://example.com',
+          client: MockClient(
+            (_) async => http.Response('<html>Proxy error</html>', status),
+          ),
+        );
+        await expectLater(
+          auth.login('ana', 'password'),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('[HTTP $status]'),
+            ),
+          ),
+        );
+        expect(auth.isAuthenticated, isFalse);
+      },
+    );
+  }
+  for (final entry in {
+    'Failed host lookup': 'AUTH_DNS',
+    'Handshake certificate failure': 'AUTH_TLS',
+    'Connection refused': 'AUTH_CONNECTION_REFUSED',
+    'Failed to fetch': 'AUTH_CONNECTION',
+  }.entries) {
+    test(
+      'Classifies ${entry.value} without exposing raw transport details',
+      () async {
+        final auth = AuthService(
+          baseUrl: 'https://example.com',
+          client: MockClient(
+            (_) async => throw http.ClientException(entry.key),
+          ),
+        );
+        await expectLater(
+          auth.login('ana', 'password'),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('[${entry.value}]'),
+            ),
+          ),
+        );
+        expect(auth.isAuthenticated, isFalse);
+      },
+    );
+  }
+  test(
+    'Timeout reports missing login response without guessing provider cause',
+    () async {
+      final auth = AuthService(
+        baseUrl: 'https://example.com',
+        client: MockClient((_) async => throw TimeoutException('test')),
+      );
+      await expectLater(
+        auth.login('ana', 'password'),
+        throwsA(
+          isA<AuthException>()
+              .having((e) => e.message, 'message', contains('[AUTH_TIMEOUT]'))
+              .having((e) => e.message, 'timeout', contains('60 segundos')),
+        ),
+      );
+      expect(auth.isAuthenticated, isFalse);
+    },
+  );
   test(
     'Reads personal data from login response and clears it on logout',
     () async {

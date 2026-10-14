@@ -16,6 +16,41 @@ class AgendaService {
       _auth = auth ?? AuthService.instance;
   final http.Client _client;
   final AuthService _auth;
+  Future<void> delete(int id) async {
+    final token = _auth.token;
+    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('${_auth.baseUrl}/api/v1/activities/$id'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 60));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode != 200 ||
+          data is! Map ||
+          data['success'] != true) {
+        throw AgendaException(
+          response.statusCode == 409 && data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'No se pudo eliminar la actividad. Actualiza la agenda e intenta nuevamente.',
+        );
+      }
+    } on TimeoutException {
+      throw const AgendaException(
+        'El servidor tardó demasiado. Actualiza la agenda para comprobar si se eliminó.',
+      );
+    } on http.ClientException {
+      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+    } on FormatException {
+      throw const AgendaException(
+        'No se pudo confirmar la eliminación. Actualiza la agenda.',
+      );
+    }
+  }
 
   Future<void> create(Map<String, dynamic> fields) async {
     final token = _auth.token;
@@ -112,7 +147,11 @@ class AgendaService {
       final now = DateTime.now();
       return (data['data'] as List)
           .map(
-            (row) => fromJson(Map<String, dynamic>.from(row as Map), now: now),
+            (row) => fromJson(
+              Map<String, dynamic>.from(row as Map),
+              now: now,
+              baseUrl: _auth.baseUrl,
+            ),
           )
           .toList();
     } on TimeoutException {
@@ -135,6 +174,7 @@ class AgendaService {
   static AgendaActivity fromJson(
     Map<String, dynamic> row, {
     required DateTime now,
+    String? baseUrl,
   }) {
     final date = DateTime.tryParse('${row['programada_at']}')?.toLocal();
     final id = int.tryParse('${row['id']}');
@@ -148,7 +188,24 @@ class AgendaService {
     };
     final type = (row['tipo'] as String).replaceAll('_', ' ');
     final reminder = DateTime.tryParse('${row['recordatorio_at']}')?.toLocal();
+    final created = DateTime.tryParse('${row['created_at']}');
+    final serverNow = DateTime.tryParse('${row['server_now']}');
+    final rawAvatar = row['prospecto_avatar_url'] ?? row['avatar_url'];
+    final avatar = rawAvatar is String && rawAvatar.trim().isNotEmpty
+        ? (baseUrl == null
+              ? Uri.tryParse(rawAvatar)
+              : Uri.parse('$baseUrl/').resolve(rawAvatar))
+        : null;
     return AgendaActivity(
+      prospectAvatarUrl: avatar?.scheme == 'https' ? avatar.toString() : null,
+      deleteUntil:
+          (row['puede_eliminar'] == 1 || row['puede_eliminar'] == true) &&
+              created != null &&
+              serverNow != null
+          ? now.add(
+              created.add(const Duration(minutes: 5)).difference(serverNow),
+            )
+          : null,
       id: id,
       prospectId: int.tryParse('${row['prospecto_id']}'),
       type: type,

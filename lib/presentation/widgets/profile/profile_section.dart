@@ -16,7 +16,12 @@ class ProfileSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(title, style: profileHeading),
+      Text(
+        title,
+        style: profileHeading.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
       const SizedBox(height: 4),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

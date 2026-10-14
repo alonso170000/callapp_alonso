@@ -8,7 +8,7 @@ Future<void> showNotificationsSheet(BuildContext context) =>
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: AppColors.homeBackground,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),

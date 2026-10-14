@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectsException implements Exception {
@@ -72,6 +73,23 @@ class ProspectsService {
       throw const ProspectsException(
         'El servidor devolvió una respuesta inválida.',
       );
+    }
+  }
+
+  Future<List<ProspectHistoryComment>> contactHistory(int id) async {
+    final data = await _request('leads/$id/contact-history');
+    try {
+      return (data['data'] as List).map((raw) {
+        final row = raw as Map;
+        return ProspectHistoryComment(
+          comment: row['nota'] as String? ?? 'Sin comentario',
+          createdAt: DateTime.parse(row['fecha_hora'] as String).toLocal(),
+          medium: row['medio'] as String,
+          results: const [],
+        );
+      }).toList();
+    } catch (_) {
+      throw const ProspectsException('El historial recibido no es válido.');
     }
   }
 

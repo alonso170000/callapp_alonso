@@ -9,6 +9,7 @@ import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -20,6 +21,7 @@ class ProspectDetailScreen extends StatefulWidget {
 }
 
 class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
+  final _commentsKey = GlobalKey<ProspectCommentsPanelState>();
   final _selected = {'Seguimiento', 'Discovery'};
   final _panelRevisions = <String, int>{};
   final _history = <String>[];
@@ -113,7 +115,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         ),
       ),
       child: Scaffold(
-        backgroundColor: AppColors.homeBackground,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(30, 10, 30, 16),
@@ -195,86 +197,104 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                   ),
                 ),
               ),
-              SingleChildScrollView(
-                child: Column(
-                  children: [
-                    ProspectDetailHeader(
-                      prospect: p,
-                      selected: _selected,
-                      onToggle: _toggleSection,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        children: [
-                          _section(
-                            'Seguimiento',
-                            'Registrar seguimiento',
-                            const Color(0xFF96E3F4),
-                            ProspectFollowUpForm(
-                              prospect: p,
-                              onSaved: (entry) =>
-                                  setState(() => _history.insert(0, entry)),
+              RefreshIndicator(
+                notificationPredicate: (notification) =>
+                    p.id != null &&
+                    _commentsKey.currentState != null &&
+                    notification.depth == 0,
+                onRefresh: () =>
+                    _commentsKey.currentState?.refresh() ??
+                    Future<void>.value(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  child: Column(
+                    children: [
+                      ProspectDetailHeader(
+                        prospect: p,
+                        selected: _selected,
+                        onToggle: _toggleSection,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            _section(
+                              'Seguimiento',
+                              'Registrar seguimiento',
+                              const Color(0xFF96E3F4),
+                              ProspectFollowUpForm(
+                                prospect: p,
+                                onSaved: (entry) =>
+                                    setState(() => _history.insert(0, entry)),
+                              ),
                             ),
-                          ),
-                          _section(
-                            'Discovery',
-                            'Registrar discovery',
-                            const Color(0xFF95FF90),
-                            ProspectDiscoveryForm(
-                              onSaved: (summary) =>
-                                  setState(() => _history.insert(0, summary)),
+                            _section(
+                              'Discovery',
+                              'Registrar discovery',
+                              const Color(0xFF95FF90),
+                              ProspectDiscoveryForm(
+                                onSaved: (summary) =>
+                                    setState(() => _history.insert(0, summary)),
+                              ),
                             ),
-                          ),
-                          _section(
-                            'Guiones',
-                            'Guiones de llamadas',
-                            const Color(0xFFFFF18A),
-                            Column(
-                              children: [
-                                ProspectCallScripts(
-                                  script: demoAlanCallScript,
-                                  prospectName: p.name,
-                                ),
-                                const SizedBox(height: 12),
-                                ProspectFollowUpCallScript(
-                                  prospectName: p.name,
-                                  onContinue: () => setState(
-                                    () => _history.insert(
-                                      0,
-                                      'Guiones · Continuar al cierre',
+                            _section(
+                              'Guiones',
+                              'Guiones de llamadas',
+                              const Color(0xFFFFF18A),
+                              Column(
+                                children: [
+                                  ProspectCallScripts(
+                                    script: demoAlanCallScript,
+                                    prospectName: p.name,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ProspectFollowUpCallScript(
+                                    prospectName: p.name,
+                                    onContinue: () => setState(
+                                      () => _history.insert(
+                                        0,
+                                        'Guiones · Continuar al cierre',
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          _section(
-                            'Prospecto',
-                            'Datos del prospecto',
-                            const Color(0xFFFF929C),
-                            ProspectDataForm(
-                              prospect: p,
-                              onSaved: (summary) =>
-                                  setState(() => _history.insert(0, summary)),
+                            _section(
+                              'Prospecto',
+                              'Datos del prospecto',
+                              const Color(0xFFFF929C),
+                              ProspectDataForm(
+                                prospect: p,
+                                onSaved: (summary) =>
+                                    setState(() => _history.insert(0, summary)),
+                              ),
                             ),
-                          ),
-                          _section(
-                            'Historial',
-                            'Historial',
-                            const Color(0xFFCE82F3),
-                            ProspectHistory(
-                              comments: demoProspectHistoryComments,
-                              discoverySummary: demoProspectDiscoverySummary,
-                              emails: demoProspectEmailHistory,
-                              callHours: demoProspectCallHours,
-                              sessionEntries: _history,
+                            _section(
+                              'Historial',
+                              'Historial',
+                              const Color(0xFFCE82F3),
+                              p.id != null
+                                  ? ProspectCommentsPanel(
+                                      key: _commentsKey,
+                                      prospectId: p.id!,
+                                    )
+                                  : ProspectHistory(
+                                      comments: demoProspectHistoryComments,
+                                      discoverySummary:
+                                          demoProspectDiscoverySummary,
+                                      emails: demoProspectEmailHistory,
+                                      callHours: demoProspectCallHours,
+                                      sessionEntries: _history,
+                                    ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],

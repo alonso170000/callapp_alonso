@@ -120,15 +120,17 @@ void main() {
           await tester.ensureVisible(field);
           await tester.enterText(field, entry.value);
         }
-        await tester.ensureVisible(find.text('Tibio'));
-        await tester.tap(find.text('Tibio'));
+        await tester.ensureVisible(find.text('Caliente'));
+        await tester.tap(find.text('Caliente'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Caliente').last);
         await tester.pumpAndSettle();
         await tester.ensureVisible(
           find.byKey(const ValueKey('first-follow-up')),
         );
-        await tester.tap(find.byKey(const ValueKey('first-follow-up')));
+        await tester.tap(find.text('No, por ahora'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sí, agregar seguimiento').last);
         await tester.pumpAndSettle();
         expect(find.text('Medio de contacto*'), findsOneWidget);
         expect(find.text('Recordatorio*'), findsOneWidget);

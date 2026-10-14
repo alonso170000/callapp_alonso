@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -23,8 +24,8 @@ class HomeHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.homeDeepTeal,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
                   fontFamily: 'BebasNeue',
                   fontSize: 34,
                   height: 0.9,
@@ -78,42 +79,29 @@ class _UserAvatar extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
+            right: 8,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: const Color.fromARGB(255, 255, 137, 118),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFFF1D6), width: 3),
               ),
               child: const Center(
-                child: Icon(
-                  Icons.person_rounded,
-                  color: Color(0xFFFFD486),
-                  size: 48,
-                ),
+                child: Icon(Iconsax.user, color: Color(0xFFFFD486), size: 48),
               ),
             ),
           ),
           Positioned(
-            left: 18,
-            top: 21,
+            right: 0,
+            bottom: 0,
             child: Container(
-              width: 36,
-              height: 9,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -2,
-            bottom: 7,
-            child: Container(
-              width: 28,
-              height: 28,
+              width: 32,
+              height: 32,
               decoration: const BoxDecoration(
                 color: AppColors.homeDeepTeal,
                 shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.homeBackground, width: 3),
+                ),
               ),
               child: IconButton(
                 tooltip: 'Notificaciones',
@@ -122,7 +110,7 @@ class _UserAvatar extends StatelessWidget {
                 icon: const Icon(
                   Icons.notifications_rounded,
                   color: AppColors.homeWarmText,
-                  size: 18,
+                  size: 20,
                 ),
               ),
             ),

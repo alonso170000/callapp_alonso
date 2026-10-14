@@ -11,6 +11,9 @@ enum AgendaStatus {
 }
 
 class AgendaActivity {
+  final String? prospectAvatarUrl;
+  final DateTime? deleteUntil;
+  bool get isFollowUp => (type ?? title).trim().toLowerCase() == 'seguimiento';
   final int? id;
   final int? prospectId;
   final String? type;
@@ -27,6 +30,8 @@ class AgendaActivity {
   final String lastContact;
 
   const AgendaActivity({
+    this.prospectAvatarUrl,
+    this.deleteUntil,
     this.id,
     this.prospectId,
     this.type,
@@ -44,6 +49,8 @@ class AgendaActivity {
   });
 
   AgendaActivity copyWith({AgendaStatus? status}) => AgendaActivity(
+    prospectAvatarUrl: prospectAvatarUrl,
+    deleteUntil: deleteUntil,
     id: id,
     prospectId: prospectId,
     type: type,

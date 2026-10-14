@@ -21,7 +21,11 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
     padding: const EdgeInsets.only(top: 18, bottom: 4),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        fontSize: 19,
+        fontWeight: FontWeight.bold,
+        fontFamily: 'SulphurPoint',
+      ),
     ),
   );
 
@@ -84,6 +88,26 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
       initialDateRange: _draft.range,
       helpText: 'Fecha de asignación',
       saveText: 'Guardar',
+      builder: (context, child) => SafeArea(
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            appBarTheme: const AppBarTheme(toolbarHeight: 56),
+            datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
+              rangePickerHeaderBackgroundColor: AppColors.primaryColor,
+              rangePickerHeaderForegroundColor: AppColors.homeWarmText,
+              rangePickerHeaderHeadlineStyle: TextStyle(
+                fontFamily: 'BebasNeue',
+                fontSize: MediaQuery.sizeOf(context).width < 360 ? 20 : 24,
+              ),
+              rangePickerHeaderHelpStyle: const TextStyle(
+                fontFamily: 'SulphurPoint',
+                fontSize: 14,
+              ),
+            ),
+          ),
+          child: child!,
+        ),
+      ),
     );
     if (mounted && range != null) {
       setState(() {
@@ -96,8 +120,10 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
   @override
   Widget build(BuildContext context) => Theme(
     data: Theme.of(context).copyWith(
-      textTheme: Theme.of(context).textTheme
-          .apply(fontFamily: 'SulphurPoint', bodyColor: Colors.black),
+      textTheme: Theme.of(context).textTheme.apply(
+        fontFamily: 'SulphurPoint',
+        bodyColor: Theme.of(context).colorScheme.onSurface,
+      ),
     ),
     child: SafeArea(
       child: Padding(
