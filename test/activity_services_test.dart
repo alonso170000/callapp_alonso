@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 
 void main() {
   Future<AuthService> auth() async {
@@ -70,6 +73,37 @@ void main() {
       expect(activity.copyWith().deleteUntil, activity.deleteUntil);
     },
   );
+  test('Creating a duplicate follow-up preserves the server conflict message', () async {
+    const message =
+        'Este prospecto ya tiene un seguimiento pendiente para el 20/10/2026 a las 10:00. Puedes editar el seguimiento existente.';
+    final service = AgendaService(
+      auth: await auth(),
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({'success': false, 'message': message}),
+          409,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    await expectLater(
+      service.create({
+        'tipo': 'seguimiento',
+        'prospecto_id': 17,
+        'descripcion': 'Duplicado',
+        'medio': 'llamada',
+        'programada_at': '2026-10-20T15:00:00Z',
+        'recordatorio_at': '2026-10-20T14:45:00Z',
+      }),
+      throwsA(
+        isA<AgendaException>().having(
+          (error) => error.message,
+          'message',
+          message,
+        ),
+      ),
+    );
+  });
   test(
     'History reads notes and actual media with no fabricated contact outcomes',
     () async {
@@ -85,6 +119,8 @@ void main() {
                 {
                   'nota': 'Nota real',
                   'medio': 'correo',
+                  'hubo_exito': 0,
+                  'siguiente_actividad_id': 24,
                   'fecha_hora': '2026-10-14T15:23:00Z',
                 },
               ],
@@ -97,11 +133,51 @@ void main() {
       final comments = await service.contactHistory(17);
       expect(comments.single.comment, 'Nota real');
       expect(comments.single.medium, 'correo');
-      expect(comments.single.results, isEmpty);
+      expect(comments.single.results, [
+        ProspectContactResult.unanswered,
+        ProspectContactResult.appointment,
+      ]);
       expect(
         comments.single.createdAt.toUtc(),
         DateTime.parse('2026-10-14T15:23:00Z'),
       );
     },
   );
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets('Contact history displays result badges at $width', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProspectCommentsPanel(
+                prospectId: 17,
+                loadComments: () async => [
+                  ProspectHistoryComment(
+                    medium: 'telefono',
+                    comment: 'No contestó; se programó una cita.',
+                    createdAt: DateTime(2026, 10, 15, 14, 46),
+                    results: const [
+                      ProspectContactResult.unanswered,
+                      ProspectContactResult.appointment,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No Contestó'), findsOneWidget);
+      expect(find.text('Cita programada'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

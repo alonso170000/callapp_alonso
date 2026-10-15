@@ -137,7 +137,8 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.text('Ubicación'), findsNothing);
-        expect(find.text('DESCRIPCIÓN'), findsNothing);
+        expect(find.text('DESCRIPCIÓN'), findsOneWidget);
+        expect(find.text('Descripción real'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

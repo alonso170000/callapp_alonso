@@ -551,7 +551,26 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                           ),
                         ),
                         const SizedBox(height: 18),
+                        _sectionTitle('DESCRIPCIÓN'),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            activity.description,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'SulphurPoint',
+                              fontSize: 15,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
                         if (activity.isFollowUp) ...[
+                          const SizedBox(height: 18),
                           if (activity.prospectId != null)
                             ProspectCommentsPanel(
                               key: _commentsKey,
@@ -561,25 +580,6 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                             const Text(
                               'Esta actividad no tiene un prospecto asociado.',
                             ),
-                        ] else ...[
-                          _sectionTitle('DESCRIPCIÓN'),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              activity.description,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontFamily: 'SulphurPoint',
-                                fontSize: 15,
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
                         ],
                       ],
                     ),

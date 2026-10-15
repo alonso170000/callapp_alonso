@@ -25,6 +25,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   final _selected = {'Seguimiento', 'Discovery'};
   final _panelRevisions = <String, int>{};
   final _history = <String>[];
+  bool _telephoneCallCompleted = false;
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) =>
       Expanded(
         child: SizedBox(
@@ -48,33 +49,45 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
     super.dispose();
   }
 
-  void _contact() => showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(widget.prospect.name),
-            SelectableText(widget.prospect.phone),
-            SelectableText(widget.prospect.email),
-            TextButton.icon(
-              onPressed: () async {
-                await Clipboard.setData(
-                  ClipboardData(text: widget.prospect.phone),
-                );
-                if (context.mounted) Navigator.pop(context);
-              },
-              icon: const Icon(Icons.copy),
-              label: const Text('Copiar teléfono'),
-            ),
-          ],
+  Future<void> _contact({bool phoneCall = false}) async {
+    final completed = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.prospect.name),
+              SelectableText(widget.prospect.phone),
+              SelectableText(widget.prospect.email),
+              TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(
+                    ClipboardData(text: widget.prospect.phone),
+                  );
+                  if (context.mounted) Navigator.pop(context);
+                },
+                icon: const Icon(Icons.copy),
+                label: const Text('Copiar teléfono'),
+              ),
+              if (phoneCall)
+                FilledButton.icon(
+                  key: const ValueKey('finish-prospect-call'),
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('TERMINÉ LA LLAMADA'),
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+    if (completed == true && mounted) {
+      setState(() => _telephoneCallCompleted = true);
+    }
+  }
 
   Widget _section(String name, String title, Color color, Widget child) =>
       Visibility(
@@ -124,13 +137,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                 _actionButton(
                   'Datos para mensaje',
                   Iconsax.send_2_copy,
-                  _contact,
+                  () => _contact(),
                 ),
                 const SizedBox(width: 7),
                 _actionButton(
                   'Datos del prospecto',
                   Iconsax.profile_tick_copy,
-                  _contact,
+                  () => _contact(),
                 ),
                 const SizedBox(width: 7),
                 Expanded(
@@ -146,7 +159,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _contact,
+                      onPressed: () => _contact(phoneCall: true),
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -225,9 +238,18 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                               'Registrar seguimiento',
                               const Color(0xFF96E3F4),
                               ProspectFollowUpForm(
+                                key: ValueKey(
+                                  'follow-up-$_telephoneCallCompleted',
+                                ),
                                 prospect: p,
-                                onSaved: (entry) =>
-                                    setState(() => _history.insert(0, entry)),
+                                telephoneCallCompleted: _telephoneCallCompleted,
+                                onSaved: (entry) {
+                                  setState(() {
+                                    _history.insert(0, entry);
+                                    _telephoneCallCompleted = false;
+                                  });
+                                  _commentsKey.currentState?.refresh();
+                                },
                               ),
                             ),
                             _section(

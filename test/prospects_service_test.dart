@@ -61,6 +61,44 @@ void main() {
     expect(record.assignedAt, isNotNull);
   });
 
+  test(
+    'Creates a follow-up and its next activity through one endpoint',
+    () async {
+      final fields = {
+        'estatus': 'Seguimiento',
+        'prioridad': 'caliente',
+        'medio': 'telefono',
+        'hubo_exito': true,
+        'nota': 'Contacto realizado',
+        'actividad': {
+          'tipo': 'seguimiento',
+          'prospecto_id': 17,
+          'medio': 'llamada',
+          'descripcion': 'Confirmar propuesta',
+          'programada_at': '2026-10-20T15:00:00.000Z',
+          'recordatorio_at': '2026-10-20T14:45:00.000Z',
+        },
+      };
+      final service = ProspectsService(
+        auth: await login(),
+        client: MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(
+            request.url.toString(),
+            'https://example.com/api/v1/leads/17/follow-ups',
+          );
+          expect(jsonDecode(request.body), fields);
+          return http.Response(
+            '{"success":true,"data":{"contact_id":4,"activity_id":9}}',
+            201,
+          );
+        }),
+      );
+      addTearDown(service.dispose);
+      await service.createFollowUp(17, fields);
+    },
+  );
+
   for (final width in [320.0, 390.0]) {
     testWidgets('Extended API card shows actual follow-up at $width', (
       tester,

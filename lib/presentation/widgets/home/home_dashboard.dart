@@ -41,15 +41,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   void _selectDate(DateTime date) =>
       setState(() => _selectedDate = DateUtils.dateOnly(date));
-  Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (date != null && mounted) _selectDate(date);
-  }
 
   @override
   void initState() {

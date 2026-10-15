@@ -49,7 +49,7 @@ class ProspectCommentsPanelState extends State<ProspectCommentsPanel> {
 
   @override
   Widget build(BuildContext context) => ProspectDetailPanel(
-    title: 'Historial de comentarios',
+    title: 'Historial de contactos previos',
     color: const Color(0xFF713080),
     nested: true,
     initiallyExpanded: true,

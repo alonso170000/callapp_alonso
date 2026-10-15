@@ -85,11 +85,30 @@ class ProspectsService {
           comment: row['nota'] as String? ?? 'Sin comentario',
           createdAt: DateTime.parse(row['fecha_hora'] as String).toLocal(),
           medium: row['medio'] as String,
-          results: const [],
+          results: [
+            if (row['hubo_exito'] == true || row['hubo_exito'] == 1)
+              ProspectContactResult.answered
+            else if (row['hubo_exito'] == false || row['hubo_exito'] == 0)
+              ProspectContactResult.unanswered,
+            if (row['siguiente_actividad_id'] != null)
+              ProspectContactResult.appointment,
+          ],
         );
       }).toList();
     } catch (_) {
       throw const ProspectsException('El historial recibido no es válido.');
+    }
+  }
+
+  Future<void> createFollowUp(
+    int prospectId,
+    Map<String, dynamic> fields,
+  ) async {
+    final data = await _request('leads/$prospectId/follow-ups', body: fields);
+    if (data['data'] is! Map || data['data']['contact_id'] is! int) {
+      throw const ProspectsException(
+        'No se pudo confirmar el seguimiento. Actualiza el historial antes de volver a guardar.',
+      );
     }
   }
 
