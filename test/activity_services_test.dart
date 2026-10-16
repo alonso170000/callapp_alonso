@@ -75,7 +75,7 @@ void main() {
   );
   test('Creating a duplicate follow-up preserves the server conflict message', () async {
     const message =
-        'Este prospecto ya tiene un seguimiento pendiente para el 20/10/2026 a las 10:00. Puedes editar el seguimiento existente.';
+        'Este prospecto ya tiene un seguimiento pendiente para el 20/10/2026 a las 10:00. Puedes editar la actividad existente.';
     final service = AgendaService(
       auth: await auth(),
       client: MockClient(
@@ -103,6 +103,31 @@ void main() {
         ),
       ),
     );
+  });
+  test('Edits an activity through its authenticated endpoint', () async {
+    late Map<String, dynamic> sent;
+    final service = AgendaService(
+      auth: await auth(),
+      client: MockClient((request) async {
+        expect(request.method, 'PUT');
+        expect(request.url.path, '/api/v1/activities/9');
+        expect(request.headers['Authorization'], 'Bearer session');
+        sent = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"success":true,"data":{"id":9}}', 200);
+      }),
+    );
+    addTearDown(service.dispose);
+
+    await service.update(9, {
+      'tipo': 'seguimiento',
+      'prospecto_id': 17,
+      'descripcion': 'Hora corregida',
+      'medio': 'llamada',
+      'programada_at': '2026-10-30T22:00:00.000Z',
+      'recordatorio_at': '2026-10-30T21:45:00.000Z',
+    });
+
+    expect(sent['programada_at'], '2026-10-30T22:00:00.000Z');
   });
   test(
     'History reads notes and actual media with no fabricated contact outcomes',

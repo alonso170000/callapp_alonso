@@ -163,7 +163,7 @@ void main() {
       await tester.tap(find.byTooltip('Periodo siguiente'));
       await tester.pumpAndSettle();
       expect(find.text('MOSTRANDO 0 ACTIVIDADES'), findsOneWidget);
-      await tester.tap(find.text('Volver a hoy'));
+      await tester.tap(find.byTooltip('Ir a hoy'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Semana'));
       await tester.pumpAndSettle();

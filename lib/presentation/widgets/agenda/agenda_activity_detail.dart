@@ -70,6 +70,13 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           .trim()
           .toLowerCase() ==
       'visita presencial';
+  String get _mediumLabel => switch (activity.medium) {
+    'llamada' => 'Llamada',
+    'whatsapp' => 'WhatsApp',
+    'facebook' => 'Facebook',
+    'correo' => 'Correo',
+    _ => 'Sin definir',
+  };
   VoidCallback get onClose => widget.onClose;
   VoidCallback get onMessage => widget.onMessage;
   VoidCallback get onCall => widget.onCall;
@@ -547,6 +554,17 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                                   AppColors.homeGreenCard,
                                 ),
                               ),
+                              if (activity.isFollowUp) ...[
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _infoCard(
+                                    _mediumLabel,
+                                    'Medio',
+                                    'Canal de contacto',
+                                    AppColors.profileConfiguracion,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

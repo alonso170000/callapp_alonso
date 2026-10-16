@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 
 class AgendaException implements Exception {
@@ -103,6 +104,44 @@ class AgendaService {
     }
   }
 
+  Future<void> update(int id, Map<String, dynamic> fields) async {
+    final token = _auth.token;
+    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('${_auth.baseUrl}/api/v1/activities/$id'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(fields),
+          )
+          .timeout(const Duration(seconds: 60));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode != 200 ||
+          data is! Map ||
+          data['success'] != true) {
+        throw AgendaException(
+          data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'No se pudo editar la actividad.',
+        );
+      }
+    } on TimeoutException {
+      throw const AgendaException(
+        'El servidor tardó demasiado. Actualiza la agenda para comprobar si se guardaron los cambios.',
+      );
+    } on http.ClientException {
+      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+    } on FormatException {
+      throw const AgendaException(
+        'No se pudo confirmar la edición. Actualiza la agenda.',
+      );
+    }
+  }
+
   Future<List<AgendaActivity>> fetch() async {
     final token = _auth.token;
     if (token == null) {
@@ -176,20 +215,29 @@ class AgendaService {
     required DateTime now,
     String? baseUrl,
   }) {
-    final date = DateTime.tryParse('${row['programada_at']}')?.toLocal();
+    final rawDate = DateTime.tryParse('${row['programada_at']}');
+    final date = rawDate == null ? null : businessTimeFromInstant(rawDate);
     final id = int.tryParse('${row['id']}');
     if (date == null || id == null) throw const FormatException();
+    final serverNow = DateTime.tryParse('${row['server_now']}');
+    final statusReference = serverNow == null
+        ? (now.isUtc ? businessTimeFromInstant(now) : now)
+        : businessTimeFromInstant(serverNow);
     final status = switch (row['estado']) {
       'completada' => AgendaStatus.completed,
       'cancelada' => AgendaStatus.cancelled,
       'pendiente' =>
-        date.isBefore(now) ? AgendaStatus.overdue : AgendaStatus.pending,
+        date.isBefore(statusReference)
+            ? AgendaStatus.overdue
+            : AgendaStatus.pending,
       _ => throw const FormatException(),
     };
     final type = (row['tipo'] as String).replaceAll('_', ' ');
-    final reminder = DateTime.tryParse('${row['recordatorio_at']}')?.toLocal();
+    final rawReminder = DateTime.tryParse('${row['recordatorio_at']}');
+    final reminder = rawReminder == null
+        ? null
+        : businessTimeFromInstant(rawReminder);
     final created = DateTime.tryParse('${row['created_at']}');
-    final serverNow = DateTime.tryParse('${row['server_now']}');
     final rawAvatar = row['prospecto_avatar_url'] ?? row['avatar_url'];
     final avatar = rawAvatar is String && rawAvatar.trim().isNotEmpty
         ? (baseUrl == null

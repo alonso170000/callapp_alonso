@@ -1,5 +1,6 @@
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -74,7 +75,12 @@ class ProspectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = prospect.appointment ?? prospect.nextContact;
-    final dateColor = date != null && date.isBefore(DateTime.now())
+    final now = businessNow();
+    final today = DateUtils.dateOnly(now);
+    final dateColor = date != null && DateUtils.dateOnly(date).isBefore(today)
+        ? const Color.fromARGB(255, 255, 159, 164)
+        : const Color(0xFFA8F5E4);
+    final timeColor = date != null && date.isBefore(now)
         ? const Color.fromARGB(255, 255, 159, 164)
         : const Color(0xFFA8F5E4);
     String two(int value) => value.toString().padLeft(2, '0');
@@ -206,7 +212,7 @@ class ProspectCard extends StatelessWidget {
                 if (date != null)
                   _tag(
                     '${two(date.hour % 12 == 0 ? 12 : date.hour % 12)}:${two(date.minute)} ${date.hour < 12 ? 'AM' : 'PM'}',
-                    dateColor,
+                    timeColor,
                   ),
               ],
             ),

@@ -2,6 +2,8 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_discovery_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_data_form.dart';
@@ -13,9 +15,22 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comme
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+class ProspectDetailArguments {
+  const ProspectDetailArguments({required this.prospect, this.sourceActivity});
+  final ProspectRecord prospect;
+  final AgendaActivity? sourceActivity;
+}
+
 class ProspectDetailScreen extends StatefulWidget {
   final ProspectRecord prospect;
-  const ProspectDetailScreen({super.key, required this.prospect});
+  final AgendaActivity? sourceActivity;
+  final Future<List<AgendaActivity>> Function()? loadActivities;
+  const ProspectDetailScreen({
+    super.key,
+    required this.prospect,
+    this.sourceActivity,
+    this.loadActivities,
+  });
   @override
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
 }
@@ -111,6 +126,29 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
     _selected.add(name);
     _panelRevisions[name] = (_panelRevisions[name] ?? 0) + 1;
   });
+
+  void _openActivity(AgendaActivity activity) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (detailContext) => Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: AgendaActivityDetail(
+              activity: activity,
+              onClose: () => Navigator.pop(detailContext),
+              onMessage: () {},
+              onCall: () {},
+              onOpenProspect: () => Navigator.pop(detailContext),
+              onEdit: () {},
+              onComplete: () {},
+              onReschedule: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.prospect;
@@ -243,6 +281,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                                 ),
                                 prospect: p,
                                 telephoneCallCompleted: _telephoneCallCompleted,
+                                sourceActivity: widget.sourceActivity,
+                                loadActivities: widget.loadActivities,
+                                onOpenActivity: _openActivity,
                                 onSaved: (entry) {
                                   setState(() {
                                     _history.insert(0, entry);

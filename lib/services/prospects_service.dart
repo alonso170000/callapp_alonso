@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -236,8 +237,10 @@ class ProspectsService {
       lastContactResult:
           row['ultimo_contacto_resultado'] as String? ??
           (lastCall == null ? 'Sin contacto' : 'Sin información'),
-      nextContact: DateTime.tryParse('${row['proximo_contacto_at']}')
-          ?.toLocal(),
+      nextContact: switch (DateTime.tryParse('${row['proximo_contacto_at']}')) {
+        final value? => businessTimeFromInstant(value),
+        null => null,
+      },
       daysSinceContact: lastCall == null
           ? 0
           : DateUtils.dateOnly(DateTime.now())

@@ -25,6 +25,13 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/prospectos/:phone',
       builder: (context, state) {
+        if (state.extra is ProspectDetailArguments) {
+          final arguments = state.extra! as ProspectDetailArguments;
+          return ProspectDetailScreen(
+            prospect: arguments.prospect,
+            sourceActivity: arguments.sourceActivity,
+          );
+        }
         if (state.extra is ProspectRecord) {
           return ProspectDetailScreen(prospect: state.extra! as ProspectRecord);
         }

@@ -89,6 +89,7 @@ void main() {
         id: 9,
         prospectId: 17,
         type: type,
+        medium: type == 'seguimiento' ? 'whatsapp' : null,
         title: type.toUpperCase(),
         prospect: prospect.name,
         description: 'Descripción real',
@@ -137,6 +138,9 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.text('Ubicación'), findsNothing);
+        expect(find.text('Medio'), findsOneWidget);
+        expect(find.text('WhatsApp'), findsOneWidget);
+        expect(find.text('Canal de contacto'), findsOneWidget);
         expect(find.text('DESCRIPCIÓN'), findsOneWidget);
         expect(find.text('Descripción real'), findsOneWidget);
         expect(tester.takeException(), isNull);
@@ -160,8 +164,18 @@ void main() {
           ),
           GoRoute(
             path: '/prospectos/:phone',
-            builder: (_, state) =>
-                ProspectDetailScreen(prospect: state.extra! as ProspectRecord),
+            builder: (_, state) {
+              final extra = state.extra;
+              return ProspectDetailScreen(
+                prospect: extra is ProspectDetailArguments
+                    ? extra.prospect
+                    : extra! as ProspectRecord,
+                sourceActivity: extra is ProspectDetailArguments
+                    ? extra.sourceActivity
+                    : null,
+                loadActivities: () async => [activity('seguimiento')],
+              );
+            },
           ),
         ],
       );
@@ -217,8 +231,9 @@ void main() {
               child: ProspectCommentsPanel(
                 prospectId: 17,
                 loadComments: () async {
-                  if (++attempts == 1)
+                  if (++attempts == 1) {
                     throw const ProspectsException('Error de conexión');
+                  }
                   return [
                     ProspectHistoryComment(
                       comment: 'Nota del contacto real',

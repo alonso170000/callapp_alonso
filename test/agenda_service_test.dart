@@ -25,10 +25,7 @@ void main() {
       final before = DateTime.parse('2026-10-13T16:59:00-05:00');
       final activity = AgendaService.fromJson(data, now: before);
       expect(activity.status, AgendaStatus.pending);
-      expect(
-        activity.date.toUtc(),
-        DateTime.parse('2026-10-13T17:00:00-05:00'),
-      );
+      expect(activity.date, DateTime(2026, 10, 13, 17));
       expect(
         AgendaService.fromJson(
           data,
@@ -38,6 +35,17 @@ void main() {
       );
     },
   );
+  test('Uses API server time to derive pending activity status', () {
+    final activity = AgendaService.fromJson({
+      'id': 9,
+      'tipo': 'seguimiento',
+      'estado': 'pendiente',
+      'programada_at': '2026-10-16T22:00:00.000Z',
+      'server_now': '2026-10-16T17:30:00.000Z',
+    }, now: DateTime.parse('2026-10-17T01:00:00.000Z'));
+
+    expect(activity.status, AgendaStatus.pending);
+  });
   final now = DateTime(2026, 10, 12, 12);
   Map<String, dynamic> row(String state, DateTime date) => {
     'id': 8,

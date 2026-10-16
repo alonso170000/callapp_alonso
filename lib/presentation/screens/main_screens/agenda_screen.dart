@@ -1,5 +1,6 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_filters_sheet.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -66,7 +68,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     'SÁBADO',
     'DOMINGO',
   ];
-  DateTime _date = DateUtils.dateOnly(DateTime.now());
+  DateTime _date = DateUtils.dateOnly(businessNow());
   final List<AgendaActivity> _activities = [];
   final _service = AgendaService();
   bool _loading = false;
@@ -186,13 +188,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       builder: (_) => AgendaFiltersSheet(
         initial: _filters,
         prospects: prospects,
-        count: (filters) => _activities
-            .where(
-              (activity) =>
-                  DateUtils.isSameDay(activity.date, _date) &&
-                  filters.matches(activity),
-            )
-            .length,
+        count: (filters) => _activities.where(filters.matches).length,
       ),
     );
     if (mounted && result != null) setState(() => _filters = result);
@@ -270,10 +266,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               onOpenProspect: () => _openProspect(activity, detailContext),
               onDelete: () => _deleteActivity(activity, detailContext),
-              onEdit: () => _showActionMessage(
-                'La edición estará disponible al conectar el servicio.',
-                detailContext,
-              ),
+              onEdit: () => _editActivity(activity, detailContext),
               onComplete: () => _completeActivity(activity, detailContext),
               onReschedule: () => _showActionMessage(
                 'La cancelación estará disponible al conectar el servicio.',
@@ -288,6 +281,43 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   bool _openingProspect = false;
   final _deleting = <int>{};
+  Future<void> _editActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    if (activity.id == null ||
+        (activity.status != AgendaStatus.pending &&
+            activity.status != AgendaStatus.overdue)) {
+      _showActionMessage(
+        'Solo se pueden editar actividades pendientes o atrasadas.',
+        detailContext,
+      );
+      return;
+    }
+    final scheduled = await showModalBottomSheet<DateTime>(
+      context: detailContext,
+      barrierColor: Colors.black54,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(detailContext).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => NewAgendaActivityDialog(
+        initialDate: activity.date,
+        activity: activity,
+        agendaService: _service,
+      ),
+    );
+    if (scheduled == null || !mounted) return;
+    if (detailContext.mounted) Navigator.pop(detailContext);
+    setState(() => _date = DateUtils.dateOnly(scheduled));
+    _showActionMessage('Actividad actualizada.');
+    await _load();
+  }
+
   Future<void> _openProspect(
     AgendaActivity activity,
     BuildContext detailContext,
@@ -316,7 +346,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
       final prospect = matches.first;
       await detailContext.push(
         '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
-        extra: prospect,
+        extra: ProspectDetailArguments(
+          prospect: prospect,
+          sourceActivity: activity,
+        ),
       );
     } on ProspectsException catch (error) {
       if (detailContext.mounted) {
@@ -399,13 +432,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredActivities = _activities.where(_filters.matches).toList();
     final visible =
-        _activities
-            .where(
-              (activity) =>
-                  DateUtils.isSameDay(activity.date, _date) &&
-                  _filters.matches(activity),
-            )
+        filteredActivities
+            .where((activity) => DateUtils.isSameDay(activity.date, _date))
             .toList()
           ..sort((a, b) => a.date.compareTo(b.date));
 
@@ -478,7 +508,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   const SizedBox(height: 16),
                   AgendaMonthCalendar(
                     selectedDate: _date,
-                    activities: _activities,
+                    activities: filteredActivities,
                     onSelected: (date) => setState(() => _date = date),
                   ),
                   const SizedBox(height: 16),
@@ -487,7 +517,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   const SizedBox(height: 16),
                   AgendaWeekSelector(
                     selectedDate: _date,
-                    activities: _activities,
+                    activities: filteredActivities,
                     onSelected: (date) => setState(() => _date = date),
                   ),
                   const SizedBox(height: 16),
@@ -511,10 +541,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       onPressed: _showFilters,
                     ),
                     IconButton(
-                      tooltip: 'Actualizar agenda',
-                      onPressed: _loading ? null : _load,
+                      tooltip: 'Ir a hoy',
+                      onPressed: () => setState(
+                        () => _date = DateUtils.dateOnly(businessNow()),
+                      ),
                       icon: const Icon(
-                        Icons.refresh,
+                        Iconsax.calendar,
                         color: AppColors.primaryColor,
                       ),
                     ),
@@ -556,7 +588,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ),
                         TextButton(
                           onPressed: () => setState(() {
-                            _date = DateUtils.dateOnly(DateTime.now());
+                            _date = DateUtils.dateOnly(businessNow());
                             _filters = AgendaFilters();
                           }),
                           child: const Text(

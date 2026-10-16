@@ -46,6 +46,7 @@ class AppColors {
   static const Color homeBlueSection = Color(0xFF64D7EA);
   static const Color homeRedSection = Color(0xFFFF9CA2);
   static const Color homeBadge = Color(0xFFF2FF81);
+  static const Color homeGreenToday = Color.fromARGB(255, 185, 237, 220);
 
   // Paleta principal para la pantalla Profile.
   static const Color profileDatos = Color.fromRGBO(186, 248, 157, 1);

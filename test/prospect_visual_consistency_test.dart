@@ -58,6 +58,37 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets('Only today time tag is overdue after its hour has passed', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final earlierToday = DateTime(now.year, now.month, now.day);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProspectCard(
+            prospect: ProspectRecord(
+              id: 18,
+              name: 'Luis',
+              phone: '',
+              email: '',
+              status: 'Nuevo',
+              temperature: 'Tibio',
+              avatarColor: Colors.teal,
+              statusColor: Colors.blue,
+              nextContact: earlierToday,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final redTags = tester
+        .widgetList<Container>(find.byType(Container))
+        .where((container) => container.color == const Color(0xFFFF9FA4));
+    expect(redTags.length, 1);
+    expect(tester.takeException(), isNull);
+  });
   for (final width in [320.0, 390.0]) {
     testWidgets(
       'Range header actions remain visible below system inset at $width',

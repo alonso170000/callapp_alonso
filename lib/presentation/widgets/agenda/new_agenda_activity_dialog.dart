@@ -1,16 +1,20 @@
 import 'package:callerapp_frontend/services/agenda_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
 
 class NewAgendaActivityDialog extends StatefulWidget {
   final DateTime initialDate;
+  final AgendaActivity? activity;
   final AgendaService? agendaService;
   final ProspectsService? prospectsService;
   const NewAgendaActivityDialog({
     super.key,
     required this.initialDate,
+    this.activity,
     this.agendaService,
     this.prospectsService,
   });
@@ -37,7 +41,22 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     super.initState();
     _agenda = widget.agendaService ?? AgendaService();
     _prospectsService = widget.prospectsService ?? ProspectsService();
-    final now = DateTime.now();
+    final activity = widget.activity;
+    if (activity != null) {
+      _type = activity.type?.replaceAll(' ', '_') ?? 'tarea';
+      _medium = activity.medium ?? 'llamada';
+      _location = activity.location;
+      _prospect = activity.prospectId ?? 0;
+      _reminder = activity.reminderMinutes == 0 ? 15 : activity.reminderMinutes;
+      _descriptionController.text = activity.description == 'Sin descripción'
+          ? ''
+          : activity.description;
+      _date = DateUtils.dateOnly(activity.date);
+      _time = TimeOfDay.fromDateTime(activity.date);
+      _loadProspects();
+      return;
+    }
+    final now = businessNow();
     final next = DateTime(
       now.year,
       now.month,
@@ -80,7 +99,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   }
 
   Future<void> _selectDate() async {
-    final today = DateUtils.dateOnly(DateTime.now());
+    final today = DateUtils.dateOnly(businessNow());
     final selected = await showDatePicker(
       context: context,
       initialDate: _date.isBefore(today) ? today : _date,
@@ -104,6 +123,14 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     if (selected != null && mounted) setState(() => _time = selected);
   }
 
+  String _prospectLabel(int id) {
+    if (id == 0) return 'Sin prospecto';
+    for (final prospect in _prospects) {
+      if (prospect.id == id) return prospect.name;
+    }
+    return widget.activity?.prospect ?? 'Prospecto';
+  }
+
   Future<void> _save() async {
     if (_saving || !_form.currentState!.validate()) return;
     final scheduled = DateTime(
@@ -113,7 +140,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
       _time.hour,
       _time.minute,
     );
-    if (!scheduled.isAfter(DateTime.now())) {
+    if (!scheduled.isAfter(businessNow())) {
       setState(
         () => _error = 'Puedes agendar hoy. Selecciona un minuto posterior a la hora actual.',
       );
@@ -124,19 +151,24 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
       _error = null;
     });
     try {
-      await _agenda.create({
+      final fields = <String, dynamic>{
         'tipo': _type,
         'prospecto_id': _prospect == 0 ? null : _prospect,
-        'programada_at': scheduled.toUtc().toIso8601String(),
-        'recordatorio_at': scheduled
-            .subtract(Duration(minutes: _reminder))
-            .toUtc()
-            .toIso8601String(),
+        'programada_at': businessTimeToUtcIso8601(scheduled),
+        'recordatorio_at': businessTimeToUtcIso8601(
+          scheduled.subtract(Duration(minutes: _reminder)),
+        ),
         if (_descriptionController.text.trim().isNotEmpty)
           'descripcion': _descriptionController.text.trim(),
         if (_type == 'seguimiento') 'medio': _medium,
         if (_type == 'visita_presencial') 'ubicacion': _location,
-      });
+      };
+      final activityId = widget.activity?.id;
+      if (activityId == null) {
+        await _agenda.create(fields);
+      } else {
+        await _agenda.update(activityId, fields);
+      }
       if (mounted) {
         setState(() => _saving = false);
         // Allow PopScope to rebuild before closing the successful form.
@@ -168,9 +200,11 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                 Row(
                   children: [
                     const SizedBox(width: 48),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Nueva actividad',
+                        widget.activity == null
+                            ? 'Nueva actividad'
+                            : 'Editar actividad',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'SulphurPoint',
@@ -220,10 +254,12 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                             ? 'Prospecto (opcional)'
                             : 'Prospecto*',
                         value: _prospect,
-                        items: [0, ..._prospects.map((p) => p.id!)],
-                        itemLabel: (id) => id == 0
-                            ? 'Sin prospecto'
-                            : _prospects.firstWhere((p) => p.id == id).name,
+                        items: {
+                          0,
+                          if (_prospect != 0) _prospect,
+                          ..._prospects.map((p) => p.id!),
+                        }.toList(),
+                        itemLabel: _prospectLabel,
                         validator: (id) =>
                             _type != 'tarea' && (id == null || id == 0)
                             ? 'Selecciona un prospecto'
@@ -319,7 +355,11 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: _DialogButton(
-                        key: const ValueKey('save-new-activity'),
+                        key: ValueKey(
+                          widget.activity == null
+                              ? 'save-new-activity'
+                              : 'save-edited-activity',
+                        ),
                         label: _saving ? 'GUARDANDO…' : 'GUARDAR',
                         color: const Color(0xFF008FA0),
                         onPressed: _saving ? null : _save,

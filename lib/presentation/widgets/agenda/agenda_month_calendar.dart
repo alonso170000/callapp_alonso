@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 class AgendaMonthCalendar extends StatelessWidget {
   final DateTime selectedDate;
@@ -24,6 +25,7 @@ class AgendaMonthCalendar extends StatelessWidget {
     final activityDates = activities
         .map((item) => DateUtils.dateOnly(item.date))
         .toSet();
+    final today = DateUtils.dateOnly(businessNow());
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: BoxDecoration(
@@ -60,6 +62,7 @@ class AgendaMonthCalendar extends StatelessWidget {
                   1 - offset + week * 7 + weekday,
                 );
                 final selected = DateUtils.isSameDay(date, selectedDate);
+                final isToday = DateUtils.isSameDay(date, today);
                 final inMonth = date.month == first.month;
                 final hasActivities = activityDates.contains(date);
                 return Expanded(
@@ -72,10 +75,23 @@ class AgendaMonthCalendar extends StatelessWidget {
                           '${date.day}/${date.month}/${date.year}${hasActivities ? ', con actividades' : ', sin actividades'}',
                       excludeSemantics: true,
                       child: Material(
+                        key: isToday
+                            ? const ValueKey('agenda-month-today')
+                            : null,
                         color: selected
                             ? AppColors.primaryColor
+                            : isToday
+                            ? AppColors.homeGreenToday
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: isToday
+                              ? const BorderSide(
+                                  color: AppColors.homeGreenToday,
+                                  width: 2,
+                                )
+                              : BorderSide.none,
+                        ),
                         child: InkWell(
                           key: ValueKey(
                             'agenda-month-${date.year}-${date.month}-${date.day}',
@@ -101,6 +117,11 @@ class AgendaMonthCalendar extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Container(
+                                  key: hasActivities
+                                      ? ValueKey(
+                                          'agenda-month-activity-${date.year}-${date.month}-${date.day}',
+                                        )
+                                      : null,
                                   width: 4,
                                   height: 4,
                                   decoration: BoxDecoration(
