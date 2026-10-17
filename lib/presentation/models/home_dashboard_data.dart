@@ -65,11 +65,17 @@ class HomeDashboardData {
   }
 
   List<ProspectRecord> get todayProspects => prospectsFor(
-    (activities
-        .where((a) => isToday(a.date) && a.status != AgendaStatus.cancelled)
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date))),
+    todayActivities,
   );
+  List<AgendaActivity> get todayActivities =>
+      activities
+          .where(
+            (activity) =>
+                isToday(activity.date) &&
+                activity.status != AgendaStatus.cancelled,
+          )
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
   List<WeeklyCallProgress> get week {
     final today = selectedDate;
     final monday = DateTime(

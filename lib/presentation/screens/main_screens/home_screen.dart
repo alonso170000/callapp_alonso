@@ -56,6 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       _prospectsController.showFromHome(ids, label);
                       setState(() => _selectedDestination = 1);
                     },
+                    onActivity: (activity) {
+                      _agendaController.openActivity(activity);
+                    },
                     onAddProspect: () {
                       setState(() => _selectedDestination = 1);
                       _prospectsController.openNewProspect();

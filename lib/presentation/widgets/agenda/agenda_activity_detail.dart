@@ -616,7 +616,9 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 width: double.infinity,
                 height: 56,
                 child: FilledButton.icon(
-                  onPressed: onComplete,
+                  onPressed: activity.status == AgendaStatus.completed
+                      ? () {}
+                      : onComplete,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
                     foregroundColor: AppColors.homeWarmText,
@@ -624,10 +626,15 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  icon: const Icon(Icons.check_circle_outline, size: 25),
+                  icon: Icon(
+                    activity.status == AgendaStatus.completed
+                        ? Icons.visibility_outlined
+                        : Icons.check_circle_outline,
+                    size: 25,
+                  ),
                   label: Text(
                     activity.status == AgendaStatus.completed
-                        ? 'COMPLETADA'
+                        ? 'VER SEGUIMIENTO'
                         : activity.isFollowUp
                         ? 'ATENDER ACTIVIDAD'
                         : 'COMPLETAR ACTIVIDAD',
@@ -638,25 +645,27 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                   ),
                 ),
               ),
-              const SizedBox(height: 9),
-              Row(
-                children: [
-                  _secondaryAction('EDITAR', Iconsax.edit_copy, onEdit),
-                  const SizedBox(width: 9),
-                  _secondaryAction(
-                    'Cancelar',
-                    Iconsax.calendar_remove_copy,
-                    onReschedule,
-                  ),
-                  if (_canDelete) const SizedBox(width: 9),
-                  if (_canDelete)
+              if (activity.status != AgendaStatus.completed) ...[
+                const SizedBox(height: 9),
+                Row(
+                  children: [
+                    _secondaryAction('EDITAR', Iconsax.edit_copy, onEdit),
+                    const SizedBox(width: 9),
                     _secondaryAction(
-                      'Eliminar',
-                      Iconsax.trash_copy,
-                      widget.onDelete!,
+                      'Cancelar',
+                      Iconsax.calendar_remove_copy,
+                      onReschedule,
                     ),
-                ],
-              ),
+                    if (_canDelete) const SizedBox(width: 9),
+                    if (_canDelete)
+                      _secondaryAction(
+                        'Eliminar',
+                        Iconsax.trash_copy,
+                        widget.onDelete!,
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

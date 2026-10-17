@@ -17,7 +17,7 @@ class AgendaWeekSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'SÃ¡b', 'Dom'];
+    const labels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
     final start = DateTime(
       selectedDate.year,
       selectedDate.month,

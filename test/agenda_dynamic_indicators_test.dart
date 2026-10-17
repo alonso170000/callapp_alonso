@@ -108,6 +108,35 @@ void main() {
     expect(find.text('Canal de contacto'), findsOneWidget);
   });
 
+  testWidgets('Completed activity only offers the future follow-up action', (
+    tester,
+  ) async {
+    final completed = _activity(businessNow())
+        .copyWith(status: AgendaStatus.completed);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaActivityDetail(
+            activity: completed,
+            onClose: () {},
+            onMessage: () {},
+            onCall: () {},
+            onOpenProspect: () {},
+            onEdit: () => fail('Edit must be hidden'),
+            onComplete: () => fail('View follow-up has no functionality yet'),
+            onReschedule: () => fail('Cancel must be hidden'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('VER SEGUIMIENTO'), findsOneWidget);
+    expect(find.text('EDITAR'), findsNothing);
+    expect(find.text('Cancelar'), findsNothing);
+    await tester.tap(find.text('VER SEGUIMIENTO'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Today button returns Agenda to the current date', (
     tester,
   ) async {

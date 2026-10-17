@@ -237,6 +237,10 @@ class AgendaService {
     final reminder = rawReminder == null
         ? null
         : businessTimeFromInstant(rawReminder);
+    final rawCompleted = DateTime.tryParse('${row['completada_at']}');
+    final completedAt = rawCompleted == null
+        ? null
+        : businessTimeFromInstant(rawCompleted);
     final created = DateTime.tryParse('${row['created_at']}');
     final rawAvatar = row['prospecto_avatar_url'] ?? row['avatar_url'];
     final avatar = rawAvatar is String && rawAvatar.trim().isNotEmpty
@@ -254,6 +258,7 @@ class AgendaService {
               created.add(const Duration(minutes: 5)).difference(serverNow),
             )
           : null,
+      completedAt: completedAt,
       id: id,
       prospectId: int.tryParse('${row['prospecto_id']}'),
       type: type,

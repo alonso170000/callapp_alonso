@@ -16,15 +16,18 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_de
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
+  ValueChanged<AgendaActivity>? _showActivity;
   void showFromHome(DateTime date, Set<int> ids, String label) =>
       _show?.call(date, ids, label);
   VoidCallback? _openNewActivity;
 
   void openNewActivity() => _openNewActivity?.call();
+  void openActivity(AgendaActivity activity) => _showActivity?.call(activity);
 
   void dispose() {
     _openNewActivity = null;
     _show = null;
+    _showActivity = null;
   }
 }
 
@@ -112,6 +115,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     super.initState();
     widget.controller?._openNewActivity = _showNewActivityDialog;
     widget.controller?._show = _showFromHome;
+    widget.controller?._showActivity = _showActivity;
     AuthService.instance.addListener(_sessionChanged);
     _load();
   }
@@ -122,8 +126,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._openNewActivity = null;
       oldWidget.controller?._show = null;
+      oldWidget.controller?._showActivity = null;
       widget.controller?._openNewActivity = _showNewActivityDialog;
       widget.controller?._show = _showFromHome;
+      widget.controller?._showActivity = _showActivity;
     }
   }
 
@@ -131,6 +137,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void dispose() {
     widget.controller?._openNewActivity = null;
     widget.controller?._show = null;
+    widget.controller?._showActivity = null;
     AuthService.instance.removeListener(_sessionChanged);
     _service.dispose();
     super.dispose();
@@ -546,7 +553,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         () => _date = DateUtils.dateOnly(businessNow()),
                       ),
                       icon: const Icon(
-                        Iconsax.calendar,
+                        Iconsax.calendar_copy,
                         color: AppColors.primaryColor,
                       ),
                     ),

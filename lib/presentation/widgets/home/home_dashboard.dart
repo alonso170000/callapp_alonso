@@ -17,6 +17,7 @@ class HomeDashboard extends StatefulWidget {
     required this.active,
     required this.onAgenda,
     required this.onProspects,
+    required this.onActivity,
     required this.onAddProspect,
     this.loadActivities,
     this.loadProspects,
@@ -24,6 +25,7 @@ class HomeDashboard extends StatefulWidget {
   final bool active;
   final void Function(DateTime, Set<int>, String) onAgenda;
   final void Function(Set<int>, String) onProspects;
+  final ValueChanged<AgendaActivity> onActivity;
   final VoidCallback onAddProspect;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final Future<List<ProspectRecord>> Function()? loadProspects;
@@ -134,6 +136,46 @@ class _HomeDashboardState extends State<HomeDashboard> {
         )
         .toList(),
   );
+
+  Widget _activitySection(
+    String title,
+    Color color,
+    List<AgendaActivity> activities,
+    HomeDashboardData data,
+  ) {
+    final prospectsById = {
+      for (final prospect in data.prospects)
+        if (prospect.id != null) prospect.id!: prospect,
+    };
+    final entries = [
+      for (final activity in activities)
+        if (activity.prospectId != null &&
+            prospectsById.containsKey(activity.prospectId))
+          (activity: activity, prospect: prospectsById[activity.prospectId]!),
+    ];
+
+    return ProspectSection(
+      title: title,
+      color: color,
+      height: 136,
+      onOpen: () => widget.onProspects(
+        entries.map((entry) => entry.prospect.id).whereType<int>().toSet(),
+        '$title · ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+      ),
+      onProspect: (index) => widget.onActivity(entries[index].activity),
+      prospects: [
+        for (final entry in entries)
+          ProspectItem(
+            name: entry.prospect.name,
+            avatarUrl: entry.prospect.avatarUrl,
+            subtitle: entry.activity.title,
+            avatarColor: entry.prospect.avatarColor,
+            accentColor: entry.prospect.statusColor,
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loaded = _data;
@@ -222,11 +264,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 .map((a) => a.id)
                                 .whereType<int>()
                                 .toSet(),
-                            'Llamadas realizadas',
+                            'Seguimientos realizados',
                           ),
                           metric: DashboardMetric(
                             value: data.completed,
-                            title: 'Llamadas\nRealizadas',
+                            title: 'Seguimientos\nRealizados',
                             backgroundColor: AppColors.homeGreenCard,
                           ),
                         ),
@@ -241,11 +283,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 .map((a) => a.id)
                                 .whereType<int>()
                                 .toSet(),
-                            'Llamadas pendientes',
+                            'Seguimientos pendientes',
                           ),
                           metric: DashboardMetric(
                             value: data.pending,
-                            title: 'Llamadas\nPendientes',
+                            title: 'Seguimientos\nPendientes',
                             backgroundColor: AppColors.homeYellowCard,
                           ),
                         ),
@@ -253,10 +295,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _section(
+                  _activitySection(
                     'Prospectos del día',
                     AppColors.homeOrangeSection,
-                    data.todayProspects,
+                    data.todayActivities,
+                    data,
                   ),
                   const SizedBox(height: 20),
                   _section(
@@ -266,10 +309,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     add: true,
                   ),
                   const SizedBox(height: 20),
-                  _section(
+                  _activitySection(
                     'Llamadas atrasadas',
                     AppColors.homeRedSection,
-                    data.prospectsFor(data.overdueCalls),
+                    data.overdueCalls,
+                    data,
                   ),
                 ],
               ],

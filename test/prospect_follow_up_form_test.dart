@@ -195,6 +195,7 @@ void main() {
                 prospect: prospect,
                 prospectsService: service,
                 sourceActivity: followUp,
+                telephoneCallCompleted: true,
                 loadActivities: () async => [followUp, visit],
                 onOpenActivity: (activity) => opened = activity,
                 onSaved: (_) {},
@@ -229,6 +230,48 @@ void main() {
       expect(service.fields?['actividad_origen_id'], 9);
       expect(service.fields?['medio'], 'whatsapp');
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Agenda follow-up disables save and requests a call before registering',
+    (tester) async {
+      final followUp = AgendaActivity(
+        id: 19,
+        prospectId: 17,
+        type: 'seguimiento',
+        medium: 'llamada',
+        title: 'SEGUIMIENTO',
+        prospect: prospect.name,
+        description: 'Realizar llamada',
+        date: DateTime.now().add(const Duration(hours: 1)),
+        status: AgendaStatus.pending,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProspectFollowUpForm(
+                prospect: prospect,
+                sourceActivity: followUp,
+                loadActivities: () async => [followUp],
+                onSaved: (_) => fail('Must remain blocked before the call'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final save = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'GUARDAR').last,
+      );
+      expect(save.onPressed, isNull);
+      final saveArea = find.byKey(const ValueKey('follow-up-save-area'));
+      await tester.ensureVisible(saveArea);
+      await tester.tap(saveArea);
+      await tester.pump();
+      expect(find.text('Primero debes realizar una llamada.'), findsOneWidget);
     },
   );
 }

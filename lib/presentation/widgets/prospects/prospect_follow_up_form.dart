@@ -67,6 +67,14 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   List<AgendaActivity> _activeActivities = [];
   Map<String, dynamic>? _saved;
 
+  bool get _requiresCompletedCall =>
+      widget.sourceActivity?.isFollowUp == true &&
+      !widget.telephoneCallCompleted;
+
+  void _showCallRequiredNotice() => setState(() {
+    _error = 'Primero debes realizar una llamada.';
+  });
+
   @override
   void initState() {
     super.initState();
@@ -778,12 +786,25 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CA382),
+                    child: Semantics(
+                      button: true,
+                      enabled: !_requiresCompletedCall && !_saving,
+                      child: GestureDetector(
+                        key: const ValueKey('follow-up-save-area'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _requiresCompletedCall
+                            ? _showCallRequiredNotice
+                            : null,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CA382),
+                          ),
+                          onPressed: _saving || _requiresCompletedCall
+                              ? null
+                              : _saveFollowUp,
+                          child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
+                        ),
                       ),
-                      onPressed: _saving ? null : _saveFollowUp,
-                      child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                     ),
                   ),
                 ],

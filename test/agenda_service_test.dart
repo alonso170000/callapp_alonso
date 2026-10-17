@@ -46,6 +46,18 @@ void main() {
 
     expect(activity.status, AgendaStatus.pending);
   });
+  test('Maps the activity completion timestamp to Cancun time', () {
+    final activity = AgendaService.fromJson({
+      'id': 10,
+      'tipo': 'seguimiento',
+      'estado': 'completada',
+      'programada_at': '2026-10-17T15:00:00.000Z',
+      'completada_at': '2026-10-17T16:30:00.000Z',
+    }, now: DateTime(2026, 10, 17, 12));
+
+    expect(activity.completedAt, DateTime(2026, 10, 17, 11, 30));
+    expect(activity.copyWith().completedAt, activity.completedAt);
+  });
   final now = DateTime(2026, 10, 12, 12);
   Map<String, dynamic> row(String state, DateTime date) => {
     'id': 8,
