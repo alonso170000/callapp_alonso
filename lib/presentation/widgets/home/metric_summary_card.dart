@@ -19,7 +19,7 @@ class MetricSummaryCard extends StatelessWidget {
         children: [
           const Positioned(top: 8, right: 8, child: HomeCardArrow()),
           Positioned.fill(
-            left: 12,
+            left: 10,
             right: 12,
             bottom: 14,
             child: Column(

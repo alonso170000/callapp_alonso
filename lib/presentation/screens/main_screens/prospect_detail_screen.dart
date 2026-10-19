@@ -298,6 +298,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                               'Registrar discovery',
                               const Color(0xFF95FF90),
                               ProspectDiscoveryForm(
+                                prospectId: p.id,
                                 onSaved: (summary) =>
                                     setState(() => _history.insert(0, summary)),
                               ),

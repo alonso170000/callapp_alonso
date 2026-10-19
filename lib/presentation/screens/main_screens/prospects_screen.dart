@@ -237,11 +237,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       hintText: 'Buscar por nombre, teléfono o email...',
                       hintStyle: const TextStyle(
                         fontFamily: 'SulphurPoint',
-                        fontSize: 13,
-                        color: Color(0xFF5CABA4),
+                        fontSize: 14,
+                        color: Color.fromARGB(255, 82, 156, 149),
                       ),
                       filled: true,
-                      fillColor: const Color(0xFFC5E9E3),
+                      fillColor: AppColors.primaryColor.withValues(alpha: 0.12),
                       contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -419,7 +419,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  'Ordenar por ${_advanced.sort.toLowerCase()}',
+                                  _advanced.sort,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(

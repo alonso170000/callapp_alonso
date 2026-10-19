@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_information.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class _FollowUpActivityDraft {
   const _FollowUpActivityDraft({
@@ -480,7 +482,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       margin: const EdgeInsets.only(top: 6, bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9F7FC),
+        color: const Color.fromARGB(255, 199, 247, 255),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -626,14 +628,19 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       margin: const EdgeInsets.only(top: 6, bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0B8),
+        color: const Color.fromARGB(255, 166, 86, 86),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFC99720)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(message),
+          Text(
+            message,
+            style: TextStyle(
+              color: AppColors.whiteColor,
+            ),
+          ),
+          const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
@@ -646,7 +653,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                     }),
               icon: Icon(
                 _completionAcknowledged
-                    ? Icons.check_circle
+                    ? Iconsax.tick_circle
                     : Icons.info_outline,
               ),
               label: Text(_completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO'),
@@ -668,11 +675,11 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9F7FC),
+        color: AppColors.accentColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF398FA3)),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           const Icon(Icons.info_outline, color: Color(0xFF195768)),
           const SizedBox(width: 8),

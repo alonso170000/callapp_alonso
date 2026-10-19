@@ -113,6 +113,28 @@ class ProspectsService {
     }
   }
 
+  Future<Map<String, dynamic>?> discovery(int prospectId) async {
+    final data = await _request('leads/$prospectId/discovery');
+    final discovery = data['data'];
+    if (discovery == null) return null;
+    if (discovery is! Map) {
+      throw const ProspectsException('El discovery recibido no es válido.');
+    }
+    return Map<String, dynamic>.from(discovery);
+  }
+
+  Future<void> saveDiscoverySection(
+    int prospectId,
+    Map<String, dynamic> fields,
+  ) async {
+    final data = await _request('leads/$prospectId/discovery', body: fields);
+    if (data['data'] is! Map || data['data']['id'] is! int) {
+      throw const ProspectsException(
+        'No se pudo confirmar el guardado del discovery.',
+      );
+    }
+  }
+
   Future<List<Map<String, dynamic>>> catalog(String name) async {
     final data = await _request('catalogs/$name');
     final rows = data['data'];

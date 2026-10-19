@@ -99,6 +99,54 @@ void main() {
     },
   );
 
+  test(
+    'Loads and saves discovery sections through the lead endpoints',
+    () async {
+      final requests = <http.Request>[];
+      final service = ProspectsService(
+        auth: await login(),
+        client: MockClient((request) async {
+          requests.add(request);
+          expect(request.headers['Authorization'], 'Bearer session');
+          if (request.method == 'GET') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'tipo_propiedad': 'casa',
+                  'ubicacion': ['Quintana Roo', 'Yucatán'],
+                },
+              }),
+              200,
+            );
+          }
+          expect(jsonDecode(request.body), {
+            'seccion': 'motivadores_compra',
+            'motivo_compra': ['precio', 'otro'],
+            'otro_motivo_compra': 'Promoción',
+          });
+          return http.Response('{"success":true,"data":{"id":8}}', 200);
+        }),
+      );
+      addTearDown(service.dispose);
+
+      final discovery = await service.discovery(17);
+      expect(discovery?['tipo_propiedad'], 'casa');
+      await service.saveDiscoverySection(17, {
+        'seccion': 'motivadores_compra',
+        'motivo_compra': ['precio', 'otro'],
+        'otro_motivo_compra': 'Promoción',
+      });
+
+      expect(requests, hasLength(2));
+      expect(
+        requests.first.url.toString(),
+        'https://example.com/api/v1/leads/17/discovery',
+      );
+      expect(requests.last.method, 'POST');
+    },
+  );
+
   for (final width in [320.0, 390.0]) {
     testWidgets('Extended API card shows actual follow-up at $width', (
       tester,
