@@ -28,6 +28,13 @@ class ProspectRecord {
   final String company;
   final String occupation;
   final String origin;
+  final int? channelId,
+      statusId,
+      campaignId,
+      interestDevelopmentId,
+      interestLotId;
+  final String interestDevelopment, interestLot;
+  final List<String> qualification;
 
   const ProspectRecord({
     this.id,
@@ -61,6 +68,14 @@ class ProspectRecord {
     this.company = 'Sin registro de Empresa',
     this.occupation = 'Sin registro de ocupación',
     this.origin = 'Campaña FB',
+    this.channelId,
+    this.statusId,
+    this.campaignId,
+    this.interestDevelopmentId,
+    this.interestDevelopment = 'Sin desarrollo seleccionado',
+    this.interestLotId,
+    this.interestLot = 'Sin lote seleccionado',
+    this.qualification = const [],
   });
 
   String get note =>

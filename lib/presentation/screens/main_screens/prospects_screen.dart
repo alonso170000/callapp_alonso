@@ -1,5 +1,6 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
@@ -33,7 +34,7 @@ class ProspectsScreen extends StatefulWidget {
 
 class _ProspectsScreenState extends State<ProspectsScreen> {
   final _records = <ProspectRecord>[];
-  final _service = ProspectsService();
+  final _repository = ProspectsRepository();
   bool _loading = false;
   String? _error;
   int _request = 0;
@@ -45,12 +46,47 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       _error = null;
     });
     try {
-      final records = await (widget.loadProspects?.call() ?? _service.fetch());
-      if (!mounted || request != _request) return;
-      setState(() {
-        _records.clear();
-        _records.addAll(records);
-      });
+      if (widget.loadProspects != null) {
+        final records = await widget.loadProspects!.call();
+        if (!mounted || request != _request) return;
+        setState(() {
+          _records.clear();
+          _records.addAll(records);
+        });
+        return;
+      }
+
+      var hasCachedRecords = false;
+      try {
+        final cached = await _repository.readCache();
+        if (!mounted || request != _request) return;
+        if (cached.isNotEmpty) {
+          hasCachedRecords = true;
+          setState(() {
+            _records.clear();
+            _records.addAll(cached);
+          });
+        }
+      } catch (_) {
+        // Una caché dañada o no disponible no debe impedir la consulta remota.
+      }
+
+      try {
+        final records = await _repository.refresh();
+        if (!mounted || request != _request) return;
+        setState(() {
+          _records.clear();
+          _records.addAll(records);
+          _error = null;
+        });
+      } on ProspectsException catch (error) {
+        if (!mounted || request != _request) return;
+        setState(() {
+          _error = hasCachedRecords
+              ? 'Mostrando datos guardados. ${error.message}'
+              : error.message;
+        });
+      }
     } on ProspectsException catch (error) {
       if (mounted && request == _request) {
         setState(() => _error = error.message);
@@ -147,7 +183,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     widget.controller?._show = null;
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
-    _service.dispose();
+    _repository.dispose();
     super.dispose();
   }
 
@@ -445,7 +481,22 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
               ),
             ),
           ),
-          
+
+          if (_error != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(_error!)),
+                    TextButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (prospects.isEmpty && !_loading && _error == null)
             SliverToBoxAdapter(
               child: Padding(

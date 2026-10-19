@@ -141,6 +141,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         'estatus_id': _status,
         'prioridad': _priority,
         if (_lot != 0) 'lote_id': _lot,
+        'desarrollo_interes_id': _service.activeDevelopment?['id'],
         if (_firstFollowUp)
           'primer_seguimiento': {
             'tipo': _activityType,
@@ -448,7 +449,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                     KeyedSubtree(
                       key: const ValueKey('first-follow-up'),
                       child: _dropdown<bool>(
-                        'Primer seguimiento',
+                        '¿Agendar primer seguimiento?',
                         _firstFollowUp,
                         const [false, true],
                         (value) => _firstFollowUp = value,

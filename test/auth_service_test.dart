@@ -89,10 +89,12 @@ void main() {
               'status': 'success',
               'token': 'test-token',
               'usuario': {
+                'id': 42,
                 'nombre_completo': 'Ana García',
                 'email': 'ana@example.com',
                 'telefono': '9981234567',
               },
+              'desarrollo_activo': {'id': 7},
             }),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
@@ -103,9 +105,13 @@ void main() {
       expect(auth.userName, 'Ana García');
       expect(auth.email, 'ana@example.com');
       expect(auth.phone, '9981234567');
+      expect(auth.userId, 42);
+      expect(auth.developmentId, 7);
       auth.logout();
       expect(auth.email, isNull);
       expect(auth.phone, isNull);
+      expect(auth.userId, isNull);
+      expect(auth.developmentId, isNull);
     },
   );
   test('Uses the signed-in full name and clears it on logout', () async {

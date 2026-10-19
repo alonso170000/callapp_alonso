@@ -15,12 +15,31 @@ class _RecordingProspectsService extends ProspectsService {
       'desarrollo_nombre': 'Residencial Hada',
     },
   ];
+  List<Map<String, dynamic>> developments = [
+    {'id': 3, 'nombre': 'Residencial Hada', 'ubicacion': 'Cancún'},
+  ];
+  final lotsRequests = <int>[];
+  List<Map<String, dynamic>> closers = [
+    {'id': 4, 'nombre_completo': 'Cerradora Uno', 'rol': 'cerrador'},
+    {'id': 8, 'nombre_completo': 'Cerrador Dos', 'rol': 'cerrador'},
+  ];
 
   @override
   Future<Map<String, dynamic>?> discovery(int prospectId) async => null;
 
   @override
-  Future<List<Map<String, dynamic>>> availableLots() async => lots;
+  Future<List<Map<String, dynamic>>> availableDevelopments() async =>
+      developments;
+
+  @override
+  Future<List<Map<String, dynamic>>> availableLots([int? developmentId]) async {
+    expect(developmentId, isNotNull);
+    lotsRequests.add(developmentId!);
+    return lots;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> availableClosers() async => closers;
 
   @override
   Future<void> saveDiscoverySection(
@@ -206,6 +225,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final developmentDropdown = tester
+        .widgetList<DropdownButtonFormField<int>>(
+          find.byType(DropdownButtonFormField<int>),
+        )
+        .firstWhere((widget) => widget.initialValue == 3);
+    expect(developmentDropdown.onChanged, isNull);
+    expect(service.lotsRequests, contains(3));
+
     expect(find.text('Seleccionar lote *'), findsNothing);
     expect(find.text('M² (Tamaño)'), findsNothing);
     expect(find.text('Precio web'), findsNothing);
@@ -222,15 +249,15 @@ void main() {
     expect(find.text('Seleccionar lote *'), findsOneWidget);
     expect(find.text('Seleccione un lote'), findsOneWidget);
 
-    final lotDropdown = find.byType(DropdownButtonFormField<int>);
+    final lotDropdown = find.byType(DropdownButtonFormField<int>).last;
     await tester.ensureVisible(lotDropdown);
     await tester.tap(lotDropdown);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Lote 12').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Desarrollo'), findsOneWidget);
-    expect(find.text('Residencial Hada'), findsOneWidget);
+    expect(find.textContaining('Desarrollo'), findsWidgets);
+    expect(find.text('Residencial Hada'), findsWidgets);
     expect(find.text('Dimensiones'), findsOneWidget);
     expect(find.text('120 m²'), findsOneWidget);
     expect(find.text(r'$ 950,000.00'), findsOneWidget);
@@ -276,5 +303,56 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Especifique quién más interviene.'), findsOneWidget);
     expect(service.fields, isNull);
+  });
+
+  testWidgets('asignación muestra cerradores reales y guarda su id', (
+    tester,
+  ) async {
+    final service = _RecordingProspectsService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectDiscoveryForm(
+              prospectId: 17,
+              prospectsService: service,
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nombre del cerrador'), findsNothing);
+    final toggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label == '¿Enviar a cerrador?',
+    );
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Nombre del cerrador'), findsOneWidget);
+    expect(find.text('Seleccionar cerrador'), findsOneWidget);
+
+    final save = find.widgetWithText(FilledButton, 'GUARDAR').last;
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('Seleccione un cerrador.'), findsOneWidget);
+    expect(service.fields, isNull);
+
+    final dropdown = find.byType(DropdownButtonFormField<int>).last;
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cerrador Dos').last);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(service.fields, {
+      'seccion': 'asignacion_cerrador',
+      'cerrador_id': 8,
+    });
   });
 }

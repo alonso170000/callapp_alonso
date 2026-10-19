@@ -17,6 +17,49 @@ class AgendaService {
       _auth = auth ?? AuthService.instance;
   final http.Client _client;
   final AuthService _auth;
+
+  Future<void> complete(int id) => _changeStatus(id, 'completada');
+
+  Future<void> cancel(int id) => _changeStatus(id, 'cancelada');
+
+  Future<void> _changeStatus(int id, String status) async {
+    final token = _auth.token;
+    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    try {
+      final response = await _client
+          .patch(
+            Uri.parse('${_auth.baseUrl}/api/v1/activities/$id/status'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'estado': status}),
+          )
+          .timeout(const Duration(seconds: 60));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode != 200 ||
+          data is! Map ||
+          data['success'] != true) {
+        throw AgendaException(
+          data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'No se pudo actualizar la actividad.',
+        );
+      }
+    } on TimeoutException {
+      throw const AgendaException(
+        'El servidor tardó demasiado. Actualiza la agenda para comprobar el estado de la actividad.',
+      );
+    } on http.ClientException {
+      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+    } on FormatException {
+      throw const AgendaException(
+        'No se pudo confirmar el cambio. Actualiza la agenda.',
+      );
+    }
+  }
+
   Future<void> delete(int id) async {
     final token = _auth.token;
     if (token == null) throw const AgendaException('Inicia sesión nuevamente.');

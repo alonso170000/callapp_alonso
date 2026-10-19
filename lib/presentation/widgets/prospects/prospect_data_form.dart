@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
 
 class ProspectDataForm extends StatefulWidget {
   final ProspectRecord prospect;
   final ValueChanged<String> onSaved;
+  final ProspectsService? prospectsService;
 
   const ProspectDataForm({
     super.key,
     required this.prospect,
     required this.onSaved,
+    this.prospectsService,
   });
 
   @override
@@ -29,6 +32,46 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   );
   late final _origin = TextEditingController(text: widget.prospect.origin);
   Map<String, String>? _saved;
+  int? _savedDevelopmentId, _savedLotId;
+  late final ProspectsService _service;
+  List<Map<String, dynamic>> _developments = const [];
+  List<Map<String, dynamic>> _lots = const [];
+  late int? _developmentId = widget.prospect.interestDevelopmentId;
+  late int? _lotId = widget.prospect.interestLotId;
+  bool _loading = false;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _service = widget.prospectsService ?? ProspectsService();
+    _loadInterests();
+  }
+
+  Future<void> _loadInterests() async {
+    setState(() => _loading = true);
+    try {
+      final developments = await _service.availableDevelopments();
+      if (!mounted) return;
+      _developmentId ??= developments.length == 1
+          ? developments.single['id'] as int
+          : null;
+      final lots = _developmentId == null
+          ? <Map<String, dynamic>>[]
+          : await _service.availableLots(_developmentId);
+      if (mounted) {
+        setState(() {
+          _developments = developments;
+          _lots = lots;
+        });
+      }
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   List<TextEditingController> get _controllers => [
     _name,
@@ -45,6 +88,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     for (final controller in _controllers) {
       controller.dispose();
     }
+    if (widget.prospectsService == null) _service.dispose();
     super.dispose();
   }
 
@@ -66,6 +110,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    bool readOnly = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Column(
@@ -78,8 +123,42 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
+          readOnly: readOnly,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: _decoration(),
+        ),
+      ],
+    ),
+  );
+
+  Widget _dropdown(
+    String label,
+    int? value,
+    List<Map<String, dynamic>> items,
+    String Function(Map<String, dynamic>) text,
+    ValueChanged<int?>? changed,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 15)),
+        const SizedBox(height: 3),
+        DropdownButtonFormField<int>(
+          initialValue: items.any((item) => item['id'] == value) ? value : null,
+          isExpanded: true,
+          decoration: _decoration(),
+          dropdownColor: const Color(0xFFAD393E),
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+          items: items
+              .map(
+                (item) => DropdownMenuItem<int>(
+                  value: item['id'] as int,
+                  child: Text(text(item), overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: changed,
         ),
       ],
     ),
@@ -93,24 +172,65 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _company.text = _saved?['company'] ?? widget.prospect.company;
     _occupation.text = _saved?['occupation'] ?? widget.prospect.occupation;
     _origin.text = _saved?['origin'] ?? widget.prospect.origin;
+    _developmentId =
+        _savedDevelopmentId ?? widget.prospect.interestDevelopmentId;
+    _lotId = _savedLotId ?? widget.prospect.interestLotId;
     _formKey.currentState?.reset();
   });
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    _saved = {
-      'name': _name.text.trim(),
-      'city': _city.text.trim(),
-      'phone': _phone.text.trim(),
-      'email': _email.text.trim(),
-      'company': _company.text.trim(),
-      'occupation': _occupation.text.trim(),
-      'origin': _origin.text.trim(),
-    };
-    widget.onSaved('Prospecto · Datos actualizados');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Datos guardados en esta vista.')),
-    );
+    if (widget.prospect.id == null ||
+        widget.prospect.channelId == null ||
+        widget.prospect.statusId == null ||
+        _developmentId == null) {
+      setState(
+        () => _error =
+            'Faltan datos de catálogo para guardar. Actualiza el prospecto.',
+      );
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await _service.update(widget.prospect.id!, {
+        'nombre': _name.text.trim(),
+        'ciudad': _city.text.trim(),
+        'telefono_normalizado': _phone.text.replaceAll(RegExp(r'\D'), ''),
+        'correo': _email.text.trim(),
+        'nombre_compania': _company.text.trim(),
+        'ocupacion': _occupation.text.trim(),
+        'canal_id': widget.prospect.channelId,
+        'estatus_id': widget.prospect.statusId,
+        'campania_id': widget.prospect.campaignId,
+        'comentario': widget.prospect.comments,
+        'calificacion': widget.prospect.qualification,
+        'desarrollo_interes_id': _developmentId,
+        'lote_id': _lotId,
+      });
+      _saved = {
+        'name': _name.text.trim(),
+        'city': _city.text.trim(),
+        'phone': _phone.text.trim(),
+        'email': _email.text.trim(),
+        'company': _company.text.trim(),
+        'occupation': _occupation.text.trim(),
+        'origin': _origin.text.trim(),
+      };
+      _savedDevelopmentId = _developmentId;
+      _savedLotId = _lotId;
+      if (!mounted) return;
+      widget.onSaved('Prospecto · Datos actualizados');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Datos del prospecto actualizados.')),
+      );
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -154,10 +274,57 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           _field(
             'Origen del prospecto',
             _origin,
+            readOnly: true,
             validator: (value) => value == null || value.trim().isEmpty
                 ? 'El origen es obligatorio'
                 : null,
           ),
+          if (_loading) const LinearProgressIndicator(),
+          _dropdown(
+            'Desarrollo de interés',
+            _developmentId,
+            _developments,
+            (item) => item['nombre'] as String,
+            _developments.length <= 1 || _saving
+                ? null
+                : (value) async {
+                    setState(() {
+                      _developmentId = value;
+                      _lotId = null;
+                      _lots = const [];
+                    });
+                    if (value != null) {
+                      try {
+                        final lots = await _service.availableLots(value);
+                        if (mounted) setState(() => _lots = lots);
+                      } on ProspectsException catch (error) {
+                        if (mounted) setState(() => _error = error.message);
+                      }
+                    }
+                  },
+          ),
+          _dropdown(
+            'Lote de interés',
+            _lotId ?? 0,
+            [
+              {'id': 0, 'numero_lote': null},
+              ..._lots,
+            ],
+            (item) => item['id'] == 0
+                ? 'Sin lote seleccionado'
+                : 'Lote ${item['numero_lote']}',
+            _saving
+                ? null
+                : (value) => setState(() => _lotId = value == 0 ? null : value),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           const SizedBox(height: 2),
           Row(
             children: [
@@ -166,7 +333,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFAC4549),
                   ),
-                  onPressed: _cancel,
+                  onPressed: _saving ? null : _cancel,
                   child: const Text('CANCELAR'),
                 ),
               ),
@@ -176,8 +343,8 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF4CA382),
                   ),
-                  onPressed: _save,
-                  child: const Text('GUARDAR'),
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                 ),
               ),
             ],

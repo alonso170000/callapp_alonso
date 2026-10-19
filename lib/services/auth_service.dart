@@ -26,8 +26,11 @@ class AuthService extends ChangeNotifier {
   String? _userName;
   String? _email;
   String? _phone;
+  int? _userId;
   String? get email => _email;
   String? get phone => _phone;
+  int? get userId => _userId;
+  int? get developmentId => _int(activeDevelopment?['id']);
   String get userName => _userName ?? 'Usuario';
   Map<String, dynamic>? activeDevelopment;
   String? get token => _token;
@@ -117,6 +120,9 @@ class AuthService extends ChangeNotifier {
       // El backend incluye nombre_completo en el JWT. Esta lectura sirve
       // para presentación; la autorización sigue validándose en el servidor.
       final user = data['usuario'];
+      _userId = user is Map
+          ? _int(user['id'])
+          : _readIntClaim(_token!, 'usuario_id');
       _userName = user is Map ? _text(user['nombre_completo']) : null;
       _userName ??= _readUserName(_token!) ?? username.trim();
       _email = user is Map ? _text(user['email']) : null;
@@ -162,6 +168,7 @@ class AuthService extends ChangeNotifier {
     _userName = null;
     _email = null;
     _phone = null;
+    _userId = null;
     activeDevelopment = null;
     notifyListeners();
   }
@@ -181,6 +188,25 @@ class AuthService extends ChangeNotifier {
     }
     return null;
   }
+
+  static int? _readIntClaim(String token, String claim) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      return payload is Map ? _int(payload[claim]) : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static int? _int(dynamic value) => switch (value) {
+    final int number => number,
+    final String text => int.tryParse(text),
+    _ => null,
+  };
 
   static String? _text(dynamic value) =>
       value is String && value.trim().isNotEmpty ? value.trim() : null;

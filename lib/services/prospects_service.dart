@@ -135,6 +135,23 @@ class ProspectsService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> availableClosers() async {
+    final data = await _request('agents/closers');
+    final rows = data['data'];
+    if (rows is! List ||
+        rows.any(
+          (row) =>
+              row is! Map ||
+              row['id'] is! int ||
+              row['nombre_completo'] is! String,
+        )) {
+      throw const ProspectsException(
+        'El listado de cerradores recibido no es válido.',
+      );
+    }
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> catalog(String name) async {
     final data = await _request('catalogs/$name');
     final rows = data['data'];
@@ -147,8 +164,25 @@ class ProspectsService {
     return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> availableLots() async {
-    final data = await _request('catalogs/lotes');
+  Future<List<Map<String, dynamic>>> availableDevelopments() async {
+    final data = await _request('catalogs/desarrollos');
+    final rows = data['data'];
+    if (rows is! List ||
+        rows.any(
+          (row) => row is! Map || row['id'] is! int || row['nombre'] is! String,
+        )) {
+      throw const ProspectsException(
+        'El listado de desarrollos recibido no es válido.',
+      );
+    }
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> availableLots([int? developmentId]) async {
+    final query = developmentId == null
+        ? ''
+        : '?desarrollo_id=${Uri.encodeQueryComponent('$developmentId')}';
+    final data = await _request('catalogs/lotes$query');
     final rows = data['data'];
     if (rows is! List ||
         rows.any(
@@ -165,6 +199,45 @@ class ProspectsService {
     if (data['data'] is! Map || data['data']['id'] is! int) {
       throw const ProspectsException(
         'No se pudo confirmar la creación. Actualiza la lista antes de volver a guardar.',
+      );
+    }
+  }
+
+  Future<void> update(int prospectId, Map<String, dynamic> fields) async {
+    final token = _auth.token;
+    if (token == null) {
+      throw const ProspectsException('Inicia sesión nuevamente.');
+    }
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('${_auth.baseUrl}/api/v1/leads/$prospectId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(fields),
+          )
+          .timeout(const Duration(seconds: 60));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          data is! Map ||
+          data['success'] != true) {
+        throw ProspectsException(
+          data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'No se pudieron actualizar los datos del prospecto.',
+        );
+      }
+    } on TimeoutException {
+      throw const ProspectsException('El servidor tardó demasiado en guardar.');
+    } on http.ClientException {
+      throw const ProspectsException('No se pudo conectar con el servidor.');
+    } on FormatException {
+      throw const ProspectsException(
+        'El servidor devolvió una respuesta inválida.',
       );
     }
   }
@@ -254,6 +327,19 @@ class ProspectsService {
       statusColor: ProspectTagColors.status(status),
       city: row['ciudad'] as String? ?? 'Sin registro de ciudad',
       origin: row['canal'] as String? ?? 'Sin canal',
+      channelId: int.tryParse('${row['canal_id']}'),
+      statusId: int.tryParse('${row['estatus_id']}'),
+      campaignId: int.tryParse('${row['campania_id']}'),
+      company: row['nombre_compania'] as String? ?? 'Sin registro de Empresa',
+      occupation: row['ocupacion'] as String? ?? 'Sin registro de ocupación',
+      interestDevelopmentId: int.tryParse('${row['desarrollo_interes_id']}'),
+      interestDevelopment:
+          row['desarrollo_interes'] as String? ?? 'Sin desarrollo seleccionado',
+      interestLotId: int.tryParse('${row['terreno_interes_id']}'),
+      interestLot: row['lote_interes'] == null
+          ? 'Sin lote seleccionado'
+          : 'Lote ${row['lote_interes']}',
+      qualification: row['calificacion']?.toString().split(',') ?? const [],
       assignedAt: DateTime.tryParse('${row['fecha_asignacion']}')?.toLocal(),
       lastCallAt: lastCall,
       lastContactResult:

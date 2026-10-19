@@ -32,13 +32,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String? _previousExperience;
   final Set<String> _decisionMakers = {};
   int? _selectedLotId;
-  String _rating = 'Seleccione';
-  String _closer = 'Seleccione';
+  int? _selectedDevelopmentId;
+  int? _selectedCloserId;
   bool _knowsArea = false;
   bool _boughtBefore = false;
   bool _acceptsPromotions = true;
   bool _hasSpecificLot = false;
-  bool _sendToCloser = true;
+  bool _sendToCloser = false;
 
   final _areaNotes = TextEditingController();
   final _budget = TextEditingController();
@@ -49,6 +49,8 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   final _additionalNotes = TextEditingController();
   late final ProspectsService _service;
   List<Map<String, dynamic>> _lots = const [];
+  List<Map<String, dynamic>> _developments = const [];
+  List<Map<String, dynamic>> _closers = const [];
   Map<String, Object?>? _saved;
   bool _showNeedErrors = false;
   bool _showPaymentErrors = false;
@@ -57,6 +59,9 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   bool _showProcessErrors = false;
   bool _loading = false;
   bool _lotsLoading = false;
+  bool _developmentsLoading = false;
+  bool _closersLoading = false;
+  bool _showCloserError = false;
   String? _savingSection;
   String? _serviceError;
   String? _lotsError;
@@ -145,7 +150,8 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     _service = widget.prospectsService ?? ProspectsService();
     if (widget.prospectId != null) {
       _loadDiscovery();
-      _loadLots();
+      _loadDevelopments();
+      _loadClosers();
     }
   }
 
@@ -449,18 +455,58 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     return null;
   }
 
+  Future<void> _loadDevelopments() async {
+    setState(() => _developmentsLoading = true);
+    try {
+      final developments = await _service.availableDevelopments();
+      if (!mounted) return;
+      setState(() {
+        _developments = developments;
+        if (_selectedDevelopmentId == null && developments.length == 1) {
+          _selectedDevelopmentId = developments.single['id'] as int;
+        } else if (_selectedDevelopmentId != null &&
+            !developments.any((item) => item['id'] == _selectedDevelopmentId)) {
+          _selectedDevelopmentId = null;
+          _selectedLotId = null;
+        }
+      });
+      if (_selectedDevelopmentId != null) await _loadLots();
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _serviceError = error.message);
+    } finally {
+      if (mounted) setState(() => _developmentsLoading = false);
+    }
+  }
+
   Future<void> _loadLots() async {
+    final developmentId = _selectedDevelopmentId;
+    if (developmentId == null) {
+      setState(() => _lots = const []);
+      return;
+    }
     setState(() {
       _lotsLoading = true;
       _lotsError = null;
     });
     try {
-      final lots = await _service.availableLots();
+      final lots = await _service.availableLots(developmentId);
       if (mounted) setState(() => _lots = lots);
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _lotsError = error.message);
     } finally {
       if (mounted) setState(() => _lotsLoading = false);
+    }
+  }
+
+  Future<void> _loadClosers() async {
+    setState(() => _closersLoading = true);
+    try {
+      final closers = await _service.availableClosers();
+      if (mounted) setState(() => _closers = closers);
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _serviceError = error.message);
+    } finally {
+      if (mounted) setState(() => _closersLoading = false);
     }
   }
 
@@ -549,6 +595,11 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           );
         _participantsOther.text = data['participantes_otro'] as String? ?? '';
         _additionalNotes.text = data['notas_adicionales'] as String? ?? '';
+        _selectedDevelopmentId = int.tryParse(
+          '${data['desarrollo_interes_id']}',
+        );
+        _selectedCloserId = int.tryParse('${data['cerrador_id']}');
+        _sendToCloser = _selectedCloserId != null;
         _saved = {
           'property': _property,
           'locations': _locations.toList(),
@@ -567,11 +618,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           'acceptsPromotions': _acceptsPromotions,
           'hasSpecificLot': _hasSpecificLot,
           'selectedLotId': _selectedLotId,
+          'selectedDevelopmentId': _selectedDevelopmentId,
           'decisionMakers': _decisionMakers.toList(),
           'participantsOther': _participantsOther.text,
           'additionalNotes': _additionalNotes.text,
+          'selectedCloserId': _selectedCloserId,
+          'sendToCloser': _sendToCloser,
         };
       });
+      if (_selectedDevelopmentId != null) await _loadLots();
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _serviceError = error.message);
     } finally {
@@ -600,6 +655,28 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   }
 
   double? get _budgetValue => double.tryParse(_budget.text.trim());
+
+  Future<void> _saveCloserAssignment() async {
+    setState(() => _showCloserError = true);
+    if (_sendToCloser && _selectedCloserId == null) return;
+    final saved = await _persist('asignacion_cerrador', {
+      'cerrador_id': _sendToCloser ? _selectedCloserId : null,
+    });
+    if (!saved || !mounted) return;
+    _saved = {
+      ...?_saved,
+      'sendToCloser': _sendToCloser,
+      'selectedCloserId': _selectedCloserId,
+    };
+    setState(() => _showCloserError = false);
+    _notify('Asignación a cerrador');
+  }
+
+  void _restoreCloserAssignment() => setState(() {
+    _sendToCloser = (_saved?['sendToCloser'] as bool?) ?? false;
+    _selectedCloserId = _saved?['selectedCloserId'] as int?;
+    _showCloserError = false;
+  });
 
   Future<void> _saveNeed() async {
     setState(() => _showNeedErrors = true);
@@ -701,13 +778,17 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
 
   Future<void> _saveProcess() async {
     setState(() => _showProcessErrors = true);
+    final needsDevelopment = _selectedDevelopmentId == null;
     final needsLot = _hasSpecificLot && _selectedLot == null;
     final needsOther =
         _decisionMakers.contains('Otro') &&
         _participantsOther.text.trim().isEmpty;
-    if (_decisionMakers.isEmpty || needsLot || needsOther) return;
+    if (needsDevelopment || _decisionMakers.isEmpty || needsLot || needsOther) {
+      return;
+    }
     final saved = await _persist('proceso_seguimiento', {
       'acepta_promociones': _acceptsPromotions,
+      'desarrollo_interes_id': _selectedDevelopmentId,
       'terreno_interes_id': _hasSpecificLot ? _selectedLotId : null,
       'participantes_decision': _decisionMakers
           .map((participant) => _participantCodes[participant])
@@ -724,6 +805,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       'acceptsPromotions': _acceptsPromotions,
       'hasSpecificLot': _hasSpecificLot,
       'selectedLotId': _hasSpecificLot ? _selectedLotId : null,
+      'selectedDevelopmentId': _selectedDevelopmentId,
       'decisionMakers': _decisionMakers.toList(),
       'participantsOther': _decisionMakers.contains('Otro')
           ? _participantsOther.text.trim()
@@ -733,17 +815,21 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     _notify('Proceso y seguimiento');
   }
 
-  void _restoreProcess() => setState(() {
-    _acceptsPromotions = (_saved?['acceptsPromotions'] as bool?) ?? true;
-    _hasSpecificLot = (_saved?['hasSpecificLot'] as bool?) ?? false;
-    _selectedLotId = _saved?['selectedLotId'] as int?;
-    _decisionMakers
-      ..clear()
-      ..addAll((_saved?['decisionMakers'] as List<String>?) ?? const []);
-    _participantsOther.text = (_saved?['participantsOther'] as String?) ?? '';
-    _additionalNotes.text = (_saved?['additionalNotes'] as String?) ?? '';
-    _showProcessErrors = false;
-  });
+  void _restoreProcess() {
+    setState(() {
+      _acceptsPromotions = (_saved?['acceptsPromotions'] as bool?) ?? true;
+      _selectedDevelopmentId = _saved?['selectedDevelopmentId'] as int?;
+      _hasSpecificLot = (_saved?['hasSpecificLot'] as bool?) ?? false;
+      _selectedLotId = _saved?['selectedLotId'] as int?;
+      _decisionMakers
+        ..clear()
+        ..addAll((_saved?['decisionMakers'] as List<String>?) ?? const []);
+      _participantsOther.text = (_saved?['participantsOther'] as String?) ?? '';
+      _additionalNotes.text = (_saved?['additionalNotes'] as String?) ?? '';
+      _showProcessErrors = false;
+    });
+    _loadLots();
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -990,6 +1076,69 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 _acceptsPromotions,
                 (value) => setState(() => _acceptsPromotions = value),
               ),
+              _label(
+                'Desarrollo de interés *',
+                DropdownButtonFormField<int>(
+                  key: ValueKey(
+                    'desarrollo-$_selectedDevelopmentId-${_developments.length}',
+                  ),
+                  initialValue:
+                      _developments.any(
+                        (development) =>
+                            development['id'] == _selectedDevelopmentId,
+                      )
+                      ? _selectedDevelopmentId
+                      : null,
+                  isExpanded: true,
+                  dropdownColor: AppColors.discoveryField,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: AppColors.discoveryFieldText,
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.discoveryFieldText,
+                    fontFamily: 'SulphurPoint',
+                    fontSize: 16,
+                  ),
+                  decoration: _decoration().copyWith(
+                    errorText:
+                        _showProcessErrors && _selectedDevelopmentId == null
+                        ? 'Seleccione un desarrollo.'
+                        : null,
+                    suffixIcon: _developments.length == 1
+                        ? const Icon(
+                            Icons.lock_outline,
+                            color: AppColors.discoveryFieldText,
+                            size: 18,
+                          )
+                        : null,
+                  ),
+                  hint: Text(
+                    _developmentsLoading
+                        ? 'Cargando desarrollos...'
+                        : 'Seleccionar desarrollo',
+                    style: const TextStyle(color: AppColors.discoveryFieldHint),
+                  ),
+                  items: _developments
+                      .map(
+                        (development) => DropdownMenuItem<int>(
+                          value: development['id'] as int,
+                          child: Text(development['nombre'] as String),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _developmentsLoading || _developments.length <= 1
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _selectedDevelopmentId = value;
+                            _selectedLotId = null;
+                            _lots = const [];
+                          });
+                          _loadLots();
+                        },
+                ),
+              ),
               _toggle(
                 '¿Tiene interés en un lote específico?',
                 _hasSpecificLot,
@@ -998,7 +1147,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                   if (!value) _selectedLotId = null;
                 }),
               ),
-              if (_hasSpecificLot) ...[
+              if (_hasSpecificLot && _selectedDevelopmentId != null) ...[
                 if (_lotsLoading)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 8),
@@ -1124,7 +1273,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       ),
       const SizedBox(height: 14),
       ProspectDetailPanel(
-        title: 'Resultado del Discovery',
+        title: 'Asignación a cerrador',
         color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
@@ -1136,39 +1285,73 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           ),
           child: Column(
             children: [
-              _select('Calificación del Prospecto', _rating, [
-                'Seleccione',
-                'Prospecto calificado',
-                'Prospecto en seguimiento',
-                'Prospecto descartado',
-              ], (value) => _rating = value),
               _toggle(
                 '¿Enviar a cerrador?',
                 _sendToCloser,
-                (value) => setState(() => _sendToCloser = value),
-              ),
-              _select('Nombre del cerrador', _closer, [
-                'Seleccione',
-                'Leonardo Pérez',
-                'Ana Gómez',
-                'Carlos Díaz',
-              ], (value) => _closer = value),
-              _buttons(
-                'resultado_discovery',
-                () => setState(() {
-                  _sendToCloser = (_saved?['sendToCloser'] as bool?) ?? true;
-                  _rating = (_saved?['rating'] as String?) ?? 'Seleccione';
-                  _closer = (_saved?['closer'] as String?) ?? 'Seleccione';
+                (value) => setState(() {
+                  _sendToCloser = value;
+                  if (!value) {
+                    _selectedCloserId = null;
+                    _showCloserError = false;
+                  }
                 }),
-                () {
-                  _saved = {
-                    ...?_saved,
-                    'sendToCloser': _sendToCloser,
-                    'rating': _rating,
-                    'closer': _closer,
-                  };
-                  _notify('Resultado del Discovery');
-                },
+              ),
+              if (_sendToCloser)
+                _label(
+                  'Nombre del cerrador',
+                  DropdownButtonFormField<int>(
+                    key: ValueKey(
+                      'cerrador-$_selectedCloserId-${_closers.length}',
+                    ),
+                    initialValue:
+                        _closers.any(
+                          (closer) => closer['id'] == _selectedCloserId,
+                        )
+                        ? _selectedCloserId
+                        : null,
+                    isExpanded: true,
+                    dropdownColor: AppColors.discoveryField,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.discoveryFieldText,
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.discoveryFieldText,
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 16,
+                    ),
+                    decoration: _decoration().copyWith(
+                      errorText: _showCloserError && _selectedCloserId == null
+                          ? 'Seleccione un cerrador.'
+                          : null,
+                    ),
+                    hint: Text(
+                      _closersLoading
+                          ? 'Cargando cerradores...'
+                          : _closers.isEmpty
+                          ? 'No hay cerradores disponibles'
+                          : 'Seleccionar cerrador',
+                      style: const TextStyle(
+                        color: AppColors.discoveryFieldHint,
+                      ),
+                    ),
+                    items: _closers
+                        .map(
+                          (closer) => DropdownMenuItem<int>(
+                            value: closer['id'] as int,
+                            child: Text(closer['nombre_completo'] as String),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _closersLoading || _closers.isEmpty
+                        ? null
+                        : (value) => setState(() => _selectedCloserId = value),
+                  ),
+                ),
+              _buttons(
+                'asignacion_cerrador',
+                _restoreCloserAssignment,
+                _saveCloserAssignment,
               ),
             ],
           ),

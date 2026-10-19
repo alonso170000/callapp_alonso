@@ -128,15 +128,14 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Eliminar'), findsOneWidget);
+        expect(find.text('EDITAR'), findsOneWidget);
+        expect(find.text('COMPLETAR ACTIVIDAD'), findsNothing);
+        expect(find.text('Cancelar'), findsOneWidget);
         await tester.tap(find.text('ATENDER ACTIVIDAD'));
         expect(attended, 1);
         await tester.pump(const Duration(seconds: 3));
         expect(find.text('Eliminar'), findsNothing);
-        await tester.scrollUntilVisible(
-          find.text('Historial de comentarios'),
-          180,
-          scrollable: find.byType(Scrollable).first,
-        );
+        await tester.ensureVisible(find.text('Historial de contactos previos'));
         expect(find.text('Ubicación'), findsNothing);
         expect(find.text('Medio'), findsOneWidget);
         expect(find.text('WhatsApp'), findsOneWidget);

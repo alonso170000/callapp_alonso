@@ -147,6 +147,27 @@ void main() {
     },
   );
 
+  test('Loads closers from the role-filtered endpoint', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient((request) async {
+        expect(
+          request.url.toString(),
+          'https://example.com/api/v1/agents/closers',
+        );
+        return http.Response(
+          '{"success":true,"data":[{"id":8,"nombre_completo":"Cerrador Dos","rol":"cerrador"}]}',
+          200,
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+
+    final closers = await service.availableClosers();
+    expect(closers.single['id'], 8);
+    expect(closers.single['nombre_completo'], 'Cerrador Dos');
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets('Extended API card shows actual follow-up at $width', (
       tester,

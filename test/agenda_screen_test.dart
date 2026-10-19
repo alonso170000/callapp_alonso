@@ -8,6 +8,95 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 void main() {
+  testWidgets('Task completion requires bottom-sheet confirmation', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaScreen(
+            loadActivities: () async => [
+              AgendaActivity(
+                type: 'tarea',
+                title: 'TAREA',
+                prospect: 'Ana',
+                description: 'Enviar documentos',
+                date: now,
+                status: AgendaStatus.pending,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AgendaActivityTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('COMPLETAR ACTIVIDAD'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.text('¿Confirmas que esta actividad fue completada?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('SÍ, COMPLETAR'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgendaActivityDetail), findsNothing);
+    expect(find.text('Actividad completada.'), findsOneWidget);
+  });
+
+  testWidgets('Follow-up cancellation requires confirmation', (tester) async {
+    final now = DateTime.now();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaScreen(
+            loadActivities: () async => [
+              AgendaActivity(
+                type: 'seguimiento',
+                title: 'SEGUIMIENTO',
+                prospect: 'Ana',
+                description: 'Seguimiento pendiente',
+                date: now,
+                status: AgendaStatus.pending,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AgendaActivityTile));
+    await tester.pumpAndSettle();
+
+    expect(find.text('COMPLETAR ACTIVIDAD'), findsNothing);
+    expect(find.text('EDITAR'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.text(
+        '¿Seguro que deseas cancelar esta actividad? Esta acción no se puede deshacer.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('VOLVER'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgendaActivityDetail), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SÍ, CANCELAR'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgendaActivityDetail), findsNothing);
+    expect(find.text('Actividad cancelada.'), findsOneWidget);
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets('New activity bottom sheet handles keyboard at $width', (
       tester,
@@ -271,6 +360,13 @@ void main() {
       final complete = find.text('COMPLETAR ACTIVIDAD');
       await tester.ensureVisible(complete);
       await tester.tap(complete);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(
+        find.text('¿Confirmas que esta actividad fue completada?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('SÍ, COMPLETAR'));
       await tester.pumpAndSettle();
       expect(find.byType(AgendaActivityDetail), findsNothing);
       expect(find.text('Actividad completada.'), findsOneWidget);

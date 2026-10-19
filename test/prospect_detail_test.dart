@@ -55,7 +55,7 @@ void main() {
       expect(find.text('Motivadores de compra'), findsOneWidget);
       expect(find.text('Experiencia previa'), findsOneWidget);
       expect(find.text('Proceso y seguimiento'), findsOneWidget);
-      expect(find.text('Resultado del Discovery'), findsOneWidget);
+      expect(find.text('Asignación a cerrador'), findsOneWidget);
       await tester.ensureVisible(find.widgetWithText(FilterChip, 'Guiones'));
       await tester.tap(find.widgetWithText(FilterChip, 'Guiones'));
       await tester.pumpAndSettle();

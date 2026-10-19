@@ -275,10 +275,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               onDelete: () => _deleteActivity(activity, detailContext),
               onEdit: () => _editActivity(activity, detailContext),
               onComplete: () => _completeActivity(activity, detailContext),
-              onReschedule: () => _showActionMessage(
-                'La cancelación estará disponible al conectar el servicio.',
-                detailContext,
-              ),
+              onReschedule: () => _cancelActivity(activity, detailContext),
             ),
           ),
         ),
@@ -288,6 +285,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   bool _openingProspect = false;
   final _deleting = <int>{};
+  final _changingStatus = <int>{};
   Future<void> _editActivity(
     AgendaActivity activity,
     BuildContext detailContext,
@@ -415,12 +413,141 @@ class _AgendaScreenState extends State<AgendaScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _completeActivity(AgendaActivity activity, BuildContext detailContext) {
-    if (activity.id != null) {
-      _showActionMessage(
-        'Completar actividades aún no está conectado al servidor.',
-        detailContext,
-      );
+  Future<bool> _confirmActivityAction(
+    BuildContext detailContext, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: detailContext,
+      barrierColor: Colors.black54,
+      useSafeArea: true,
+      backgroundColor: Theme.of(detailContext).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 48),
+                  Expanded(
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar confirmación',
+                    onPressed: () => Navigator.pop(sheetContext, false),
+                    icon: const Icon(Icons.close, size: 28),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'SulphurPoint',
+                  fontSize: 17,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(sheetContext, false),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.grey.shade600,
+                        minimumSize: const Size.fromHeight(44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'VOLVER',
+                        style: TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      key: const ValueKey('confirm-activity-action'),
+                      onPressed: () => Navigator.pop(sheetContext, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        minimumSize: const Size.fromHeight(44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        confirmLabel,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'BebasNeue',
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<void> _completeActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    if (activity.isFollowUp) return;
+    final confirmed = await _confirmActivityAction(
+      detailContext,
+      title: 'Completar actividad',
+      message: '¿Confirmas que esta actividad fue completada?',
+      confirmLabel: 'SÍ, COMPLETAR',
+    );
+    if (!confirmed || !detailContext.mounted) return;
+    final id = activity.id;
+    if (id != null) {
+      if (!_changingStatus.add(id)) return;
+      try {
+        await _service.complete(id);
+        if (!detailContext.mounted) return;
+        Navigator.pop(detailContext);
+        if (mounted) {
+          _showActionMessage('Actividad completada.');
+          await _load();
+        }
+      } on AgendaException catch (error) {
+        if (detailContext.mounted) {
+          _showActionMessage(error.message, detailContext);
+        }
+      } finally {
+        _changingStatus.remove(id);
+      }
       return;
     }
     if (activity.status != AgendaStatus.completed) {
@@ -435,6 +562,47 @@ class _AgendaScreenState extends State<AgendaScreen> {
     }
     Navigator.pop(detailContext);
     _showActionMessage('Actividad completada.');
+  }
+
+  Future<void> _cancelActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    final confirmed = await _confirmActivityAction(
+      detailContext,
+      title: 'Cancelar actividad',
+      message: '¿Seguro que deseas cancelar esta actividad? Esta acción no se puede deshacer.',
+      confirmLabel: 'SÍ, CANCELAR',
+    );
+    if (!confirmed || !detailContext.mounted) return;
+    final id = activity.id;
+    if (id != null) {
+      if (!_changingStatus.add(id)) return;
+      try {
+        await _service.cancel(id);
+        if (!detailContext.mounted) return;
+        Navigator.pop(detailContext);
+        if (mounted) {
+          _showActionMessage('Actividad cancelada.');
+          await _load();
+        }
+      } on AgendaException catch (error) {
+        if (detailContext.mounted) {
+          _showActionMessage(error.message, detailContext);
+        }
+      } finally {
+        _changingStatus.remove(id);
+      }
+      return;
+    }
+    final index = _activities.indexOf(activity);
+    if (index != -1) {
+      setState(() {
+        _activities[index] = activity.copyWith(status: AgendaStatus.cancelled);
+      });
+    }
+    if (detailContext.mounted) Navigator.pop(detailContext);
+    _showActionMessage('Actividad cancelada.');
   }
 
   @override

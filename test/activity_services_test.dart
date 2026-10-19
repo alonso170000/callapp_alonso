@@ -57,6 +57,31 @@ void main() {
     },
   );
   test(
+    'Completes and cancels through the authenticated status endpoint',
+    () async {
+      final sentStatuses = <String>[];
+      final service = AgendaService(
+        auth: await auth(),
+        client: MockClient((request) async {
+          expect(request.method, 'PATCH');
+          expect(request.url.path, '/api/v1/activities/9/status');
+          expect(request.headers['Authorization'], 'Bearer session');
+          sentStatuses.add(
+            (jsonDecode(request.body) as Map<String, dynamic>)['estado']
+                as String,
+          );
+          return http.Response('{"success":true,"data":{"id":9}}', 200);
+        }),
+      );
+      addTearDown(service.dispose);
+
+      await service.complete(9);
+      await service.cancel(9);
+
+      expect(sentStatuses, ['completada', 'cancelada']);
+    },
+  );
+  test(
     'Deletion deadline uses server creation time instead of device clock',
     () {
       final now = DateTime(2026, 10, 14, 14);

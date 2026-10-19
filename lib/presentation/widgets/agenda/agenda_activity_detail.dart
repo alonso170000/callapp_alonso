@@ -85,6 +85,9 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   VoidCallback get onComplete =>
       activity.isFollowUp ? widget.onOpenProspect : widget.onComplete;
   VoidCallback get onReschedule => widget.onReschedule;
+  bool get _isOpen =>
+      activity.status == AgendaStatus.pending ||
+      activity.status == AgendaStatus.overdue;
   Timer? _deleteTimer;
   bool _deleteExpired = false;
   bool get _canDelete =>
@@ -612,40 +615,41 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: FilledButton.icon(
-                  onPressed: activity.status == AgendaStatus.completed
-                      ? () {}
-                      : onComplete,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: AppColors.homeWarmText,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              if (_isOpen || activity.status == AgendaStatus.completed)
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: FilledButton.icon(
+                    onPressed: activity.status == AgendaStatus.completed
+                        ? () {}
+                        : onComplete,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: AppColors.homeWarmText,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                  ),
-                  icon: Icon(
-                    activity.status == AgendaStatus.completed
-                        ? Icons.visibility_outlined
-                        : Icons.check_circle_outline,
-                    size: 25,
-                  ),
-                  label: Text(
-                    activity.status == AgendaStatus.completed
-                        ? 'VER SEGUIMIENTO'
-                        : activity.isFollowUp
-                        ? 'ATENDER ACTIVIDAD'
-                        : 'COMPLETAR ACTIVIDAD',
-                    style: const TextStyle(
-                      fontFamily: 'BebasNeue',
-                      fontSize: 18,
+                    icon: Icon(
+                      activity.status == AgendaStatus.completed
+                          ? Icons.visibility_outlined
+                          : Icons.check_circle_outline,
+                      size: 25,
+                    ),
+                    label: Text(
+                      activity.status == AgendaStatus.completed
+                          ? 'VER SEGUIMIENTO'
+                          : activity.isFollowUp
+                          ? 'ATENDER ACTIVIDAD'
+                          : 'COMPLETAR ACTIVIDAD',
+                      style: const TextStyle(
+                        fontFamily: 'BebasNeue',
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (activity.status != AgendaStatus.completed) ...[
+              if (_isOpen) ...[
                 const SizedBox(height: 9),
                 Row(
                   children: [

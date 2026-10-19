@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
@@ -35,7 +36,7 @@ class HomeDashboard extends StatefulWidget {
 
 class _HomeDashboardState extends State<HomeDashboard> {
   final _agenda = AgendaService();
-  final _prospects = ProspectsService();
+  final _prospects = ProspectsRepository();
   HomeDashboardData? _data;
   bool _loading = true;
   String? _error;
@@ -69,18 +70,48 @@ class _HomeDashboardState extends State<HomeDashboard> {
       _error = null;
     });
     try {
-      final values = await Future.wait<Object>([
-        widget.loadProspects?.call() ?? _prospects.fetch(),
-        widget.loadActivities?.call() ?? _agenda.fetch(),
-      ]);
+      if (widget.loadProspects != null) {
+        final values = await Future.wait<Object>([
+          widget.loadProspects!.call(),
+          widget.loadActivities?.call() ?? _agenda.fetch(),
+        ]);
+        if (!mounted || request != _request) return;
+        setState(
+          () => _data = HomeDashboardData(
+            values[0] as List<ProspectRecord>,
+            values[1] as List<AgendaActivity>,
+            DateTime.now(),
+          ),
+        );
+        return;
+      }
+
+      final activitiesFuture = widget.loadActivities?.call() ?? _agenda.fetch();
+      var cached = <ProspectRecord>[];
+      try {
+        cached = await _prospects.readCache();
+      } catch (_) {
+        // La API sigue disponible aunque SQLite no pueda leerse.
+      }
+      final activities = await activitiesFuture;
       if (!mounted || request != _request) return;
-      setState(
-        () => _data = HomeDashboardData(
-          values[0] as List<ProspectRecord>,
-          values[1] as List<AgendaActivity>,
-          DateTime.now(),
-        ),
-      );
+      if (cached.isNotEmpty) {
+        setState(
+          () => _data = HomeDashboardData(cached, activities, DateTime.now()),
+        );
+      }
+      try {
+        final refreshed = await _prospects.refresh();
+        if (!mounted || request != _request) return;
+        setState(
+          () =>
+              _data = HomeDashboardData(refreshed, activities, DateTime.now()),
+        );
+      } on ProspectsException catch (error) {
+        if (cached.isEmpty) rethrow;
+        if (!mounted || request != _request) return;
+        setState(() => _error = 'Mostrando datos guardados. ${error.message}');
+      }
     } catch (error) {
       if (!mounted || request != _request) return;
       setState(
@@ -211,7 +242,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   Text(_error!),
                   TextButton(onPressed: _load, child: const Text('Reintentar')),
                 ],
-                if (data != null && _error == null) ...[
+                if (data != null) ...[
                   Row(
                     children: [
                       IconButton(
