@@ -48,6 +48,18 @@ class AppColors {
   static const Color homeBadge = Color(0xFFF2FF81);
   static const Color homeGreenToday = Color.fromARGB(255, 185, 237, 220);
 
+  // Paleta compartida por las secciones del formulario de discovery.
+  static const Color discoveryHeader = Color(0xFF438E72);
+  static const Color discoveryPanel = Color(0xFFADFAC4);
+  static const Color discoveryField = Color(0xFF38A58B);
+  static const Color discoveryFieldSelected = Color(0xFF287965);
+  static const Color discoveryFieldText = Color(0xFFFFFFFF);
+  static const Color discoveryFieldHint = Color(0xB3FFFFFF);
+  static const Color discoverySave = Color(0xFF4CA382);
+  static const Color discoveryCancel = Color(0xFFB5484D);
+  static const Color discoveryToggleOnThumb = Color(0xFFA8F7D3);
+  static const Color discoveryToggleOffThumb = Color(0xFFFFB1B1);
+
   // Paleta principal para la pantalla Profile.
   static const Color profileDatos = Color.fromRGBO(186, 248, 157, 1);
   static const Color profileSincronizacion = Color.fromRGBO(157, 248, 227, 1);

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,14 +29,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String? _payment;
   String? _investmentTime;
   final Set<String> _keyFactors = {};
-  String _previousExperience = 'Positivo';
-  String _lot = 'Seleccione un lote';
-  String _decisionMaker = 'Pareja';
+  String? _previousExperience;
+  final Set<String> _decisionMakers = {};
+  int? _selectedLotId;
   String _rating = 'Seleccione';
   String _closer = 'Seleccione';
   bool _knowsArea = false;
-  bool _boughtBefore = true;
+  bool _boughtBefore = false;
   bool _acceptsPromotions = true;
+  bool _hasSpecificLot = false;
   bool _sendToCloser = true;
 
   final _areaNotes = TextEditingController();
@@ -43,17 +45,21 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   final _otherFactor = TextEditingController();
   final _whereBought = TextEditingController();
   final _experienceReason = TextEditingController();
-  final _lotSize = TextEditingController();
-  final _webPrice = TextEditingController();
+  final _participantsOther = TextEditingController();
   final _additionalNotes = TextEditingController();
   late final ProspectsService _service;
+  List<Map<String, dynamic>> _lots = const [];
   Map<String, Object?>? _saved;
   bool _showNeedErrors = false;
   bool _showPaymentErrors = false;
   bool _showMotivatorErrors = false;
+  bool _showExperienceErrors = false;
+  bool _showProcessErrors = false;
   bool _loading = false;
+  bool _lotsLoading = false;
   String? _savingSection;
   String? _serviceError;
+  String? _lotsError;
 
   static const _locationOptions = ['Quintana Roo', 'Yucatán'];
   static const _keyFactorOptions = [
@@ -100,12 +106,47 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     'Retorno de inversión': 'retorno_inversion',
     'Otro': 'otro',
   };
+  static const _experienceOptions = [
+    'Muy buena',
+    'Buena',
+    'Regular',
+    'Mala',
+    'Muy mala',
+  ];
+  static const _experienceCodes = {
+    'Muy buena': 'muy_buena',
+    'Buena': 'buena',
+    'Regular': 'regular',
+    'Mala': 'mala',
+    'Muy mala': 'muy_mala',
+  };
+  static const _participantOptions = [
+    'Pareja',
+    'Padres',
+    'Socio',
+    'Familia',
+    'Asesor',
+    'Solo decide él/ella',
+    'Otro',
+  ];
+  static const _participantCodes = {
+    'Pareja': 'pareja',
+    'Padres': 'padres',
+    'Socio': 'socio',
+    'Familia': 'familia',
+    'Asesor': 'asesor',
+    'Solo decide él/ella': 'solo',
+    'Otro': 'otro',
+  };
 
   @override
   void initState() {
     super.initState();
     _service = widget.prospectsService ?? ProspectsService();
-    if (widget.prospectId != null) _loadDiscovery();
+    if (widget.prospectId != null) {
+      _loadDiscovery();
+      _loadLots();
+    }
   }
 
   @override
@@ -115,8 +156,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     _otherFactor.dispose();
     _whereBought.dispose();
     _experienceReason.dispose();
-    _lotSize.dispose();
-    _webPrice.dispose();
+    _participantsOther.dispose();
     _additionalNotes.dispose();
     if (widget.prospectsService == null) _service.dispose();
     super.dispose();
@@ -124,7 +164,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
 
   InputDecoration _decoration() => InputDecoration(
     filled: true,
-    fillColor: const Color(0xFF38A58B),
+    fillColor: AppColors.discoveryField,
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     border: OutlineInputBorder(
@@ -157,17 +197,20 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       key: ValueKey('$label-$value'),
       initialValue: value,
       isExpanded: true,
-      dropdownColor: const Color(0xFF38A58B),
-      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+      dropdownColor: AppColors.discoveryField,
+      icon: const Icon(
+        Icons.keyboard_arrow_down,
+        color: AppColors.discoveryFieldText,
+      ),
       style: const TextStyle(
-        color: Colors.white,
+        color: AppColors.discoveryFieldText,
         fontFamily: 'SulphurPoint',
         fontSize: 16,
       ),
       decoration: _decoration().copyWith(errorText: errorText),
       hint: const Text(
         'Seleccione una opción',
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(color: AppColors.discoveryFieldHint),
       ),
       items: values
           .map((item) => DropdownMenuItem(value: item, child: Text(item)))
@@ -198,15 +241,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 label: Text(option),
                 selected: isSelected,
                 showCheckmark: true,
-                checkmarkColor: Colors.white,
-                selectedColor: const Color(0xFF287965),
-                backgroundColor: const Color(0xFF38A58B),
+                checkmarkColor: AppColors.discoveryFieldText,
+                selectedColor: AppColors.discoveryFieldSelected,
+                backgroundColor: AppColors.discoveryField,
                 side: BorderSide.none,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: EdgeInsets.zero,
                 labelPadding: const EdgeInsets.symmetric(horizontal: 10),
                 labelStyle: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.discoveryFieldText,
                   fontFamily: 'SulphurPoint',
                 ),
                 onSelected: _savingSection != null
@@ -248,12 +291,43 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       maxLines: 3,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.discoveryFieldText),
       decoration: _decoration().copyWith(
         prefixText: prefixText,
-        prefixStyle: const TextStyle(color: Colors.white),
+        prefixStyle: const TextStyle(color: AppColors.discoveryFieldText),
         errorText: errorText,
       ),
+    ),
+  );
+
+  Widget _readOnlyRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.discoveryFieldText,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.discoveryFieldText,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 
@@ -267,7 +341,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
               toggled: value,
               label: label,
               child: InkWell(
-                onTap: () => onChanged(!value),
+                onTap: _savingSection == null ? () => onChanged(!value) : null,
                 borderRadius: BorderRadius.circular(7),
                 child: Container(
                   width: 62,
@@ -278,16 +352,16 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: value
-                        ? const Color(0xFF4CA382)
-                        : const Color(0xFFB5484D),
+                        ? AppColors.discoverySave
+                        : AppColors.discoveryCancel,
                     borderRadius: BorderRadius.circular(7),
                   ),
                   child: Container(
                     width: 27,
                     decoration: BoxDecoration(
                       color: value
-                          ? const Color(0xFFA8F7D3)
-                          : const Color(0xFFFFB1B1),
+                          ? AppColors.discoveryToggleOnThumb
+                          : AppColors.discoveryToggleOffThumb,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Icon(value ? Icons.check : Icons.close, size: 17),
@@ -299,38 +373,35 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         ),
       );
 
-  Widget _buttons(
-    String section,
-    VoidCallback cancel,
-    VoidCallback save,
-  ) => Row(
-    children: [
-      Expanded(
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFB5484D),
+  Widget _buttons(String section, VoidCallback cancel, VoidCallback save) =>
+      Row(
+        children: [
+          Expanded(
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.discoveryCancel,
+              ),
+              onPressed: _savingSection == null ? cancel : null,
+              child: const Text('CANCELAR'),
+            ),
           ),
-          onPressed: _savingSection == null ? cancel : null,
-          child: const Text('CANCELAR'),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF4CA382),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.discoverySave,
+              ),
+              onPressed: _savingSection == null ? save : null,
+              child: _savingSection == section
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('GUARDAR'),
+            ),
           ),
-          onPressed: _savingSection == null ? save : null,
-          child: _savingSection == section
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('GUARDAR'),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 
   void _notify(String section) {
     widget.onSaved('Discovery · $section');
@@ -369,7 +440,61 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     for (final entry in codes.entries) {
       if (entry.value == value) return entry.key;
     }
+    // Compatibilidad con registros previos que guardaron la etiqueta visible.
+    final text = value?.toString().trim().toLowerCase();
+    if (text == null || text.isEmpty) return null;
+    for (final entry in codes.entries) {
+      if (entry.key.toLowerCase() == text) return entry.key;
+    }
     return null;
+  }
+
+  Future<void> _loadLots() async {
+    setState(() {
+      _lotsLoading = true;
+      _lotsError = null;
+    });
+    try {
+      final lots = await _service.availableLots();
+      if (mounted) setState(() => _lots = lots);
+    } on ProspectsException catch (error) {
+      if (mounted) setState(() => _lotsError = error.message);
+    } finally {
+      if (mounted) setState(() => _lotsLoading = false);
+    }
+  }
+
+  Map<String, dynamic>? get _selectedLot {
+    for (final lot in _lots) {
+      if (lot['id'] == _selectedLotId) return lot;
+    }
+    return null;
+  }
+
+  String _lotLabel(Map<String, dynamic> lot) =>
+      'Lote ${lot['numero_lote'] ?? lot['id']}';
+
+  String _money(Object? value) {
+    final amount = double.tryParse('$value');
+    if (amount == null) return 'No disponible';
+    final fixed = amount.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final digits = parts.first;
+    final buffer = StringBuffer();
+    for (var index = 0; index < digits.length; index++) {
+      if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
+      buffer.write(digits[index]);
+    }
+    return '\$ $buffer.${parts.last}';
+  }
+
+  String _dimensions(Object? value) {
+    final size = double.tryParse('$value');
+    if (size == null) return 'No disponible';
+    final text = size == size.roundToDouble()
+        ? size.toStringAsFixed(0)
+        : size.toStringAsFixed(2);
+    return '$text m²';
   }
 
   Future<void> _loadDiscovery() async {
@@ -402,6 +527,28 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 .whereType<String>(),
           );
         _otherFactor.text = data['otro_motivo_compra'] as String? ?? '';
+        _boughtBefore =
+            data['ha_comprado_inmuebles'] == true ||
+            data['ha_comprado_inmuebles'] == 1;
+        _whereBought.text = data['donde_comprado'] as String? ?? '';
+        _previousExperience = _labelForCode(
+          _experienceCodes,
+          data['experiencia_previa'],
+        );
+        _experienceReason.text = data['detalles_experiencia'] as String? ?? '';
+        _acceptsPromotions = data['acepta_promociones'] != false;
+        final lotId = int.tryParse('${data['terreno_interes_id']}');
+        _selectedLotId = lotId;
+        _hasSpecificLot = lotId != null;
+        _decisionMakers
+          ..clear()
+          ..addAll(
+            _listValue(data['participantes_decision'])
+                .map((value) => _labelForCode(_participantCodes, value))
+                .whereType<String>(),
+          );
+        _participantsOther.text = data['participantes_otro'] as String? ?? '';
+        _additionalNotes.text = data['notas_adicionales'] as String? ?? '';
         _saved = {
           'property': _property,
           'locations': _locations.toList(),
@@ -413,6 +560,16 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           'investmentTime': _investmentTime,
           'keyFactors': _keyFactors.toList(),
           'otherFactor': _otherFactor.text,
+          'boughtBefore': _boughtBefore,
+          'whereBought': _whereBought.text,
+          'previousExperience': _previousExperience,
+          'experienceReason': _experienceReason.text,
+          'acceptsPromotions': _acceptsPromotions,
+          'hasSpecificLot': _hasSpecificLot,
+          'selectedLotId': _selectedLotId,
+          'decisionMakers': _decisionMakers.toList(),
+          'participantsOther': _participantsOther.text,
+          'additionalNotes': _additionalNotes.text,
         };
       });
     } on ProspectsException catch (error) {
@@ -510,6 +667,84 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     _notify('Motivadores de compra');
   }
 
+  Future<void> _saveExperience() async {
+    setState(() => _showExperienceErrors = true);
+    if (_boughtBefore && _previousExperience == null) return;
+    final saved = await _persist('experiencia_previa', {
+      'ha_comprado_inmuebles': _boughtBefore,
+      'donde_comprado': _boughtBefore ? _whereBought.text.trim() : null,
+      'experiencia_previa': _boughtBefore
+          ? _experienceCodes[_previousExperience]
+          : null,
+      'detalles_experiencia': _boughtBefore
+          ? _experienceReason.text.trim()
+          : null,
+    });
+    if (!saved || !mounted) return;
+    _saved = {
+      ...?_saved,
+      'boughtBefore': _boughtBefore,
+      'whereBought': _boughtBefore ? _whereBought.text.trim() : '',
+      'previousExperience': _boughtBefore ? _previousExperience : null,
+      'experienceReason': _boughtBefore ? _experienceReason.text.trim() : '',
+    };
+    _notify('Experiencia previa');
+  }
+
+  void _restoreExperience() => setState(() {
+    _boughtBefore = (_saved?['boughtBefore'] as bool?) ?? false;
+    _whereBought.text = (_saved?['whereBought'] as String?) ?? '';
+    _previousExperience = _saved?['previousExperience'] as String?;
+    _experienceReason.text = (_saved?['experienceReason'] as String?) ?? '';
+    _showExperienceErrors = false;
+  });
+
+  Future<void> _saveProcess() async {
+    setState(() => _showProcessErrors = true);
+    final needsLot = _hasSpecificLot && _selectedLot == null;
+    final needsOther =
+        _decisionMakers.contains('Otro') &&
+        _participantsOther.text.trim().isEmpty;
+    if (_decisionMakers.isEmpty || needsLot || needsOther) return;
+    final saved = await _persist('proceso_seguimiento', {
+      'acepta_promociones': _acceptsPromotions,
+      'terreno_interes_id': _hasSpecificLot ? _selectedLotId : null,
+      'participantes_decision': _decisionMakers
+          .map((participant) => _participantCodes[participant])
+          .whereType<String>()
+          .toList(),
+      'participantes_otro': _decisionMakers.contains('Otro')
+          ? _participantsOther.text.trim()
+          : null,
+      'notas_adicionales': _additionalNotes.text.trim(),
+    });
+    if (!saved || !mounted) return;
+    _saved = {
+      ...?_saved,
+      'acceptsPromotions': _acceptsPromotions,
+      'hasSpecificLot': _hasSpecificLot,
+      'selectedLotId': _hasSpecificLot ? _selectedLotId : null,
+      'decisionMakers': _decisionMakers.toList(),
+      'participantsOther': _decisionMakers.contains('Otro')
+          ? _participantsOther.text.trim()
+          : '',
+      'additionalNotes': _additionalNotes.text.trim(),
+    };
+    _notify('Proceso y seguimiento');
+  }
+
+  void _restoreProcess() => setState(() {
+    _acceptsPromotions = (_saved?['acceptsPromotions'] as bool?) ?? true;
+    _hasSpecificLot = (_saved?['hasSpecificLot'] as bool?) ?? false;
+    _selectedLotId = _saved?['selectedLotId'] as int?;
+    _decisionMakers
+      ..clear()
+      ..addAll((_saved?['decisionMakers'] as List<String>?) ?? const []);
+    _participantsOther.text = (_saved?['participantsOther'] as String?) ?? '';
+    _additionalNotes.text = (_saved?['additionalNotes'] as String?) ?? '';
+    _showProcessErrors = false;
+  });
+
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -524,13 +759,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         ),
       ProspectDetailPanel(
         title: 'Necesidad y objetivo',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -589,13 +824,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       const SizedBox(height: 14),
       ProspectDetailPanel(
         title: 'Capacidad y forma de pago',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -648,13 +883,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       const SizedBox(height: 14),
       ProspectDetailPanel(
         title: 'Motivadores de compra',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -696,13 +931,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       const SizedBox(height: 14),
       ProspectDetailPanel(
         title: 'Experiencia previa',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -712,32 +947,25 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 _boughtBefore,
                 (value) => setState(() => _boughtBefore = value),
               ),
-              _text('¿Dónde?', _whereBought),
-              _select('¿Qué experiencia tuvo?', _previousExperience, [
-                'Positivo',
-                'Negativo',
-              ], (value) => _previousExperience = value),
-              _text('¿Por qué?', _experienceReason),
+              if (_boughtBefore) ...[
+                _text('¿Dónde?', _whereBought),
+                _select(
+                  '¿Qué experiencia tuvo? *',
+                  _previousExperience,
+                  _experienceOptions,
+                  (value) => _previousExperience = value,
+                  errorText:
+                      _showExperienceErrors && _previousExperience == null
+                      ? 'Seleccione la experiencia que tuvo.'
+                      : null,
+                ),
+                if (_previousExperience != null)
+                  _text('¿Por qué?', _experienceReason),
+              ],
               _buttons(
                 'experiencia_previa',
-                () => setState(() {
-                  _boughtBefore = (_saved?['boughtBefore'] as bool?) ?? true;
-                  _whereBought.text = (_saved?['whereBought'] as String?) ?? '';
-                  _previousExperience =
-                      (_saved?['previousExperience'] as String?) ?? 'Positivo';
-                  _experienceReason.text =
-                      (_saved?['experienceReason'] as String?) ?? '';
-                }),
-                () {
-                  _saved = {
-                    ...?_saved,
-                    'boughtBefore': _boughtBefore,
-                    'whereBought': _whereBought.text,
-                    'previousExperience': _previousExperience,
-                    'experienceReason': _experienceReason.text,
-                  };
-                  _notify('Experiencia previa');
-                },
+                _restoreExperience,
+                _saveExperience,
               ),
             ],
           ),
@@ -746,13 +974,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       const SizedBox(height: 14),
       ProspectDetailPanel(
         title: 'Proceso y seguimiento',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -762,47 +990,134 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 _acceptsPromotions,
                 (value) => setState(() => _acceptsPromotions = value),
               ),
-              _select('¿Lote seleccionado?', _lot, [
-                'Seleccione un lote',
-                'Lote 12',
-                'Lote 23',
-                'Lote 38',
-              ], (value) => _lot = value),
-              _text('M² (Tamaño)', _lotSize),
-              _text('Precio web', _webPrice),
-              _select('¿Quién más interviene en la decisión?', _decisionMaker, [
-                'Pareja',
-                'Socios',
-                'Padres',
-                'Hijos',
-              ], (value) => _decisionMaker = value),
-              _text('Notas adicionales', _additionalNotes),
-              _buttons(
-                'proceso_seguimiento',
-                () => setState(() {
-                  _acceptsPromotions =
-                      (_saved?['acceptsPromotions'] as bool?) ?? true;
-                  _lot = (_saved?['lot'] as String?) ?? 'Seleccione un lote';
-                  _lotSize.text = (_saved?['lotSize'] as String?) ?? '';
-                  _webPrice.text = (_saved?['webPrice'] as String?) ?? '';
-                  _decisionMaker =
-                      (_saved?['decisionMaker'] as String?) ?? 'Pareja';
-                  _additionalNotes.text =
-                      (_saved?['additionalNotes'] as String?) ?? '';
+              _toggle(
+                '¿Tiene interés en un lote específico?',
+                _hasSpecificLot,
+                (value) => setState(() {
+                  _hasSpecificLot = value;
+                  if (!value) _selectedLotId = null;
                 }),
-                () {
-                  _saved = {
-                    ...?_saved,
-                    'acceptsPromotions': _acceptsPromotions,
-                    'lot': _lot,
-                    'lotSize': _lotSize.text,
-                    'webPrice': _webPrice.text,
-                    'decisionMaker': _decisionMaker,
-                    'additionalNotes': _additionalNotes.text,
-                  };
-                  _notify('Proceso y seguimiento');
-                },
               ),
+              if (_hasSpecificLot) ...[
+                if (_lotsLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+                if (_lotsError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _lotsError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                if (!_lotsLoading &&
+                    _selectedLotId != null &&
+                    _selectedLot == null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'El lote guardado ya no está disponible. Selecciona otro.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                _label(
+                  'Seleccionar lote *',
+                  DropdownButtonFormField<int>(
+                    key: ValueKey('lote-$_selectedLotId-${_lots.length}'),
+                    initialValue: _selectedLot?['id'] as int?,
+                    isExpanded: true,
+                    dropdownColor: AppColors.discoveryField,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.discoveryFieldText,
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.discoveryFieldText,
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 16,
+                    ),
+                    decoration: _decoration().copyWith(
+                      errorText:
+                          _showProcessErrors &&
+                              _hasSpecificLot &&
+                              _selectedLot == null
+                          ? 'Seleccione el lote de interés.'
+                          : null,
+                    ),
+                    hint: Text(
+                      _lots.isEmpty
+                          ? 'No hay lotes disponibles'
+                          : 'Seleccione un lote',
+                      style: const TextStyle(
+                        color: AppColors.discoveryFieldHint,
+                      ),
+                    ),
+                    items: _lots
+                        .map(
+                          (lot) => DropdownMenuItem<int>(
+                            value: lot['id'] as int,
+                            child: Text(_lotLabel(lot)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _lots.isEmpty
+                        ? null
+                        : (value) => setState(() => _selectedLotId = value),
+                  ),
+                ),
+                if (_selectedLot case final lot?)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.discoveryField,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      children: [
+                        _readOnlyRow(
+                          'Desarrollo',
+                          '${lot['desarrollo_nombre'] ?? _service.activeDevelopment?['nombre'] ?? 'No disponible'}',
+                        ),
+                        _readOnlyRow('Número de lote', '${lot['numero_lote']}'),
+                        _readOnlyRow(
+                          'Dimensiones',
+                          _dimensions(lot['dimensiones_m2']),
+                        ),
+                        _readOnlyRow('Precio actual', _money(lot['precio'])),
+                      ],
+                    ),
+                  ),
+              ],
+              _multiSelectChips(
+                '¿Quién más interviene en la decisión? *',
+                _participantOptions,
+                _decisionMakers,
+                errorText: _showProcessErrors && _decisionMakers.isEmpty
+                    ? 'Seleccione al menos un participante.'
+                    : null,
+              ),
+              if (_decisionMakers.contains('Otro'))
+                _text(
+                  'Especificar *',
+                  _participantsOther,
+                  errorText:
+                      _showProcessErrors &&
+                          _participantsOther.text.trim().isEmpty
+                      ? 'Especifique quién más interviene.'
+                      : null,
+                ),
+              _text('Notas adicionales', _additionalNotes),
+              _buttons('proceso_seguimiento', _restoreProcess, _saveProcess),
             ],
           ),
         ),
@@ -810,13 +1125,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       const SizedBox(height: 14),
       ProspectDetailPanel(
         title: 'Resultado del Discovery',
-        color: const Color(0xFF438E72),
+        color: AppColors.discoveryHeader,
         nested: true,
         initiallyExpanded: true,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFADFAC4),
+            color: AppColors.discoveryPanel,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
