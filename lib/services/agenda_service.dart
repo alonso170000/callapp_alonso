@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 
 class AgendaException implements Exception {
   const AgendaException(this.message);
@@ -227,7 +228,7 @@ class AgendaService {
         );
       }
       final now = DateTime.now();
-      return (data['data'] as List)
+      final activities = (data['data'] as List)
           .map(
             (row) => fromJson(
               Map<String, dynamic>.from(row as Map),
@@ -236,6 +237,12 @@ class AgendaService {
             ),
           )
           .toList();
+      await NotificationService.instance.syncActivities(
+        activities,
+        userId: _auth.userId,
+        developmentId: _auth.developmentId,
+      );
+      return activities;
     } on TimeoutException {
       throw const AgendaException(
         'El servidor tardó demasiado. Intenta nuevamente.',

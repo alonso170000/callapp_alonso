@@ -38,7 +38,7 @@ class AppDatabase {
     return factory.openDatabase(
       resolvedPath,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onCreate: (database, _) async {
           await database.execute('''
             CREATE TABLE cached_prospects (
@@ -109,9 +109,51 @@ class AppDatabase {
               next_contact_at_ms
             )
           ''');
+          await _createNotificationsTable(database);
+        },
+        onUpgrade: (database, oldVersion, _) async {
+          if (oldVersion < 2) await _createNotificationsTable(database);
         },
       ),
     );
+  }
+
+  static Future<void> _createNotificationsTable(Database database) async {
+    await database.execute('''
+      CREATE TABLE activity_notifications (
+        user_id INTEGER NOT NULL,
+        development_id INTEGER NOT NULL,
+        activity_id INTEGER NOT NULL,
+        prospect_id INTEGER,
+        type TEXT,
+        medium TEXT,
+        title TEXT NOT NULL,
+        prospect TEXT NOT NULL,
+        description TEXT NOT NULL,
+        activity_at_ms INTEGER NOT NULL,
+        reminder_at_ms INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        location TEXT NOT NULL,
+        reminder_minutes INTEGER NOT NULL,
+        has_reminder INTEGER NOT NULL,
+        last_contact TEXT NOT NULL,
+        prospect_avatar_url TEXT,
+        completed_at_ms INTEGER,
+        is_read INTEGER NOT NULL DEFAULT 0,
+        dismissed INTEGER NOT NULL DEFAULT 0,
+        created_at_ms INTEGER NOT NULL,
+        PRIMARY KEY (user_id, development_id, activity_id)
+      )
+    ''');
+    await database.execute('''
+      CREATE INDEX idx_activity_notifications_scope_reminder
+      ON activity_notifications (
+        user_id,
+        development_id,
+        reminder_at_ms DESC
+      )
+    ''');
   }
 
   Future<void> close() async {

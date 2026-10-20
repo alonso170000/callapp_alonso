@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 
 class ProspectsRepository {
   ProspectsRepository({
@@ -35,6 +36,11 @@ class ProspectsRepository {
     final scope = _scope;
     final prospects = await _service.fetch();
     await _cache.replace(scope, prospects);
+    await NotificationService.instance.syncAssignedProspects(
+      prospects,
+      userId: scope.userId,
+      developmentId: scope.developmentId,
+    );
     return prospects;
   }
 

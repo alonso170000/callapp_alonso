@@ -231,7 +231,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 118),
             sliver: SliverList.list(
               children: [
-                HomeHeader(userName: AuthService.instance.userName),
+                HomeHeader(
+                  userName: AuthService.instance.userName,
+                  onNotificationActivity: widget.onActivity,
+                ),
                 if (_loading)
                   LinearProgressIndicator(
                     color: AppColors.primaryColor,
@@ -341,7 +344,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 20),
                   _activitySection(
-                    'Llamadas atrasadas',
+                    'Seguimientos atrasados',
                     AppColors.homeRedSection,
                     data.overdueCalls,
                     data,

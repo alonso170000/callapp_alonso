@@ -340,7 +340,10 @@ class ProspectsService {
           ? 'Sin lote seleccionado'
           : 'Lote ${row['lote_interes']}',
       qualification: row['calificacion']?.toString().split(',') ?? const [],
-      assignedAt: DateTime.tryParse('${row['fecha_asignacion']}')?.toLocal(),
+      assignedAt: switch (DateTime.tryParse('${row['fecha_asignacion']}')) {
+        final value? => businessTimeFromInstant(value),
+        null => null,
+      },
       lastCallAt: lastCall,
       lastContactResult:
           row['ultimo_contacto_resultado'] as String? ??

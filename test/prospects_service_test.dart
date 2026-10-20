@@ -58,7 +58,7 @@ void main() {
     expect(record.email, isEmpty);
     expect(record.temperature, 'Sin calificar');
     expect(record.nextContact, isNull);
-    expect(record.assignedAt, isNotNull);
+    expect(record.assignedAt, DateTime(2026, 10, 9, 7));
   });
 
   test(

@@ -154,7 +154,11 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
               .map(
                 (item) => DropdownMenuItem<int>(
                   value: item['id'] as int,
-                  child: Text(text(item), overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    text(item),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 18, color: Colors.white),
+                  ),
                 ),
               )
               .toList(),

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_card.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
@@ -16,17 +17,26 @@ class ProspectsController {
   void Function(Set<int>, String)? _show;
   void showFromHome(Set<int> ids, String label) => _show?.call(ids, label);
   VoidCallback? _open;
+  void Function(int)? _openProspect;
   void openNewProspect() => _open?.call();
+  void openProspect(int prospectId) => _openProspect?.call(prospectId);
   void dispose() {
     _open = null;
     _show = null;
+    _openProspect = null;
   }
 }
 
 class ProspectsScreen extends StatefulWidget {
   final ProspectsController? controller;
   final Future<List<ProspectRecord>> Function()? loadProspects;
-  const ProspectsScreen({super.key, this.controller, this.loadProspects});
+  final ValueChanged<AgendaActivity>? onNotificationActivity;
+  const ProspectsScreen({
+    super.key,
+    this.controller,
+    this.loadProspects,
+    this.onNotificationActivity,
+  });
 
   @override
   State<ProspectsScreen> createState() => _ProspectsScreenState();
@@ -110,6 +120,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     super.initState();
     widget.controller?._open = _addProspect;
     widget.controller?._show = _showFromHome;
+    widget.controller?._openProspect = _openProspectById;
     AuthService.instance.addListener(_sessionChanged);
     _load();
   }
@@ -120,8 +131,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._open = null;
       oldWidget.controller?._show = null;
+      oldWidget.controller?._openProspect = null;
       widget.controller?._open = _addProspect;
       widget.controller?._show = _showFromHome;
+      widget.controller?._openProspect = _openProspectById;
     }
   }
 
@@ -136,6 +149,26 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       );
     });
     _load();
+  }
+
+  Future<void> _openProspectById(int prospectId) async {
+    var index = _records.indexWhere((record) => record.id == prospectId);
+    if (index == -1) {
+      await _load();
+      if (!mounted) return;
+      index = _records.indexWhere((record) => record.id == prospectId);
+    }
+    if (index == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El prospecto ya no está disponible.')),
+      );
+      return;
+    }
+    final prospect = _records[index];
+    context.push(
+      '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
+      extra: prospect,
+    );
   }
 
   Future<void> _addProspect() async {
@@ -181,6 +214,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   void dispose() {
     widget.controller?._open = null;
     widget.controller?._show = null;
+    widget.controller?._openProspect = null;
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
     _repository.dispose();
@@ -252,6 +286,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                 children: [
                   HomeHeader(
                     userName: AuthService.instance.userName,
+                    onNotificationActivity: widget.onNotificationActivity,
                     title:
                         AuthService.instance.activeDevelopment?['rol']
                                 ?.toString()

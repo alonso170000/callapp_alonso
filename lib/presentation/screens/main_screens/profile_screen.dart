@@ -9,22 +9,25 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/services/appearance_controller.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/appearance_sheet.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.onNotificationActivity});
+  final ValueChanged<AgendaActivity>? onNotificationActivity;
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late ProfileData _profile;
-  bool _notifications = true;
   int _reminder = 15;
 
   @override
   void initState() {
     super.initState();
     AppearanceController.instance.addListener(_appearanceChanged);
+    NotificationService.instance.addListener(_notificationsChanged);
     final auth = AuthService.instance;
     _profile = ProfileData(
       name: auth.userName,
@@ -38,9 +41,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  void _notificationsChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     AppearanceController.instance.removeListener(_appearanceChanged);
+    NotificationService.instance.removeListener(_notificationsChanged);
     super.dispose();
   }
 
@@ -130,7 +138,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 backgroundColor: AppColors.primaryColor,
                 foregroundColor: AppColors.homeWarmText,
               ),
-              onPressed: () => showNotificationsSheet(context),
+              onPressed: () async {
+                final activity = await showNotificationsSheet(context);
+                if (activity != null) {
+                  widget.onNotificationActivity?.call(activity);
+                }
+              },
               icon: const Icon(Iconsax.notification),
             ),
           ],
@@ -188,15 +201,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               titleColor: AppColors.profileConfiguracion,
               icon: Icons.chevron_right,
               actionLabel: 'Abrir notificaciones',
-              onPressed: () => showNotificationsSheet(context),
+              onPressed: () async {
+                final activity = await showNotificationsSheet(context);
+                if (activity != null) {
+                  widget.onNotificationActivity?.call(activity);
+                }
+              },
             ),
             ProfileSettingRow(
               title: 'NOTIFICACIONES',
-              value: _notifications ? 'Activado' : 'Desactivado',
+              value: NotificationService.instance.enabled
+                  ? 'Activado'
+                  : 'Desactivado',
               titleColor: AppColors.profileConfiguracion,
-              icon: _notifications ? Icons.close : Icons.check,
+              icon: NotificationService.instance.enabled
+                  ? Icons.close
+                  : Icons.check,
               actionLabel: 'Cambiar notificaciones',
-              onPressed: () => setState(() => _notifications = !_notifications),
+              onPressed: () => NotificationService.instance.setEnabled(
+                !NotificationService.instance.enabled,
+              ),
             ),
             ProfileSettingRow(
               title: 'RECORDATORIOS',

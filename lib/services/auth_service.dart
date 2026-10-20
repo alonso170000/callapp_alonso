@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:callerapp_frontend/services/notification_service.dart';
 
 class AuthException implements Exception {
   final String message;
@@ -164,6 +165,7 @@ class AuthService extends ChangeNotifier {
   }
 
   void logout() {
+    unawaited(NotificationService.instance.clearActivityReminders());
     _token = null;
     _userName = null;
     _email = null;

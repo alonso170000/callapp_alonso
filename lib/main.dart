@@ -3,9 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:callerapp_frontend/config/router/app_router.dart';
 import 'package:callerapp_frontend/resources/styles/app_themes.dart';
 import 'package:callerapp_frontend/services/appearance_controller.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.initialize();
 
   runApp(const MainApp());
 }

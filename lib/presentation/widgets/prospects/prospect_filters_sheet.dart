@@ -100,7 +100,7 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                 fontSize: MediaQuery.sizeOf(context).width < 360 ? 20 : 24,
               ),
               rangePickerHeaderHelpStyle: const TextStyle(
-                fontFamily: 'SulphurPoint',
+                fontFamily: 'BebasNeue',
                 fontSize: 14,
               ),
             ),

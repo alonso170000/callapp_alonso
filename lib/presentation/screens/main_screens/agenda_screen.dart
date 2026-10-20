@@ -35,12 +35,14 @@ class AgendaScreen extends StatefulWidget {
   final AgendaController? controller;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final Future<List<ProspectRecord>> Function()? loadProspects;
+  final ValueChanged<AgendaActivity>? onNotificationActivity;
 
   const AgendaScreen({
     super.key,
     this.controller,
     this.loadActivities,
     this.loadProspects,
+    this.onNotificationActivity,
   });
 
   @override
@@ -629,6 +631,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 HomeHeader(
                   userName: AuthService.instance.userName,
                   title: 'MI AGENDA',
+                  onNotificationActivity:
+                      widget.onNotificationActivity ?? _showActivity,
                 ),
                 const SizedBox(height: 20),
                 if (_loading)
