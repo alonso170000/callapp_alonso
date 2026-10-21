@@ -386,6 +386,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.discoveryCancel,
+                foregroundColor: Colors.white,
               ),
               onPressed: _savingSection == null ? cancel : null,
               child: const Text('CANCELAR'),
@@ -396,6 +397,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.discoverySave,
+                foregroundColor: Colors.white,
               ),
               onPressed: _savingSection == null ? save : null,
               child: _savingSection == section

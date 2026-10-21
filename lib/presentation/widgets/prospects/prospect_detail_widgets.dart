@@ -228,7 +228,7 @@ class ProspectDetailHeader extends StatelessWidget {
                               fontSize: 11,
                               color: selected.contains(name)
                                   ? const Color(0xFF185465)
-                                  : const Color(0xFF68A6A0),
+                                  : const Color(0xFFA9DCD3),
                             ),
                           ),
                         ),

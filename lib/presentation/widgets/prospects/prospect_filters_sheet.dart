@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectFiltersSheet extends StatefulWidget {
   final ProspectFilters initial;
@@ -45,7 +45,7 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               visualDensity: const VisualDensity(vertical: -3),
-              activeColor: AppColors.primaryColor,
+              activeColor: Theme.of(context).colorScheme.primary,
               toggleable: true,
             ),
           )
@@ -63,7 +63,9 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             visualDensity: const VisualDensity(vertical: -3),
-            activeColor: AppColors.primaryColor,
+            activeColor: Theme.of(context).colorScheme.primary,
+            checkColor: Theme.of(context).colorScheme.onPrimary,
+            side: BorderSide(color: Theme.of(context).colorScheme.outline),
             onChanged: (checked) => setState(() {
               checked! ? selected.add(value) : selected.remove(value);
             }),
@@ -93,8 +95,9 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
           data: Theme.of(context).copyWith(
             appBarTheme: const AppBarTheme(toolbarHeight: 56),
             datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
-              rangePickerHeaderBackgroundColor: AppColors.primaryColor,
-              rangePickerHeaderForegroundColor: AppColors.homeWarmText,
+              rangePickerHeaderBackgroundColor: AppPalette.of(context)
+                  .brandFill,
+              rangePickerHeaderForegroundColor: AppPalette.of(context).onBrand,
               rangePickerHeaderHeadlineStyle: TextStyle(
                 fontFamily: 'BebasNeue',
                 fontSize: MediaQuery.sizeOf(context).width < 360 ? 20 : 24,
@@ -182,7 +185,9 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                       TextButton(
                         onPressed: () => _assignment('Rango personalizado'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primaryColor,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary,
                           textStyle: const TextStyle(
                             fontFamily: 'SulphurPoint',
                             fontSize: 18,
@@ -215,6 +220,7 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF606060),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -233,6 +239,7 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF008593),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),

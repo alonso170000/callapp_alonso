@@ -7,9 +7,8 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
-import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
-import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/prospect_assignment_controller.dart';
 
 import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
 
@@ -28,69 +27,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedDestination = 0;
   final AgendaController _agendaController = AgendaController();
   final ProspectsController _prospectsController = ProspectsController();
-  final ProspectsService _assignmentService = ProspectsService();
-  Timer? _assignmentTimer;
-  bool _checkingAssignments = false;
-  Set<int>? _knownProspectIds;
-  String? _knownAssignmentScope;
+  final ProspectAssignmentController _assignmentController =
+      ProspectAssignmentController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (widget.loadProspects == null) {
-      unawaited(_checkAssignments());
-      _assignmentTimer = Timer.periodic(
-        const Duration(seconds: 30),
-        (_) => unawaited(_checkAssignments()),
-      );
-    }
+    if (widget.loadProspects == null) _assignmentController.start();
+    NotificationService.instance.pendingProspectId.addListener(
+      _pendingProspectChanged,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingProspect());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && widget.loadProspects == null) {
-      unawaited(_checkAssignments());
+      unawaited(_assignmentController.check());
     }
   }
 
-  Future<void> _checkAssignments() async {
-    if (_checkingAssignments) return;
-    final userId = AuthService.instance.userId;
-    final developmentId = AuthService.instance.developmentId;
-    if (userId == null || developmentId == null) return;
-    final scope = '$userId:$developmentId';
-    if (_knownAssignmentScope != scope) {
-      _knownAssignmentScope = scope;
-      _knownProspectIds = null;
-    }
-    _checkingAssignments = true;
-    try {
-      final prospects = await _assignmentService.fetch();
-      final currentIds = prospects
-          .map((item) => item.id)
-          .whereType<int>()
-          .toSet();
-      final previousIds = _knownProspectIds;
-      final newlyVisible = previousIds == null
-          ? <int>{}
-          : currentIds.difference(previousIds);
-      _knownProspectIds = currentIds;
-      await NotificationService.instance.syncAssignedProspects(
-        prospects,
-        userId: userId,
-        developmentId: developmentId,
-        newlyVisibleProspectIds: newlyVisible,
-      );
-    } catch (_) {
-      // La siguiente consulta o el refresco manual volverá a intentarlo.
-    } finally {
-      _checkingAssignments = false;
-    }
+  void _pendingProspectChanged() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _openPendingProspect();
+    });
+  }
+
+  void _openPendingProspect() {
+    final prospectId = NotificationService.instance.takePendingProspectId();
+    if (prospectId == null || !mounted) return;
+    setState(() => _selectedDestination = 1);
+    _prospectsController.openProspect(prospectId);
   }
 
   void _openNotificationActivity(AgendaActivity activity) {
-    if (activity.type == 'nuevo_prospecto' && activity.prospectId != null) {
+    if (activity.type == NotificationService.assignmentType &&
+        activity.prospectId != null) {
       setState(() => _selectedDestination = 1);
       _prospectsController.openProspect(activity.prospectId!);
       return;
@@ -101,8 +75,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _assignmentTimer?.cancel();
-    _assignmentService.dispose();
+    NotificationService.instance.pendingProspectId.removeListener(
+      _pendingProspectChanged,
+    );
+    _assignmentController.dispose();
     _agendaController.dispose();
     _prospectsController.dispose();
     super.dispose();

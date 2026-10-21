@@ -28,7 +28,7 @@ void main() {
         const Offset(0, -500),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Llamadas atrasadas'), findsOneWidget);
+      expect(find.text('Seguimientos atrasados'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

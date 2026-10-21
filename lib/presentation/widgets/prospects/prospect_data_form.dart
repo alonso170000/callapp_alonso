@@ -157,7 +157,11 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                   child: Text(
                     text(item),
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 18, color: Colors.white),
+                    style: const TextStyle(
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               )
@@ -336,6 +340,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFAC4549),
+                    foregroundColor: Colors.white,
                   ),
                   onPressed: _saving ? null : _cancel,
                   child: const Text('CANCELAR'),
@@ -346,6 +351,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF4CA382),
+                    foregroundColor: Colors.white,
                   ),
                   onPressed: _saving ? null : _save,
                   child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),

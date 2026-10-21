@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
@@ -85,10 +86,10 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
             padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
             child: Text(
               section,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'BebasNeue',
                 fontSize: 18,
-                color: AppColors.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
@@ -105,7 +106,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 24),
             decoration: BoxDecoration(
-              color: const Color(0xFFB94D52),
+              color: AppColors.notificationDismissBackground,
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Column(
@@ -145,6 +146,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     child: AnimatedBuilder(
       animation: NotificationService.instance,
       builder: (context, _) {
+        final palette = AppPalette.of(context);
         final service = NotificationService.instance;
         final notifications = service.reminders.where((notification) {
           return switch (_filter) {
@@ -167,8 +169,13 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      const Expanded(
-                        child: Text('NOTIFICACIONES', style: profileHeading),
+                      Expanded(
+                        child: Text(
+                          'NOTIFICACIONES',
+                          style: profileHeading.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
                       ),
                       IconButton(
                         tooltip: 'Cerrar notificaciones',
@@ -184,7 +191,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                     margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.homeWarmText.withValues(alpha: .35),
+                      color: palette.warmBannerFill,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -192,10 +199,10 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                           ? 'Las notificaciones están desactivadas desde tu perfil.'
                           : 'Permite las notificaciones en el dispositivo para recibir alertas en tiempo real.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'SulphurPoint',
                         fontSize: 15,
-                        color: AppColors.primaryColor,
+                        color: palette.warmBannerForeground,
                       ),
                     ),
                   ),
@@ -214,15 +221,15 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                           label: Text(entry.value),
                           onSelected: (_) =>
                               setState(() => _filter = entry.key),
-                          selectedColor: AppColors.primaryColor,
-                          checkmarkColor: AppColors.homeWarmText,
+                          selectedColor: palette.chipSelectedFill,
+                          checkmarkColor: palette.chipSelectedForeground,
                           labelStyle: TextStyle(
                             fontFamily: 'SulphurPoint',
                             color: _filter == entry.key
-                                ? Colors.white
-                                : AppColors.primaryColor,
+                                ? palette.chipSelectedForeground
+                                : palette.chipForeground,
                           ),
-                          side: const BorderSide(color: AppColors.primaryColor),
+                          side: BorderSide(color: palette.chipBorder),
                         ),
                         const SizedBox(width: 7),
                       ],
@@ -265,17 +272,17 @@ class _EmptyNotifications extends StatelessWidget {
   const _EmptyNotifications();
 
   @override
-  Widget build(BuildContext context) => const SingleChildScrollView(
+  Widget build(BuildContext context) => SingleChildScrollView(
     child: Padding(
-      padding: EdgeInsets.fromLTRB(12, 24, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 24, 12, 8),
       child: Column(
         children: [
           Icon(
             Iconsax.notification_copy,
             size: 66,
-            color: AppColors.homeDeepTeal,
+            color: Theme.of(context).colorScheme.primary,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'No tienes notificaciones recientes',
             textAlign: TextAlign.center,
@@ -283,17 +290,17 @@ class _EmptyNotifications extends StatelessWidget {
               fontFamily: 'SulphurPoint',
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Las alertas aparecerán aquí cuando llegue la hora de cada recordatorio.',
+            'Aquí verás los recordatorios de tu agenda y los prospectos que se te asignen.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'SulphurPoint',
               fontSize: 16,
-              color: AppColors.primaryColor,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -332,13 +339,15 @@ class _NotificationCard extends StatelessWidget {
 
   Color get _titleColor => switch (notification.activity.type) {
     'seguimiento' => AppColors.homeYellowCard,
-    'visita_presencial' => const Color(0xFFFF8E8E),
-    _ => const Color(0xFFFF8E8E),
+    NotificationService.assignmentType => AppColors.notificationAssignment,
+    _ => AppColors.notificationTitleVisit,
   };
 
-  Color get _tagColor => notification.activity.type == 'seguimiento'
-      ? AppColors.homeYellowCard
-      : const Color(0xFFFF9C9C);
+  Color get _tagColor => switch (notification.activity.type) {
+    'seguimiento' => AppColors.homeYellowCard,
+    NotificationService.assignmentType => AppColors.notificationAssignmentTag,
+    _ => AppColors.notificationTagVisit,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +357,7 @@ class _NotificationCard extends StatelessWidget {
         activity.prospect.trim().isNotEmpty &&
         activity.prospect.toLowerCase() != 'actividad personal';
     return Material(
-      color: AppColors.primaryColor,
+      color: AppPalette.of(context).brandFill,
       borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -391,7 +400,7 @@ class _NotificationCard extends StatelessWidget {
                             width: 10,
                             height: 10,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF78F0A1),
+                              color: AppColors.notificationUnread,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -469,7 +478,7 @@ class _NotificationCard extends StatelessWidget {
       return _tagColor;
     }
     return DateUtils.dateOnly(date).isBefore(DateUtils.dateOnly(now))
-        ? const Color.fromARGB(255, 255, 159, 164)
+        ? AppColors.notificationOverdueTag
         : _tagColor;
   }
 
@@ -477,9 +486,7 @@ class _NotificationCard extends StatelessWidget {
     if (notification.activity.type == NotificationService.assignmentType) {
       return _tagColor;
     }
-    return date.isBefore(now)
-        ? const Color.fromARGB(255, 255, 159, 164)
-        : _tagColor;
+    return date.isBefore(now) ? AppColors.notificationOverdueTag : _tagColor;
   }
 }
 
@@ -511,11 +518,13 @@ class _NotificationAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: 20,
       backgroundColor: isFollowUp
-          ? const Color(0xFFE34BB4)
-          : const Color(0xFF38C4E8),
+          ? AppColors.notificationFollowUp
+          : AppColors.notificationVisit,
       child: Icon(
         isFollowUp ? Icons.phone_in_talk_outlined : Icons.person,
-        color: isFollowUp ? const Color(0xFF89F293) : const Color(0xFFFFDC7B),
+        color: isFollowUp
+            ? AppColors.notificationFollowUpIcon
+            : AppColors.notificationVisitIcon,
         size: 25,
       ),
     );

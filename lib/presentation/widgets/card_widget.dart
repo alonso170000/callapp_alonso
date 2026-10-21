@@ -163,8 +163,6 @@ class AuthCard extends StatelessWidget {
   }
 }
 
-
-
 class _AuthBackground extends StatelessWidget {
   const _AuthBackground();
 

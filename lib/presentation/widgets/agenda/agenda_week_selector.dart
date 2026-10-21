@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 
@@ -18,6 +18,7 @@ class AgendaWeekSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    final palette = AppPalette.of(context);
     final start = DateTime(
       selectedDate.year,
       selectedDate.month,
@@ -36,7 +37,9 @@ class AgendaWeekSelector extends StatelessWidget {
             daily.isNotEmpty &&
             daily.every((item) => item.status == AgendaStatus.completed);
         final foreground = selected
-            ? AppColors.homeBackground
+            ? palette.selectedForeground
+            : isToday
+            ? palette.todayForeground
             : Theme.of(context).colorScheme.primary;
         return Expanded(
           child: Padding(
@@ -50,17 +53,16 @@ class AgendaWeekSelector extends StatelessWidget {
               child: Material(
                 key: isToday ? const ValueKey('agenda-week-today') : null,
                 color: selected
-                    ? AppColors.primaryColor
+                    ? palette.selectedFill
                     : isToday
-                    ? AppColors.homeGreenToday
+                    ? palette.todayFill
                     : Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: isToday
-                      ? const BorderSide(
-                          color: AppColors.homeGreenToday,
-                          width: 2,
-                        )
+                  side: selected
+                      ? BorderSide.none
+                      : isToday
+                      ? BorderSide(color: palette.todayBorder, width: 2)
                       : BorderSide.none,
                 ),
                 child: InkWell(
@@ -100,12 +102,10 @@ class AgendaWeekSelector extends StatelessWidget {
                                 : Icons.update_rounded,
                             size: 17,
                             color: selected
-                                ? AppColors.homeWarmText
+                                ? palette.activityDotSelected
                                 : completed
-                                ? const Color(0xFF55AD62)
-                                : AppColors.primaryColor.withValues(
-                                    alpha: 0.65,
-                                  ),
+                                ? palette.completedIcon
+                                : palette.pendingIcon,
                           )
                         else
                           const SizedBox(height: 17),

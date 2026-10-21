@@ -34,14 +34,58 @@ class ProspectsRepository {
 
   Future<List<ProspectRecord>> refresh() async {
     final scope = _scope;
+    final previous = await _cachedOrEmpty(scope);
     final prospects = await _service.fetch();
     await _cache.replace(scope, prospects);
-    await NotificationService.instance.syncAssignedProspects(
-      prospects,
-      userId: scope.userId,
-      developmentId: scope.developmentId,
-    );
+    try {
+      await NotificationService.instance.syncAssignedProspects(
+        prospects,
+        userId: scope.userId,
+        developmentId: scope.developmentId,
+        newlyVisibleProspectIds: newlyVisibleIds(previous, prospects),
+        baseline: assignmentBaseline(previous),
+      );
+    } catch (_) {
+      // Un fallo al registrar el aviso no debe impedir cargar los prospectos.
+    }
     return prospects;
+  }
+
+  Future<List<ProspectRecord>> _cachedOrEmpty(ProspectCacheScope scope) async {
+    try {
+      return await _cache.read(scope);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Prospectos que aparecen por primera vez respecto a la caché anterior.
+  static Set<int> newlyVisibleIds(
+    List<ProspectRecord> previous,
+    List<ProspectRecord> current,
+  ) {
+    final known = previous.map((prospect) => prospect.id).whereType<int>();
+    final knownIds = known.toSet();
+    return current
+        .map((prospect) => prospect.id)
+        .whereType<int>()
+        .where((id) => !knownIds.contains(id))
+        .toSet();
+  }
+
+  /// Fecha de asignación más reciente ya conocida. Devuelve `null` cuando no
+  /// existe una caché previa y la sesión debe sembrarse sin avisos.
+  static DateTime? assignmentBaseline(List<ProspectRecord> previous) {
+    if (previous.isEmpty) return null;
+    DateTime? latest;
+    for (final prospect in previous) {
+      final assignedAt = prospect.assignedAt;
+      if (assignedAt != null &&
+          (latest == null || assignedAt.isAfter(latest))) {
+        latest = assignedAt;
+      }
+    }
+    return latest ?? DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   void dispose() {

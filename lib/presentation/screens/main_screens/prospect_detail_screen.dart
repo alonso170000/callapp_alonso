@@ -13,6 +13,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class ProspectDetailArguments {
@@ -41,24 +42,27 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   final _panelRevisions = <String, int>{};
   final _history = <String>[];
   bool _telephoneCallCompleted = false;
-  Widget _actionButton(String label, IconData icon, VoidCallback onPressed) =>
-      Expanded(
-        child: SizedBox(
-          height: 48,
-          child: IconButton.filledTonal(
-            tooltip: label,
-            style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFACEFE2),
-              foregroundColor: const Color(0xFF398C80),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+  Widget _actionButton(String label, IconData icon, VoidCallback onPressed) {
+    final palette = AppPalette.of(context);
+    return Expanded(
+      child: SizedBox(
+        height: 48,
+        child: IconButton.filledTonal(
+          tooltip: label,
+          style: IconButton.styleFrom(
+            backgroundColor: palette.secondaryActionFill,
+            foregroundColor: palette.secondaryActionForeground,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: onPressed,
-            icon: Icon(icon, size: 30),
           ),
+          onPressed: onPressed,
+          icon: Icon(icon, size: 30),
         ),
-      );
+      ),
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();

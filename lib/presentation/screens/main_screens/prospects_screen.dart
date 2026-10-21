@@ -12,6 +12,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -269,6 +270,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final prospects = _visible;
     return RefreshIndicator(
       onRefresh: _load,
@@ -299,28 +301,28 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   TextField(
                     controller: _search,
                     onChanged: (_) => setState(() {}),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'SulphurPoint',
                       fontSize: 14,
-                      color: AppColors.primaryColor,
+                      color: palette.fieldForeground,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, teléfono o email...',
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontFamily: 'SulphurPoint',
                         fontSize: 14,
-                        color: Color.fromARGB(255, 82, 156, 149),
+                        color: palette.fieldHint,
                       ),
                       filled: true,
-                      fillColor: AppColors.primaryColor.withValues(alpha: 0.12),
+                      fillColor: palette.fieldFill,
                       contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Iconsax.search_normal_1_copy,
-                        color: AppColors.primaryColor,
+                        color: palette.fieldForeground,
                         size: 23,
                       ),
                       suffixIcon: Padding(
@@ -360,8 +362,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                             onSelected: (_) => setState(() {
                               _status = filter;
                             }),
-                            selectedColor: AppColors.primaryColor,
-                            backgroundColor: const Color(0xFFABF5E7),
+                            selectedColor: palette.chipSelectedFill,
+                            backgroundColor: palette.chipFill,
                             side: BorderSide.none,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(5),
@@ -376,8 +378,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                               fontFamily: 'SulphurPoint',
                               fontSize: 12,
                               color: _status == filter
-                                  ? AppColors.accentColor
-                                  : const Color(0xFF3B8C83),
+                                  ? palette.chipSelectedForeground
+                                  : palette.chipForeground,
                             ),
                           ),
                         )
@@ -418,10 +420,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     children: [
                       Text(
                         'MOSTRANDO ${prospects.length} PROSPECTOS',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'BebasNeue',
                           fontSize: 20,
-                          color: AppColors.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       PopupMenuButton<String>(
@@ -482,7 +484,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFABF5E7),
+                            color: palette.chipFill,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Row(
@@ -493,16 +495,18 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                                   _advanced.sort,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'SulphurPoint',
                                     fontSize: 12,
-                                    color: AppColors.primaryColor,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary,
                                   ),
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.keyboard_arrow_down,
-                                color: AppColors.primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 18,
                               ),
                             ],
@@ -541,18 +545,18 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Iconsax.search_normal_1_copy,
                       size: 40,
-                      color: AppColors.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'No se encontraron prospectos',
                       style: TextStyle(
                         fontFamily: 'SulphurPoint',
                         fontSize: 18,
-                        color: AppColors.primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     TextButton(
@@ -564,7 +568,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       child: Text(
                         'Limpiar filtros',
                         style: TextStyle(
-                          color: AppColors.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                           fontFamily: 'SulphurPoint',
                           fontWeight: FontWeight.w900,
                           fontSize: 20,

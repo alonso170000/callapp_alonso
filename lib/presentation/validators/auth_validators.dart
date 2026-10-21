@@ -1,9 +1,7 @@
 class AuthValidators {
   AuthValidators._();
 
-  static final RegExp _nombreCorrecto = RegExp(
-    r'^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+$',
-  );
+  static final RegExp _nombreCorrecto = RegExp(r'^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+$');
 
   static final RegExp _parteLocalEmail = RegExp(
     r'^[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]{0,62}[a-zA-Z0-9])?$',

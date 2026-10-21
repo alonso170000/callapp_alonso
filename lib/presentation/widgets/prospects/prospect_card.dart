@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectCard extends StatelessWidget {
   final ProspectRecord prospect;
@@ -25,10 +26,10 @@ class ProspectCard extends StatelessWidget {
             children: [
               Text(
                 prospect.name.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'BebasNeue',
                   fontSize: 28,
-                  color: AppColors.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               Text(
@@ -46,7 +47,9 @@ class ProspectCard extends StatelessWidget {
                 prospect.id == null
                     ? 'Contacto de ejemplo'
                     : 'Datos de contacto',
-                style: TextStyle(color: Colors.black54),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               TextButton.icon(
                 onPressed: prospect.phone.isEmpty
@@ -90,7 +93,7 @@ class ProspectCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.primaryColor,
+          color: AppPalette.of(context).brandFill,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(

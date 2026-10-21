@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 import 'home_card_components.dart';
 import 'prospect_tile.dart';
@@ -58,7 +59,7 @@ class ProspectSection extends StatelessWidget {
                   const HomeCardArrow(),
                 ],
               ),
-              
+
               SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(0, 4, 8, 0),
                 scrollDirection: Axis.horizontal,
@@ -68,7 +69,11 @@ class ProspectSection extends StatelessWidget {
                   spacing: 9,
                   children: [
                     if (showAddButton) _AddProspectTile(onTap: onAdd),
-                    if (prospects.isEmpty) const Text('Sin prospectos'),
+                    if (prospects.isEmpty)
+                      Text(
+                        'Sin prospectos',
+                        style: TextStyle(color: AppPalette.of(context).cardInk),
+                      ),
                     for (var i = 0; i < prospects.length; i++)
                       InkWell(
                         onTap: onProspect == null ? null : () => onProspect!(i),

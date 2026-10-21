@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectSummarySheet extends StatelessWidget {
   const ProspectSummarySheet({super.key, required this.prospect});
@@ -9,6 +8,7 @@ class ProspectSummarySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = prospect.assignedAt;
+    final scheme = Theme.of(context).colorScheme;
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -17,10 +17,10 @@ class ProspectSummarySheet extends StatelessWidget {
           children: [
             Text(
               prospect.name.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'BebasNeue',
                 fontSize: 28,
-                color: AppColors.primaryColor,
+                color: scheme.primary,
               ),
             ),
             const SizedBox(height: 16),
@@ -41,10 +41,10 @@ class ProspectSummarySheet extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   '${entry.key}: ${entry.value}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'SulphurPoint',
                     fontSize: 18,
-                    color: AppColors.primaryColor,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -52,7 +52,7 @@ class ProspectSummarySheet extends StatelessWidget {
               prospect.note,
               style: TextStyle(
                 fontFamily: 'SulphurPoint',
-                color: AppColors.primaryColor,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),

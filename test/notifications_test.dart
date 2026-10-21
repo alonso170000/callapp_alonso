@@ -30,7 +30,7 @@ void main() {
           reminderMinutes: 15,
         );
         await NotificationService.instance.syncActivities([activity]);
-        addTearDown(NotificationService.instance.clearActivityReminders);
+        addTearDown(NotificationService.instance.endSession);
         AgendaActivity? opened;
         await tester.pumpWidget(
           MaterialApp(
@@ -93,7 +93,7 @@ void main() {
       activity(3, today.subtract(const Duration(days: 2))),
     ]);
     await NotificationService.instance.markRead(2);
-    addTearDown(NotificationService.instance.clearActivityReminders);
+    addTearDown(NotificationService.instance.endSession);
 
     await tester.pumpWidget(
       const MaterialApp(

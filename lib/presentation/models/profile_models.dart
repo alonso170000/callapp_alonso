@@ -11,13 +11,17 @@ class ProfileData {
     required this.rol,
   });
 
-  ProfileData copyWith({String? name, String? phone, String? email, String? rol}) =>
-      ProfileData(
-        name: name ?? this.name,
-        phone: phone ?? this.phone,
-        email: email ?? this.email,
-        rol: rol ?? this.rol,
-      );
+  ProfileData copyWith({
+    String? name,
+    String? phone,
+    String? email,
+    String? rol,
+  }) => ProfileData(
+    name: name ?? this.name,
+    phone: phone ?? this.phone,
+    email: email ?? this.email,
+    rol: rol ?? this.rol,
+  );
 }
 
 const demoProfile = ProfileData(

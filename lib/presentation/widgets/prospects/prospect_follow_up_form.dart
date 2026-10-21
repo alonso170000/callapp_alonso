@@ -634,12 +634,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            message,
-            style: TextStyle(
-              color: AppColors.whiteColor,
-            ),
-          ),
+          Text(message, style: TextStyle(color: AppColors.whiteColor)),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
@@ -786,6 +781,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFA34D4D),
+                        foregroundColor: Colors.white,
                       ),
                       onPressed: _saving ? null : _cancel,
                       child: const Text('CANCELAR'),
@@ -805,6 +801,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                         child: FilledButton(
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF4CA382),
+                            foregroundColor: Colors.white,
                           ),
                           onPressed: _saving || _requiresCompletedCall
                               ? null

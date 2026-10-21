@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 
@@ -16,6 +17,7 @@ class AgendaActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final color = switch (activity.status) {
       AgendaStatus.completed => AppColors.homeGreenCard,
       AgendaStatus.overdue => AppColors.homeRedSection,
@@ -34,10 +36,10 @@ class AgendaActivityTile extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               '$time\n${activity.date.hour < 12 ? 'AM' : 'PM'}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'SulphurPoint',
                 fontWeight: FontWeight.w700,
-                color: AppColors.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 18,
                 height: 1,
               ),
@@ -46,10 +48,10 @@ class AgendaActivityTile extends StatelessWidget {
         ),
         Expanded(
           child: Material(
-            color: AppColors.primaryColor,
+            color: palette.brandFill,
             borderRadius: BorderRadius.circular(15),
             elevation: 2,
-            shadowColor: AppColors.primaryColor.withValues(alpha: 0.2),
+            shadowColor: palette.brandFill.withValues(alpha: 0.2),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
@@ -84,10 +86,11 @@ class AgendaActivityTile extends StatelessWidget {
                           ),
                           child: Text(
                             activity.status.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'SulphurPoint',
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
+                              color: palette.cardInk,
                             ),
                           ),
                         ),

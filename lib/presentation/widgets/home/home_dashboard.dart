@@ -8,7 +8,10 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
 import 'package:callerapp_frontend/presentation/models/home_dashboard_data.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 import 'home_dashboard_widgets.dart';
 
@@ -41,9 +44,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _loading = true;
   String? _error;
   int _request = 0;
-  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
+  DateTime _selectedDate = DateUtils.dateOnly(businessNow());
   void _selectDate(DateTime date) =>
       setState(() => _selectedDate = DateUtils.dateOnly(date));
+
+  static const _months = [
+    'ENERO',
+    'FEBRERO',
+    'MARZO',
+    'ABRIL',
+    'MAYO',
+    'JUNIO',
+    'JULIO',
+    'AGOSTO',
+    'SEPTIEMBRE',
+    'OCTUBRE',
+    'NOVIEMBRE',
+    'DICIEMBRE',
+  ];
+
+  String get _weekLabel {
+    final start = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day - _selectedDate.weekday + 1,
+    );
+    final last = DateTime(start.year, start.month, start.day + 6);
+    if (start.month == last.month && start.year == last.year) {
+      return '${start.day} - ${last.day} DE ${_months[last.month - 1]}, ${last.year}';
+    }
+    return '${start.day} ${_months[start.month - 1]} - ${last.day} ${_months[last.month - 1]}, ${last.year}';
+  }
 
   @override
   void initState() {
@@ -80,7 +111,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           () => _data = HomeDashboardData(
             values[0] as List<ProspectRecord>,
             values[1] as List<AgendaActivity>,
-            DateTime.now(),
+            businessNow(),
           ),
         );
         return;
@@ -97,15 +128,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
       if (!mounted || request != _request) return;
       if (cached.isNotEmpty) {
         setState(
-          () => _data = HomeDashboardData(cached, activities, DateTime.now()),
+          () => _data = HomeDashboardData(cached, activities, businessNow()),
         );
       }
       try {
         final refreshed = await _prospects.refresh();
         if (!mounted || request != _request) return;
         setState(
-          () =>
-              _data = HomeDashboardData(refreshed, activities, DateTime.now()),
+          () => _data = HomeDashboardData(refreshed, activities, businessNow()),
         );
       } on ProspectsException catch (error) {
         if (cached.isEmpty) rethrow;
@@ -209,19 +239,20 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final loaded = _data;
     final data = loaded == null
         ? null
         : HomeDashboardData(
             loaded.prospects,
             loaded.activities,
-            DateTime.now(),
+            businessNow(),
             selectedDate: _selectedDate,
           );
     return RefreshIndicator(
       onRefresh: _load,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      color: AppColors.primaryColor,
+      color: Theme.of(context).colorScheme.primary,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -237,7 +268,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
                 if (_loading)
                   LinearProgressIndicator(
-                    color: AppColors.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     backgroundColor: Theme.of(context).colorScheme.surface,
                   ),
                 const SizedBox(height: 6),
@@ -248,7 +279,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 if (data != null) ...[
                   Row(
                     children: [
-                      IconButton(
+                      IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: palette.navSelectedFill,
+                          foregroundColor: palette.navSelectedForeground,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                         tooltip: 'Semana anterior',
                         onPressed: () => _selectDate(
                           DateTime(
@@ -261,16 +299,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       Expanded(
                         child: Text(
-                          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                          _weekLabel,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
+                          style: agendaHeadingStyle.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
-                      IconButton(
+                      IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: palette.navSelectedFill,
+                          foregroundColor: palette.navSelectedForeground,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                         tooltip: 'Semana siguiente',
                         onPressed: () => _selectDate(
                           DateTime(
@@ -283,7 +326,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ],
                   ),
-                  WeeklyProgressStrip(days: data.week, onSelected: _selectDate),
+                  const SizedBox(height: 8),
+                  AgendaWeekSelector(
+                    selectedDate: _selectedDate,
+                    activities: data.activities,
+                    onSelected: _selectDate,
+                  ),
                   const SizedBox(height: 18),
                   Row(
                     children: [

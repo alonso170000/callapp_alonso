@@ -47,6 +47,20 @@ class AppColors {
   static const Color homeRedSection = Color(0xFFFF9CA2);
   static const Color homeBadge = Color(0xFFF2FF81);
   static const Color homeGreenToday = Color.fromARGB(255, 185, 237, 220);
+  static const Color homeNotificationBadge = Color(0xFFD70016);
+
+  // Paleta compartida por la bandeja de notificaciones.
+  static const Color notificationFollowUp = Color(0xFFE34BB4);
+  static const Color notificationFollowUpIcon = Color(0xFF89F293);
+  static const Color notificationVisit = Color(0xFF38C4E8);
+  static const Color notificationVisitIcon = Color(0xFFFFDC7B);
+  static const Color notificationAssignment = Color(0xFF7DE8FF);
+  static const Color notificationAssignmentTag = Color(0xFFB9F4FF);
+  static const Color notificationTitleVisit = Color(0xFFFF8E8E);
+  static const Color notificationTagVisit = Color(0xFFFF9C9C);
+  static const Color notificationOverdueTag = Color(0xFFFF9FA4);
+  static const Color notificationUnread = Color(0xFF78F0A1);
+  static const Color notificationDismissBackground = Color(0xFFB94D52);
 
   // Paleta compartida por las secciones del formulario de discovery.
   static const Color discoveryHeader = Color(0xFF438E72);
@@ -155,6 +169,9 @@ class AppColors {
   static const LinearGradient navigationGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [Color.fromRGBO(172, 239, 226, 1), Color.fromRGBO(172, 239, 226, 1)],
+    colors: [
+      Color.fromRGBO(172, 239, 226, 1),
+      Color.fromRGBO(172, 239, 226, 1),
+    ],
   );
 }

@@ -267,6 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFAA3034),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(9),
               ),

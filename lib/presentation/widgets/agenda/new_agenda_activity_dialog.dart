@@ -222,7 +222,12 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                 ),
                 if (_loading) const LinearProgressIndicator(),
                 if (_error != null) ...[
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                   if (_prospects.isEmpty)
                     TextButton(
                       onPressed: _saving ? null : _loadProspects,

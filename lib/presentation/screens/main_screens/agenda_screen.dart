@@ -8,6 +8,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
@@ -477,6 +478,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       onPressed: () => Navigator.pop(sheetContext, false),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.grey.shade600,
+                        foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(44),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -495,6 +497,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       onPressed: () => Navigator.pop(sheetContext, true),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.homeBackground,
                         minimumSize: const Size.fromHeight(44),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -609,6 +612,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final filteredActivities = _activities.where(_filters.matches).toList();
     final visible =
         filteredActivities
@@ -636,7 +640,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 ),
                 const SizedBox(height: 20),
                 if (_loading)
-                  const LinearProgressIndicator(color: AppColors.primaryColor),
+                  LinearProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 if (_error != null) ...[
                   Text(_error!, textAlign: TextAlign.center),
                   TextButton(onPressed: _load, child: const Text('Reintentar')),
@@ -650,8 +656,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   children: [
                     IconButton.filled(
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        foregroundColor: AppColors.homeWarmText,
+                        backgroundColor: palette.navSelectedFill,
+                        foregroundColor: palette.navSelectedForeground,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -671,8 +677,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                     IconButton.filled(
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        foregroundColor: AppColors.homeWarmText,
+                        backgroundColor: palette.navSelectedFill,
+                        foregroundColor: palette.navSelectedForeground,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -715,7 +721,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       tooltip: 'Filtrar actividades',
                       icon: Icon(
                         _filters.active ? Icons.filter_alt : Icons.tune,
-                        color: AppColors.primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       onPressed: _showFilters,
                     ),
@@ -724,9 +730,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       onPressed: () => setState(
                         () => _date = DateUtils.dateOnly(businessNow()),
                       ),
-                      icon: const Icon(
+                      icon: Icon(
                         Iconsax.calendar_copy,
-                        color: AppColors.primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ],
@@ -753,10 +759,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Iconsax.calendar_2_copy,
                           size: 52,
-                          color: AppColors.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -770,10 +776,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
                             _date = DateUtils.dateOnly(businessNow());
                             _filters = AgendaFilters();
                           }),
-                          child: const Text(
+                          child: Text(
                             'Volver a hoy',
                             style: TextStyle(
-                              color: AppColors.primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                               fontFamily: 'SulphurPoint',
                               fontSize: 18,
                               fontWeight: FontWeight.w900,

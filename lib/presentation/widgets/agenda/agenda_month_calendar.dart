@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 
@@ -18,6 +18,7 @@ class AgendaMonthCalendar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final palette = AppPalette.of(context);
     final first = DateTime(selectedDate.year, selectedDate.month);
     final offset = first.weekday - 1;
     final days = DateTime(first.year, first.month + 1, 0).day;
@@ -29,7 +30,7 @@ class AgendaMonthCalendar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.primaryColor.withValues(alpha: 0.05),
+        color: palette.calendarSurface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -41,10 +42,10 @@ class AgendaMonthCalendar extends StatelessWidget {
                     child: Text(
                       label,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'SulphurPoint',
                         fontSize: 16,
-                        color: AppColors.primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -65,6 +66,12 @@ class AgendaMonthCalendar extends StatelessWidget {
                 final isToday = DateUtils.isSameDay(date, today);
                 final inMonth = date.month == first.month;
                 final hasActivities = activityDates.contains(date);
+                final foreground = selected
+                    ? palette.selectedForeground
+                    : isToday
+                    ? palette.todayForeground
+                    : Theme.of(context).colorScheme.primary
+                          .withValues(alpha: inMonth ? 1 : 0.35);
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(2),
@@ -79,17 +86,16 @@ class AgendaMonthCalendar extends StatelessWidget {
                             ? const ValueKey('agenda-month-today')
                             : null,
                         color: selected
-                            ? AppColors.primaryColor
+                            ? palette.selectedFill
                             : isToday
-                            ? AppColors.homeGreenToday
+                            ? palette.todayFill
                             : Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: isToday
-                              ? const BorderSide(
-                                  color: AppColors.homeGreenToday,
-                                  width: 2,
-                                )
+                          side: selected
+                              ? BorderSide.none
+                              : isToday
+                              ? BorderSide(color: palette.todayBorder, width: 2)
                               : BorderSide.none,
                         ),
                         child: InkWell(
@@ -107,12 +113,7 @@ class AgendaMonthCalendar extends StatelessWidget {
                                   style: TextStyle(
                                     fontFamily: 'SulphurPoint',
                                     fontSize: 18,
-                                    color: selected
-                                        ? Colors.white
-                                        : Theme.of(context).colorScheme.primary
-                                              .withValues(
-                                                alpha: inMonth ? 1 : 0.35,
-                                              ),
+                                    color: foreground,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -129,8 +130,8 @@ class AgendaMonthCalendar extends StatelessWidget {
                                     color: !hasActivities
                                         ? Colors.transparent
                                         : selected
-                                        ? AppColors.homeWarmText
-                                        : const Color(0xFFFF4655),
+                                        ? palette.activityDotSelected
+                                        : palette.activityDot,
                                   ),
                                 ),
                               ],

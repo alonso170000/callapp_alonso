@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:async';
@@ -380,31 +381,32 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     ),
   );
 
-  Widget _secondaryAction(
-    String label,
-    IconData icon,
-    VoidCallback onPressed,
-  ) => Expanded(
-    child: OutlinedButton.icon(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 52),
-        backgroundColor: const Color(0xFFACEFE2),
-        foregroundColor: AppColors.primaryColor,
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-      ),
-      icon: Icon(icon, size: 19),
-      label: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          label,
-          style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 15),
+  Widget _secondaryAction(String label, IconData icon, VoidCallback onPressed) {
+    final palette = AppPalette.of(context);
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 52),
+          backgroundColor: palette.secondaryActionFill,
+          foregroundColor: palette.secondaryActionForeground,
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+        ),
+        icon: Icon(icon, size: 19),
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 15),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Material(

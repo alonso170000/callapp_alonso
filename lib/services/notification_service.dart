@@ -12,17 +12,30 @@ import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/data/local/notifications_store.dart';
 
 class NotificationService extends ChangeNotifier {
-  NotificationService._();
+  NotificationService._({NotificationsStore? store})
+    : _store = store ?? NotificationsStore();
+
+  @visibleForTesting
+  NotificationService.forTesting(NotificationsStore store)
+    : this._(store: store);
 
   static final instance = NotificationService._();
   static const _payloadPrefix = 'callerapp:activity:';
+  static const _assignmentPayloadPrefix = 'callerapp:prospect:';
   static const _notificationIdOffset = 1000000;
   static const _channelId = 'activity_reminders';
+  static const _channelName = 'Recordatorios y prospectos';
+  static const _channelDescription =
+      'Avisos de tareas, visitas, seguimientos y prospectos asignados.';
   static const _locationName = 'America/Cancun';
+
+  /// Las notificaciones leídas más viejas que esto se purgan. El mismo corte
+  /// se aplica al reconstruir la bandeja para que no reaparezcan como nuevas.
+  static const _retention = Duration(days: 7);
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
-  final NotificationsStore _store = NotificationsStore();
+  final NotificationsStore _store;
   final List<ActivityNotification> _reminders = [];
   List<AgendaActivity> _lastActivities = const [];
   NotificationScope? _scope;
@@ -31,6 +44,10 @@ class NotificationService extends ChangeNotifier {
   bool? _permissionGranted;
   Timer? _nextInboxTimer;
   Timer? _cleanupTimer;
+
+  /// Prospecto que el usuario abrió desde una notificación del sistema.
+  /// Se conserva para poder abrirlo cuando la pantalla de Inicio ya esté lista.
+  final ValueNotifier<int?> pendingProspectId = ValueNotifier<int?>(null);
 
   List<ActivityNotification> get reminders => List.unmodifiable(_reminders);
   bool get enabled => _enabled;
@@ -58,10 +75,58 @@ class NotificationService extends ChangeNotifier {
       ),
     );
     try {
-      _initialized = await _plugin.initialize(settings: settings) ?? false;
+      _initialized =
+          await _plugin.initialize(
+            settings: settings,
+            onDidReceiveNotificationResponse: _handleNotificationResponse,
+          ) ??
+          false;
     } catch (_) {
       _initialized = false;
     }
+    if (!_initialized) return;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _channelId,
+          _channelName,
+          description: _channelDescription,
+          importance: Importance.high,
+        ),
+      );
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp ?? false) {
+        _handleNotificationResponse(launch?.notificationResponse);
+      }
+    } catch (_) {
+      // El canal o el detalle de arranque se reintentan en cada inicialización.
+    }
+  }
+
+  void _handleNotificationResponse(NotificationResponse? response) {
+    final prospectId = prospectIdFromPayload(response?.payload);
+    if (prospectId == null) return;
+    pendingProspectId.value = prospectId;
+    unawaited(markRead(-prospectId));
+  }
+
+  /// Extrae el prospecto del payload de un aviso de asignación.
+  static int? prospectIdFromPayload(String? payload) {
+    if (payload == null || !payload.startsWith(_assignmentPayloadPrefix)) {
+      return null;
+    }
+    return int.tryParse(payload.substring(_assignmentPayloadPrefix.length));
+  }
+
+  /// Consume el prospecto pendiente y limpia el aviso para no repetirlo.
+  int? takePendingProspectId() {
+    final prospectId = pendingProspectId.value;
+    pendingProspectId.value = null;
+    return prospectId;
   }
 
   Future<void> setEnabled(bool value) async {
@@ -71,7 +136,7 @@ class NotificationService extends ChangeNotifier {
     if (value) {
       await syncActivities(_lastActivities);
     } else {
-      await clearActivityReminders(clearActivities: false);
+      await pauseScheduledNotifications();
     }
   }
 
@@ -118,9 +183,8 @@ class NotificationService extends ChangeNotifier {
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               _channelId,
-              'Recordatorios de actividades',
-              channelDescription:
-                  'Avisos de tareas, visitas y seguimientos pendientes.',
+              _channelName,
+              channelDescription: _channelDescription,
               importance: Importance.high,
               priority: Priority.high,
             ),
@@ -145,6 +209,7 @@ class NotificationService extends ChangeNotifier {
     required int userId,
     required int developmentId,
     Set<int> newlyVisibleProspectIds = const {},
+    DateTime? baseline,
   }) async {
     final scope = NotificationScope(
       userId: userId,
@@ -156,6 +221,7 @@ class NotificationService extends ChangeNotifier {
       prospects,
       now: now,
       newlyVisibleProspectIds: newlyVisibleProspectIds,
+      baseline: baseline,
     );
     if (assignments.isEmpty) {
       await _reloadStored(scope, now);
@@ -217,20 +283,34 @@ class NotificationService extends ChangeNotifier {
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
-  Future<void> clearActivityReminders({bool clearActivities = true}) async {
+  /// Cancela los avisos programados sin borrar la bandeja persistida.
+  /// Se usa al desactivar las notificaciones desde el perfil.
+  Future<void> pauseScheduledNotifications() async {
     _nextInboxTimer?.cancel();
     _cleanupTimer?.cancel();
-    if (clearActivities) {
-      _lastActivities = const [];
-      _scope = null;
-    }
     _reminders.clear();
     notifyListeners();
+    await _cancelOsNotifications();
+  }
+
+  /// Cierra la sesión actual conservando la bandeja persistida para que el
+  /// estado de leído sobreviva al volver a iniciar sesión.
+  Future<void> endSession() async {
+    _nextInboxTimer?.cancel();
+    _cleanupTimer?.cancel();
+    _lastActivities = const [];
+    _scope = null;
+    _reminders.clear();
+    notifyListeners();
+    await _cancelOsNotifications();
+  }
+
+  Future<void> _cancelOsNotifications() async {
     if (!_initialized || kIsWeb) return;
     try {
       await _cancelScheduledActivityNotifications();
     } catch (_) {
-      // Closing the session must not fail if the operating system is busy.
+      // Cerrar sesión o desactivar avisos no debe fallar si el SO está ocupado.
     }
   }
 
@@ -286,10 +366,7 @@ class NotificationService extends ChangeNotifier {
     }
     try {
       await _store.upsert(scope, inbox);
-      await _store.purgeReadOlderThan(
-        scope,
-        now.subtract(const Duration(days: 7)),
-      );
+      await _store.purgeReadOlderThan(scope, now.subtract(_retention));
       final stored = await _store.read(scope);
       _reminders
         ..clear()
@@ -303,10 +380,7 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> _reloadStored(NotificationScope scope, DateTime now) async {
     try {
-      await _store.purgeReadOlderThan(
-        scope,
-        now.subtract(const Duration(days: 7)),
-      );
+      await _store.purgeReadOlderThan(scope, now.subtract(_retention));
       final stored = await _store.read(scope);
       _reminders
         ..clear()
@@ -334,8 +408,8 @@ class NotificationService extends ChangeNotifier {
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               _channelId,
-              'Recordatorios de actividades',
-              channelDescription: 'Avisos de tareas, visitas, seguimientos y prospectos asignados.',
+              _channelName,
+              channelDescription: _channelDescription,
               importance: Importance.high,
               priority: Priority.high,
             ),
@@ -345,7 +419,8 @@ class NotificationService extends ChangeNotifier {
               presentSound: true,
             ),
           ),
-          payload: '$_payloadPrefix${notification.activityId}',
+          payload:
+              '$_assignmentPayloadPrefix${notification.activity.prospectId}',
         );
       }
     } catch (_) {
@@ -362,7 +437,7 @@ class NotificationService extends ChangeNotifier {
       try {
         await _store.purgeReadOlderThan(
           scope,
-          businessNow().subtract(const Duration(days: 7)),
+          businessNow().subtract(_retention),
         );
         final stored = await _store.read(scope);
         _reminders
@@ -406,6 +481,7 @@ class NotificationService extends ChangeNotifier {
     List<AgendaActivity> activities, {
     required DateTime now,
   }) {
+    final cutoff = now.subtract(_retention);
     final notifications = <ActivityNotification>[];
     for (final activity in activities) {
       final id = activity.id;
@@ -416,7 +492,7 @@ class NotificationService extends ChangeNotifier {
       final reminderAt = activity.date.subtract(
         Duration(minutes: activity.reminderMinutes),
       );
-      if (reminderAt.isAfter(now)) continue;
+      if (reminderAt.isAfter(now) || reminderAt.isBefore(cutoff)) continue;
       notifications.add(
         ActivityNotification(
           activity: activity,
@@ -433,18 +509,28 @@ class NotificationService extends ChangeNotifier {
     List<ProspectRecord> prospects, {
     required DateTime now,
     Set<int> newlyVisibleProspectIds = const {},
+    DateTime? baseline,
   }) {
-    final cutoff = now.subtract(const Duration(days: 7));
+    // Sin una línea base no hay forma de distinguir un prospecto nuevo de los
+    // que ya existían: el primer chequeo de la sesión solo prepara la caché.
+    if (baseline == null) return const [];
+    final cutoff = now.subtract(_retention);
     final notifications = <ActivityNotification>[];
     for (final prospect in prospects) {
       final id = prospect.id;
-      final assignedAt = newlyVisibleProspectIds.contains(id)
-          ? now
-          : prospect.assignedAt;
-      if (id == null ||
-          assignedAt == null ||
-          assignedAt.isBefore(cutoff) ||
-          assignedAt.isAfter(now)) {
+      if (id == null) continue;
+      final isNew = newlyVisibleProspectIds.contains(id);
+      final assignedAt = _assignmentMoment(
+        prospect,
+        now: now,
+        cutoff: cutoff,
+        isNew: isNew,
+      );
+      if (assignedAt == null) continue;
+      if (!isNew &&
+          (!assignedAt.isAfter(baseline) ||
+              assignedAt.isBefore(cutoff) ||
+              assignedAt.isAfter(now))) {
         continue;
       }
       notifications.add(
@@ -469,6 +555,23 @@ class NotificationService extends ChangeNotifier {
     }
     notifications.sort((a, b) => b.reminderAt.compareTo(a.reminderAt));
     return notifications;
+  }
+
+  /// Fecha estable para que dos chequeos seguidos no generen avisos duplicados.
+  static DateTime? _assignmentMoment(
+    ProspectRecord prospect, {
+    required DateTime now,
+    required DateTime cutoff,
+    required bool isNew,
+  }) {
+    final assignedAt = prospect.assignedAt;
+    if (!isNew) return assignedAt;
+    if (assignedAt != null &&
+        !assignedAt.isBefore(cutoff) &&
+        !assignedAt.isAfter(now)) {
+      return assignedAt;
+    }
+    return now;
   }
 
   void _scheduleInboxRefresh(

@@ -6,7 +6,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/metric_summary_card.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/prospect_section.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_card.dart';
-import 'package:callerapp_frontend/presentation/widgets/home/weekly_progress_strip.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_week_selector.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
 import 'package:go_router/go_router.dart';
 
@@ -91,7 +91,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         final date = find.descendant(
-          of: find.byType(WeeklyProgressStrip),
+          of: find.byType(AgendaWeekSelector),
           matching: find.text('${selected.day}'),
         );
         await tester.ensureVisible(date);
@@ -99,10 +99,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           tester
-              .widget<WeeklyProgressStrip>(find.byType(WeeklyProgressStrip))
-              .days
-              .singleWhere((day) => day.isSelected)
-              .date,
+              .widget<AgendaWeekSelector>(find.byType(AgendaWeekSelector))
+              .selectedDate,
           selected,
         );
         final todaySection = tester
@@ -142,7 +140,7 @@ void main() {
         for (final title in [
           'Prospectos del día',
           'Prospectos nuevos',
-          'Llamadas atrasadas',
+          'Seguimientos atrasados',
         ]) {
           await tester.scrollUntilVisible(
             find.text(title),
@@ -177,6 +175,8 @@ void main() {
           -180,
           scrollable: find.byType(Scrollable).first,
         );
+        await tester.ensureVisible(find.byTooltip('Semana siguiente'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Semana siguiente'));
         await tester.pumpAndSettle();
         final emptyMetric = tester

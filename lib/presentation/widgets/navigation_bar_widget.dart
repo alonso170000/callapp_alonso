@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class NavigationBarWidget extends StatefulWidget {
@@ -193,6 +193,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   }
 
   Widget _buildSearchBar() {
+    final palette = AppPalette.of(context);
     return Row(
       key: const ValueKey('search-navigation-bar'),
       children: [
@@ -204,7 +205,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
           child: Center(
             child: Icon(
               Iconsax.home_2_copy,
-              color: AppColors.primaryColor,
+              color: palette.navForeground,
               size: 28,
             ),
           ),
@@ -220,22 +221,19 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                 focusNode: _searchFocusNode,
                 autocorrect: false,
                 textInputAction: TextInputAction.search,
-                cursorColor: AppColors.primaryColor,
-                style: const TextStyle(
-                  color: AppColors.primaryColor,
-                  fontSize: 16,
-                ),
+                cursorColor: palette.navForeground,
+                style: TextStyle(color: palette.navForeground, fontSize: 16),
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   isDense: true,
                   hintText: 'Buscar prospecto...',
-                  hintStyle: const TextStyle(
-                    color: AppColors.primaryColor,
+                  hintStyle: TextStyle(
+                    color: palette.navForeground,
                     fontSize: 15,
                   ),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Iconsax.search_normal_1_copy,
-                    color: AppColors.primaryColor,
+                    color: palette.navForeground,
                     size: 24,
                   ),
                   prefixIconConstraints: const BoxConstraints(
@@ -245,9 +243,9 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
                   suffixIcon: _searchController.text.isNotEmpty
                       ? GestureDetector(
                           onTap: _searchController.clear,
-                          child: const Icon(
+                          child: Icon(
                             Icons.close_rounded,
-                            color: AppColors.primaryColor,
+                            color: palette.navForeground,
                             size: 22,
                           ),
                         )
@@ -279,6 +277,7 @@ class _NavigationOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Semantics(
       selected: isSelected,
       button: true,
@@ -292,7 +291,7 @@ class _NavigationOption extends StatelessWidget {
           vertical: 4,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor : Colors.transparent,
+          color: isSelected ? palette.navSelectedFill : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -301,8 +300,8 @@ class _NavigationOption extends StatelessWidget {
             Icon(
               isSelected ? itemsSelected.icon : itemsNoSelected.icon,
               color: isSelected
-                  ? AppColors.accentColor
-                  : AppColors.primaryColor,
+                  ? palette.navSelectedForeground
+                  : palette.navForeground,
               size: 26,
             ),
             if (isSelected) const SizedBox(width: 3),
@@ -312,8 +311,8 @@ class _NavigationOption extends StatelessWidget {
                   itemsSelected.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.accentColor,
+                  style: TextStyle(
+                    color: palette.navSelectedForeground,
                     fontFamily: 'SulphurPoint',
                     fontSize: 16,
                     height: 1,
@@ -341,10 +340,10 @@ class _SearchCircleButton extends StatelessWidget {
       height: size,
       onTap: onTap,
       semanticLabel: 'Buscar prospectos',
-      child: const Center(
+      child: Center(
         child: Icon(
           Iconsax.search_normal_1_copy,
-          color: AppColors.primaryColor,
+          color: AppPalette.of(context).navForeground,
           size: 30,
         ),
       ),
@@ -370,8 +369,12 @@ class _AddAgendaButton extends StatelessWidget {
       height: size,
       onTap: onTap,
       semanticLabel: label,
-      child: const Center(
-        child: Icon(Iconsax.add_copy, color: AppColors.primaryColor, size: 40),
+      child: Center(
+        child: Icon(
+          Iconsax.add_copy,
+          color: AppPalette.of(context).navForeground,
+          size: 40,
+        ),
       ),
     );
   }
@@ -416,7 +419,7 @@ class _NavigationSurface extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Ink(
             decoration: BoxDecoration(
-              gradient: AppColors.navigationGradient,
+              gradient: AppPalette.of(context).navGradient,
               borderRadius: radius,
             ),
             child: InkWell(

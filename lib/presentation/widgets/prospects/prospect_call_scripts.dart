@@ -217,9 +217,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  style: callScriptButtonStyle(
-                    AppColors.scriptBlue,
-                  ),
+                  style: callScriptButtonStyle(AppColors.scriptBlue),
                   onPressed: () {
                     if (current.nextStep case final next?) {
                       _advance(next);

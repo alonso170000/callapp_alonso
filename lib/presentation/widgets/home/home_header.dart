@@ -110,59 +110,49 @@ class _UserAvatar extends StatelessWidget {
                 ),
               ),
               Positioned(
+                key: unread > 0
+                    ? const ValueKey('notification-unread-badge')
+                    : null,
                 right: 0,
                 bottom: 0,
                 child: Container(
                   width: 32,
                   height: 32,
-                  decoration: const BoxDecoration(
-                    color: AppColors.homeDeepTeal,
+                  decoration: BoxDecoration(
+                    color: unread > 0
+                        ? AppColors.homeNotificationBadge
+                        : AppColors.homeDeepTeal,
                     shape: BoxShape.circle,
                     border: Border.fromBorderSide(
-                      BorderSide(color: AppColors.homeBackground, width: 3),
+                      BorderSide(
+                        color: Theme.of(context).colorScheme.surface,
+                        width: 3,
+                      ),
                     ),
                   ),
                   child: IconButton(
                     tooltip: 'Notificaciones',
                     padding: EdgeInsets.zero,
                     onPressed: () => _openNotifications(context),
-                    icon: const Icon(
-                      Icons.notifications_rounded,
-                      color: AppColors.homeWarmText,
-                      size: 20,
-                    ),
+                    icon: unread > 0
+                        ? Text(
+                            unread > 99 ? '99+' : '$unread',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'BebasNeue',
+                              fontSize: 17,
+                              height: 1,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.notifications_rounded,
+                            color: AppColors.homeWarmText,
+                            size: 20,
+                          ),
                   ),
                 ),
               ),
-              if (unread > 0)
-                Positioned(
-                  key: const ValueKey('notification-unread-badge'),
-                  right: -7,
-                  bottom: -8,
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 25),
-                    height: 25,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD70016),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppColors.homeBackground,
-                        width: 2,
-                      ),
-                    ),
-                    child: Text(
-                      unread > 99 ? '99+' : '$unread',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'BebasNeue',
-                        fontSize: 16,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         );

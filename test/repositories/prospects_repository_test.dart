@@ -33,6 +33,34 @@ void main() {
     expect((await repository.readCache()).single.id, 15);
   });
 
+  test('detecta los prospectos que no estaban en la caché anterior', () {
+    final newIds = ProspectsRepository.newlyVisibleIds(
+      [_prospect(1, 'Ana'), _prospect(2, 'Luis')],
+      [_prospect(2, 'Luis'), _prospect(3, 'Marta')],
+    );
+
+    expect(newIds, {3});
+  });
+
+  test('la línea base usa la asignación más reciente de la caché', () {
+    final newest = DateTime(2026, 10, 18, 9);
+    expect(
+      ProspectsRepository.assignmentBaseline([
+        _prospect(1, 'Ana', assignedAt: DateTime(2026, 10, 15)),
+        _prospect(2, 'Luis', assignedAt: newest),
+      ]),
+      newest,
+    );
+  });
+
+  test('sin caché previa no hay línea base y el chequeo es silencioso', () {
+    expect(ProspectsRepository.assignmentBaseline(const []), isNull);
+    expect(
+      ProspectsRepository.assignmentBaseline([_prospect(1, 'Ana')]),
+      DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  });
+
   test('un error remoto no elimina la última caché válida', () async {
     final auth = await _auth(userId: 5, developmentId: 9);
     final database = AppDatabase(
@@ -78,16 +106,18 @@ Future<AuthService> _auth({
   return auth;
 }
 
-ProspectRecord _prospect(int id, String name) => ProspectRecord(
-  id: id,
-  name: name,
-  phone: '$id',
-  email: '$name@example.com',
-  status: 'Nuevo',
-  temperature: 'Tibio',
-  avatarColor: Colors.teal,
-  statusColor: Colors.blue,
-);
+ProspectRecord _prospect(int id, String name, {DateTime? assignedAt}) =>
+    ProspectRecord(
+      id: id,
+      name: name,
+      phone: '$id',
+      email: '$name@example.com',
+      status: 'Nuevo',
+      temperature: 'Tibio',
+      avatarColor: Colors.teal,
+      statusColor: Colors.blue,
+      assignedAt: assignedAt,
+    );
 
 class _FakeProspectsService extends ProspectsService {
   _FakeProspectsService(this.loader);

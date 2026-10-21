@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../colors/colors.dart';
+import 'app_palette.dart';
 import 'picker_theme.dart';
 
 class AppThemes {
@@ -9,16 +10,34 @@ class AppThemes {
     final surface = dark ? const Color(0xFF112521) : AppColors.homeBackground;
     final foreground = dark ? const Color(0xFFE1F5EE) : AppColors.textDarkColor;
     final accent = dark ? const Color(0xFF91E5D6) : AppColors.primaryColor;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primaryColor,
-      brightness: brightness,
-    ).copyWith(surface: surface, onSurface: foreground, primary: accent);
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primaryColor,
+          brightness: brightness,
+        ).copyWith(
+          surface: surface,
+          onSurface: foreground,
+          primary: accent,
+          onPrimary: dark ? const Color(0xFF06211D) : AppColors.whiteColor,
+          primaryContainer: dark
+              ? const Color(0xFF1E4A43)
+              : AppColors.homeGreenToday,
+          onPrimaryContainer: dark ? foreground : AppColors.primaryColor,
+          surfaceContainerHighest: dark
+              ? const Color(0xFF173B35)
+              : const Color(0xFFC3E7DF),
+          onSurfaceVariant: dark
+              ? const Color(0xFFB7D8D0)
+              : const Color(0xFF3F5F5A),
+          outline: dark ? const Color(0xFF3C6F66) : const Color(0xFF6FA39A),
+        );
     return ThemeData(
       brightness: brightness,
       colorScheme: scheme,
       primaryColor: AppColors.primaryColor,
       scaffoldBackgroundColor: surface,
       fontFamily: 'SulphurPoint',
+      extensions: [dark ? AppPalette.dark : AppPalette.light],
       appBarTheme: AppBarTheme(
         backgroundColor: surface,
         foregroundColor: foreground,
@@ -56,6 +75,8 @@ class AppThemes {
               hourMinuteColor: const Color(0xFF243F38),
               dayPeriodColor: const Color(0xFF243F38),
               dayPeriodTextColor: foreground,
+              dayPeriodBorderSide: BorderSide(color: accent),
+              entryModeIconColor: accent,
               confirmButtonStyle: TextButton.styleFrom(foregroundColor: accent),
               cancelButtonStyle: TextButton.styleFrom(foregroundColor: accent),
             )

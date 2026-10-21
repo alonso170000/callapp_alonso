@@ -165,7 +165,7 @@ class AuthService extends ChangeNotifier {
   }
 
   void logout() {
-    unawaited(NotificationService.instance.clearActivityReminders());
+    unawaited(NotificationService.instance.endSession());
     _token = null;
     _userName = null;
     _email = null;

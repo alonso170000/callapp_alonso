@@ -64,9 +64,7 @@ class HomeDashboardData {
     ];
   }
 
-  List<ProspectRecord> get todayProspects => prospectsFor(
-    todayActivities,
-  );
+  List<ProspectRecord> get todayProspects => prospectsFor(todayActivities);
   List<AgendaActivity> get todayActivities =>
       activities
           .where(

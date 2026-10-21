@@ -100,13 +100,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                         WrapCrossAlignment.center,
                                     spacing: 5,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'INICIA',
                                         style: TextStyle(
                                           fontFamily: 'BebasNeue',
                                           fontSize: 34,
                                           height: 1.1,
-                                          color: AppColors.primaryColor,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                         ),
                                       ),
                                       Container(
