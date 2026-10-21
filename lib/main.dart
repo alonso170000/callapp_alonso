@@ -1,13 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:callerapp_frontend/config/router/app_router.dart';
 import 'package:callerapp_frontend/resources/styles/app_themes.dart';
 import 'package:callerapp_frontend/services/appearance_controller.dart';
+import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/local_maintenance_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/outbox_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.instance.restoreSession();
   await NotificationService.instance.initialize();
+  unawaited(OutboxService.instance.initialize());
+  unawaited(LocalMaintenanceService.instance.runIfDue());
 
   runApp(const MainApp());
 }

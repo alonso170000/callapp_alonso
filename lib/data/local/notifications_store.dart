@@ -1,15 +1,11 @@
 import 'dart:convert';
 
 import 'package:callerapp_frontend/data/local/app_database.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 
-class NotificationScope {
-  const NotificationScope({required this.userId, required this.developmentId});
-
-  final int userId;
-  final int developmentId;
-}
+typedef NotificationScope = LocalScope;
 
 class NotificationsStore {
   NotificationsStore({AppDatabase? database})
@@ -22,7 +18,8 @@ class NotificationsStore {
     List<ActivityNotification> notifications,
   ) async {
     if (notifications.isEmpty) return;
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
     await database.transaction((transaction) async {
       for (final notification in notifications) {
         await transaction.rawInsert('''
@@ -66,7 +63,8 @@ class NotificationsStore {
   }
 
   Future<List<ActivityNotification>> read(NotificationScope scope) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return const [];
     final rows = await database.query(
       'activity_notifications',
       where: 'user_id = ? AND development_id = ? AND dismissed = 0',
@@ -77,7 +75,8 @@ class NotificationsStore {
   }
 
   Future<bool> contains(NotificationScope scope, int activityId) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return false;
     final rows = await database.query(
       'activity_notifications',
       columns: const ['activity_id'],
@@ -89,7 +88,8 @@ class NotificationsStore {
   }
 
   Future<DateTime?> reminderAt(NotificationScope scope, int activityId) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return null;
     final rows = await database.query(
       'activity_notifications',
       columns: const ['reminder_at_ms'],
@@ -104,7 +104,8 @@ class NotificationsStore {
   }
 
   Future<void> markRead(NotificationScope scope, int activityId) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
     await database.update(
       'activity_notifications',
       {'is_read': 1},
@@ -114,7 +115,8 @@ class NotificationsStore {
   }
 
   Future<void> markAllRead(NotificationScope scope) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
     await database.update(
       'activity_notifications',
       {'is_read': 1},
@@ -124,7 +126,8 @@ class NotificationsStore {
   }
 
   Future<void> dismiss(NotificationScope scope, int activityId) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
     await database.update(
       'activity_notifications',
       {'dismissed': 1},
@@ -137,7 +140,8 @@ class NotificationsStore {
     NotificationScope scope,
     DateTime cutoff,
   ) async {
-    final database = await _database.database;
+    final database = await _database.databaseOrNull;
+    if (database == null) return 0;
     return database.delete(
       'activity_notifications',
       where: 'user_id = ? AND development_id = ? AND is_read = 1 AND reminder_at_ms < ?',

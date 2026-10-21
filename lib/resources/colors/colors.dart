@@ -27,6 +27,8 @@ class AppColors {
   static const Color transparentColor = Color(0x00000000);
 
   static const Color backgroundColor = Color(0xFF121212);
+  // Superficie base del tema oscuro; también da tono a las flechas de navegación.
+  static const Color darkSurface = Color(0xFF112521);
   static const Color textPrimaryColor = Color(0xFFFFFFFF);
   static const Color textSecondaryColor = Color.fromRGBO(229, 229, 229, 1);
 

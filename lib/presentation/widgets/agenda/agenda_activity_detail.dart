@@ -49,9 +49,12 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   Future<void> _loadAvatar() async {
     if (_avatarLookupStarted || activity.prospectId == null) return;
     _avatarLookupStarted = true;
-    final service = ProspectsService();
+    final loader = widget.loadProspects;
+    ProspectsService? service;
     try {
-      final records = await (widget.loadProspects?.call() ?? service.fetch());
+      final records = await (loader != null
+          ? loader()
+          : (service = ProspectsService()).fetch());
       if (!mounted) return;
       final matches = records.where((p) => p.id == activity.prospectId);
       if (matches.isNotEmpty && matches.first.avatarUrl != null) {
@@ -60,7 +63,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     } catch (_) {
       // Keep the placeholder when the prospect cannot be retrieved.
     } finally {
-      service.dispose();
+      service?.dispose();
     }
   }
 

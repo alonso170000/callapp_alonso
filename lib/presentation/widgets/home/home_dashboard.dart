@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -38,7 +39,7 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  final _agenda = AgendaService();
+  final _agenda = AgendaRepository();
   final _prospects = ProspectsRepository();
   HomeDashboardData? _data;
   bool _loading = true;
@@ -104,7 +105,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       if (widget.loadProspects != null) {
         final values = await Future.wait<Object>([
           widget.loadProspects!.call(),
-          widget.loadActivities?.call() ?? _agenda.fetch(),
+          widget.loadActivities?.call() ?? _agenda.refresh(),
         ]);
         if (!mounted || request != _request) return;
         setState(
@@ -117,44 +118,88 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return;
       }
 
-      final activitiesFuture = widget.loadActivities?.call() ?? _agenda.fetch();
-      var cached = <ProspectRecord>[];
+      var cachedProspects = <ProspectRecord>[];
+      var cachedActivities = <AgendaActivity>[];
       try {
-        cached = await _prospects.readCache();
+        cachedProspects = await _prospects.readCache();
       } catch (_) {
         // La API sigue disponible aunque SQLite no pueda leerse.
       }
-      final activities = await activitiesFuture;
-      if (!mounted || request != _request) return;
-      if (cached.isNotEmpty) {
-        setState(
-          () => _data = HomeDashboardData(cached, activities, businessNow()),
-        );
-      }
       try {
-        final refreshed = await _prospects.refresh();
-        if (!mounted || request != _request) return;
-        setState(
-          () => _data = HomeDashboardData(refreshed, activities, businessNow()),
-        );
-      } on ProspectsException catch (error) {
-        if (cached.isEmpty) rethrow;
-        if (!mounted || request != _request) return;
-        setState(() => _error = 'Mostrando datos guardados. ${error.message}');
+        cachedActivities = await _agenda.readCache();
+      } catch (_) {
+        // La API sigue disponible aunque SQLite no pueda leerse.
       }
+      if (!mounted || request != _request) return;
+      final hasCache =
+          cachedProspects.isNotEmpty || cachedActivities.isNotEmpty;
+      if (hasCache) {
+        setState(
+          () => _data = HomeDashboardData(
+            cachedProspects,
+            cachedActivities,
+            businessNow(),
+          ),
+        );
+      }
+
+      List<ProspectRecord>? refreshedProspects;
+      List<AgendaActivity>? refreshedActivities;
+      Object? prospectsError;
+      Object? activitiesError;
+      await Future.wait([
+        () async {
+          try {
+            refreshedProspects = await _prospects.refresh();
+          } catch (error) {
+            prospectsError = error;
+          }
+        }(),
+        () async {
+          try {
+            refreshedActivities =
+                await (widget.loadActivities?.call() ?? _agenda.refresh());
+          } catch (error) {
+            activitiesError = error;
+          }
+        }(),
+      ]);
+      if (!mounted || request != _request) return;
+
+      if (refreshedProspects != null || refreshedActivities != null) {
+        setState(
+          () => _data = HomeDashboardData(
+            refreshedProspects ?? cachedProspects,
+            refreshedActivities ?? cachedActivities,
+            businessNow(),
+          ),
+        );
+      }
+
+      final errors = [
+        if (prospectsError != null) _errorMessage(prospectsError!),
+        if (activitiesError != null) _errorMessage(activitiesError!),
+      ];
+      setState(() {
+        _error = errors.isEmpty
+            ? null
+            : hasCache
+            ? 'Mostrando datos guardados. ${errors.first}'
+            : errors.first;
+      });
     } catch (error) {
       if (!mounted || request != _request) return;
-      setState(
-        () => _error = error is AgendaException
-            ? error.message
-            : error is ProspectsException
-            ? error.message
-            : 'No se pudo cargar Inicio. Intenta nuevamente.',
-      );
+      setState(() => _error = _errorMessage(error));
     } finally {
       if (mounted && request == _request) setState(() => _loading = false);
     }
   }
+
+  String _errorMessage(Object error) => switch (error) {
+    AgendaException(:final message) => message,
+    ProspectsException(:final message) => message,
+    _ => 'No se pudo cargar Inicio. Intenta nuevamente.',
+  };
 
   @override
   void dispose() {
@@ -271,7 +316,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     color: Theme.of(context).colorScheme.primary,
                     backgroundColor: Theme.of(context).colorScheme.surface,
                   ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 20),
                 if (_error != null) ...[
                   Text(_error!),
                   TextButton(onPressed: _load, child: const Text('Reintentar')),

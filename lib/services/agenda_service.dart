@@ -12,6 +12,22 @@ class AgendaException implements Exception {
   final String message;
 }
 
+class AgendaRecoverableException extends AgendaException {
+  const AgendaRecoverableException(super.message);
+}
+
+class AgendaIndeterminateException extends AgendaRecoverableException {
+  const AgendaIndeterminateException(super.message);
+}
+
+class AgendaSessionException extends AgendaException {
+  const AgendaSessionException(super.message);
+}
+
+class AgendaBusinessException extends AgendaException {
+  const AgendaBusinessException(super.message);
+}
+
 class AgendaService {
   AgendaService({http.Client? client, AuthService? auth})
     : _client = client ?? http.Client(),
@@ -19,11 +35,17 @@ class AgendaService {
   final http.Client _client;
   final AuthService _auth;
 
-  Future<void> complete(int id) => _changeStatus(id, 'completada');
+  Future<void> complete(int id, {String? operationKey}) =>
+      _changeStatus(id, 'completada', operationKey: operationKey);
 
-  Future<void> cancel(int id) => _changeStatus(id, 'cancelada');
+  Future<void> cancel(int id, {String? operationKey}) =>
+      _changeStatus(id, 'cancelada', operationKey: operationKey);
 
-  Future<void> _changeStatus(int id, String status) async {
+  Future<void> _changeStatus(
+    int id,
+    String status, {
+    String? operationKey,
+  }) async {
     final token = _auth.token;
     if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
     try {
@@ -34,34 +56,43 @@ class AgendaService {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Idempotency-Key': ?operationKey,
             },
             body: jsonEncode({'estado': status}),
           )
           .timeout(const Duration(seconds: 60));
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = _decode(response);
+      await _ensureSession(response, data);
+      if (response.statusCode >= 500) {
+        throw const AgendaRecoverableException(
+          'El servidor no pudo actualizar la actividad. Se reintentará.',
+        );
+      }
       if (response.statusCode != 200 ||
           data is! Map ||
           data['success'] != true) {
-        throw AgendaException(
+        throw AgendaBusinessException(
           data is Map && data['message'] is String
               ? data['message'] as String
               : 'No se pudo actualizar la actividad.',
         );
       }
     } on TimeoutException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'El servidor tardó demasiado. Actualiza la agenda para comprobar el estado de la actividad.',
       );
     } on http.ClientException {
-      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+      throw const AgendaRecoverableException(
+        'No se pudo conectar. El cambio se sincronizará después.',
+      );
     } on FormatException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'No se pudo confirmar el cambio. Actualiza la agenda.',
       );
     }
   }
 
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {String? operationKey}) async {
     final token = _auth.token;
     if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
     try {
@@ -71,33 +102,45 @@ class AgendaService {
             headers: {
               'Authorization': 'Bearer $token',
               'Accept': 'application/json',
+              'Idempotency-Key': ?operationKey,
             },
           )
           .timeout(const Duration(seconds: 60));
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = _decode(response);
+      await _ensureSession(response, data);
+      if (response.statusCode >= 500) {
+        throw const AgendaRecoverableException(
+          'El servidor no pudo eliminar la actividad. Se reintentará.',
+        );
+      }
       if (response.statusCode != 200 ||
           data is! Map ||
           data['success'] != true) {
-        throw AgendaException(
+        throw AgendaBusinessException(
           response.statusCode == 409 && data is Map && data['message'] is String
               ? data['message'] as String
               : 'No se pudo eliminar la actividad. Actualiza la agenda e intenta nuevamente.',
         );
       }
     } on TimeoutException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'El servidor tardó demasiado. Actualiza la agenda para comprobar si se eliminó.',
       );
     } on http.ClientException {
-      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+      throw const AgendaRecoverableException(
+        'No se pudo conectar. La eliminación se sincronizará después.',
+      );
     } on FormatException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'No se pudo confirmar la eliminación. Actualiza la agenda.',
       );
     }
   }
 
-  Future<void> create(Map<String, dynamic> fields) async {
+  Future<AgendaActivity> create(
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
     final token = _auth.token;
     if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
     try {
@@ -108,25 +151,22 @@ class AgendaService {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Idempotency-Key': ?operationKey,
             },
             body: jsonEncode(fields),
           )
           .timeout(const Duration(seconds: 60));
-      if (response.statusCode == 401) {
-        throw const AgendaException(
-          'Tu sesión expiró. Vuelve a iniciar sesión.',
-        );
-      }
+      final data = _decode(response);
+      await _ensureSession(response, data);
       if (response.statusCode >= 500) {
-        throw const AgendaException(
+        throw const AgendaRecoverableException(
           'No se pudo guardar la actividad. Intenta nuevamente.',
         );
       }
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode != 201 ||
           data is! Map ||
           data['success'] != true) {
-        throw AgendaException(
+        throw AgendaBusinessException(
           data is Map && data['message'] is String
               ? data['message'] as String
               : 'No se pudo guardar la actividad.',
@@ -135,20 +175,46 @@ class AgendaService {
       if (data['data'] is! Map || data['data']['id'] is! int) {
         throw const FormatException();
       }
+      final created = Map<String, dynamic>.from(data['data'] as Map);
+      try {
+        return fromJson(created, now: businessNow(), baseUrl: _auth.baseUrl);
+      } on FormatException {
+        final instant = DateTime.tryParse('${fields['programada_at']}');
+        if (instant == null) rethrow;
+        final type = '${fields['tipo']}'.replaceAll('_', ' ');
+        return AgendaActivity(
+          id: created['id'] as int,
+          prospectId: fields['prospecto_id'] as int?,
+          type: type,
+          medium: fields['medio'] as String?,
+          title: type.toUpperCase(),
+          prospect: fields['prospecto_id'] == null ? 'Actividad personal' : 'Prospecto',
+          description: fields['descripcion'] as String? ?? 'Sin descripción',
+          date: businessTimeFromInstant(instant),
+          status: AgendaStatus.pending,
+          location: fields['ubicacion'] as String? ?? 'Sin ubicación',
+        );
+      }
     } on TimeoutException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'El servidor tardó demasiado. Actualiza la agenda antes de volver a guardar para comprobar si se creó.',
       );
     } on http.ClientException {
-      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+      throw const AgendaRecoverableException(
+        'No se pudo conectar. La actividad se sincronizará después.',
+      );
     } on FormatException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'No se pudo confirmar la creación. Actualiza la agenda antes de volver a guardar.',
       );
     }
   }
 
-  Future<void> update(int id, Map<String, dynamic> fields) async {
+  Future<void> update(
+    int id,
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
     final token = _auth.token;
     if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
     try {
@@ -159,28 +225,37 @@ class AgendaService {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Idempotency-Key': ?operationKey,
             },
             body: jsonEncode(fields),
           )
           .timeout(const Duration(seconds: 60));
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = _decode(response);
+      await _ensureSession(response, data);
+      if (response.statusCode >= 500) {
+        throw const AgendaRecoverableException(
+          'El servidor no pudo editar la actividad. Se reintentará.',
+        );
+      }
       if (response.statusCode != 200 ||
           data is! Map ||
           data['success'] != true) {
-        throw AgendaException(
+        throw AgendaBusinessException(
           data is Map && data['message'] is String
               ? data['message'] as String
               : 'No se pudo editar la actividad.',
         );
       }
     } on TimeoutException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'El servidor tardó demasiado. Actualiza la agenda para comprobar si se guardaron los cambios.',
       );
     } on http.ClientException {
-      throw const AgendaException('No se pudo conectar. Revisa tu conexión.');
+      throw const AgendaRecoverableException(
+        'No se pudo conectar. Los cambios se sincronizarán después.',
+      );
     } on FormatException {
-      throw const AgendaException(
+      throw const AgendaIndeterminateException(
         'No se pudo confirmar la edición. Actualiza la agenda.',
       );
     }
@@ -201,11 +276,8 @@ class AgendaService {
             },
           )
           .timeout(const Duration(seconds: 60));
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        throw const AgendaException(
-          'Tu sesión expiró. Vuelve a iniciar sesión.',
-        );
-      }
+      final decoded = _decode(response);
+      await _ensureSession(response, decoded);
       if (response.statusCode == 404) {
         throw const AgendaException(
           'El servidor aún no tiene disponible la agenda. Actualiza el despliegue del backend.',
@@ -216,7 +288,7 @@ class AgendaService {
           'El servidor no pudo consultar las actividades (HTTP ${response.statusCode}). Revisa el error en los logs de Render.',
         );
       }
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = decoded;
       if (response.statusCode != 200 ||
           data is! Map ||
           data['success'] != true ||
@@ -258,6 +330,20 @@ class AgendaService {
         'El servidor devolvió actividades inválidas.',
       );
     }
+  }
+
+  static dynamic _decode(http.Response response) =>
+      jsonDecode(utf8.decode(response.bodyBytes));
+
+  Future<void> _ensureSession(http.Response response, dynamic data) async {
+    final sessionFailure =
+        data is Map &&
+        (data['status'] == 'error' || data['code'] == 'TOKEN_EXPIRED');
+    if (!sessionFailure) return;
+    await _auth.expireSession();
+    throw const AgendaSessionException(
+      'Tu sesión expiró. Vuelve a iniciar sesión.',
+    );
   }
 
   static AgendaActivity fromJson(

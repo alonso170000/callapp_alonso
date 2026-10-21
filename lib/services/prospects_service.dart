@@ -46,6 +46,7 @@ class ProspectsService {
                   : _client.post(uri, headers: headers, body: jsonEncode(body)))
               .timeout(const Duration(seconds: 60));
       if (response.statusCode == 401 || response.statusCode == 403) {
+        await _auth.expireSession();
         throw const ProspectsException(
           'Tu sesión expiró. Vuelve a iniciar sesión.',
         );
@@ -220,6 +221,12 @@ class ProspectsService {
             body: jsonEncode(fields),
           )
           .timeout(const Duration(seconds: 60));
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await _auth.expireSession();
+        throw const ProspectsException(
+          'Tu sesión expiró. Vuelve a iniciar sesión.',
+        );
+      }
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode < 200 ||
           response.statusCode >= 300 ||
@@ -258,6 +265,7 @@ class ProspectsService {
           )
           .timeout(const Duration(seconds: 60));
       if (response.statusCode == 401 || response.statusCode == 403) {
+        await _auth.expireSession();
         throw const ProspectsException(
           'Tu sesión expiró. Vuelve a iniciar sesión.',
         );

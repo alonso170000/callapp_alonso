@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:callerapp_frontend/data/local/app_database.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
@@ -69,7 +70,7 @@ void main() {
     );
     addTearDown(database.close);
     final cache = ProspectsCache(database: database);
-    const scope = ProspectCacheScope(userId: 5, developmentId: 9);
+    const scope = LocalScope(userId: 5, developmentId: 9);
     await cache.replace(scope, [_prospect(21, 'Guardado')]);
     final repository = ProspectsRepository(
       auth: auth,

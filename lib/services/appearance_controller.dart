@@ -69,6 +69,7 @@ class AppearanceController extends ChangeNotifier {
                     ))
               .timeout(const Duration(seconds: 30));
       if (response.statusCode == 401 || response.statusCode == 403) {
+        await _auth.expireSession();
         throw const AppearanceException(
           'Tu sesión expiró. Vuelve a iniciar sesión.',
         );

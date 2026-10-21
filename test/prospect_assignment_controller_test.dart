@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
@@ -109,11 +110,11 @@ class _CountingProspectsService extends ProspectsService {
 
 class _FakeCache extends ProspectsCache {
   @override
-  Future<List<ProspectRecord>> read(ProspectCacheScope scope) async => const [];
+  Future<List<ProspectRecord>> read(LocalScope scope) async => const [];
 
   @override
   Future<void> replace(
-    ProspectCacheScope scope,
+    LocalScope scope,
     List<ProspectRecord> prospects,
   ) async {}
 }

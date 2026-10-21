@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 
 class HomeCardArrow extends StatelessWidget {
@@ -7,6 +7,7 @@ class HomeCardArrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return SizedBox.square(
       dimension: 52,
       child: Stack(
@@ -16,13 +17,13 @@ class HomeCardArrow extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AppColors.textDarkColor,
+              color: palette.cardArrowFill,
               borderRadius: BorderRadius.circular(6),
             ),
           ),
-          const Icon(
+          Icon(
             FluentIcons.arrow_square_up_right_24_filled,
-            color: AppColors.whiteColor,
+            color: palette.cardArrowForeground,
             size: 52,
           ),
         ],

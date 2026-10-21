@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
@@ -19,7 +20,7 @@ class ProspectsRepository {
   final ProspectsCache _cache;
   final AuthService _auth;
 
-  ProspectCacheScope get _scope {
+  LocalScope get _scope {
     final userId = _auth.userId;
     final developmentId = _auth.developmentId;
     if (userId == null || developmentId == null) {
@@ -27,7 +28,7 @@ class ProspectsRepository {
         'La sesión no identifica al usuario o desarrollo activo.',
       );
     }
-    return ProspectCacheScope(userId: userId, developmentId: developmentId);
+    return LocalScope(userId: userId, developmentId: developmentId);
   }
 
   Future<List<ProspectRecord>> readCache() => _cache.read(_scope);
@@ -36,7 +37,11 @@ class ProspectsRepository {
     final scope = _scope;
     final previous = await _cachedOrEmpty(scope);
     final prospects = await _service.fetch();
-    await _cache.replace(scope, prospects);
+    try {
+      await _cache.replace(scope, prospects);
+    } catch (_) {
+      // La API respondió correctamente; la caché es solo una optimización.
+    }
     try {
       await NotificationService.instance.syncAssignedProspects(
         prospects,
@@ -51,7 +56,7 @@ class ProspectsRepository {
     return prospects;
   }
 
-  Future<List<ProspectRecord>> _cachedOrEmpty(ProspectCacheScope scope) async {
+  Future<List<ProspectRecord>> _cachedOrEmpty(LocalScope scope) async {
     try {
       return await _cache.read(scope);
     } catch (_) {

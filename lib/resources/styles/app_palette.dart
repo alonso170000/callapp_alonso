@@ -24,6 +24,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.navForeground,
     required this.navSelectedFill,
     required this.navSelectedForeground,
+    required this.cardArrowFill,
+    required this.cardArrowForeground,
     required this.fieldFill,
     required this.fieldForeground,
     required this.fieldHint,
@@ -67,6 +69,12 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color navSelectedFill;
   final Color navSelectedForeground;
 
+  /// Flechas de las tarjetas de Inicio. El icono dibuja un cuadro relleno con
+  /// la flecha recortada, por lo que [cardArrowFill] es el color que se ve en
+  /// la flecha y [cardArrowForeground] el del cuadro.
+  final Color cardArrowFill;
+  final Color cardArrowForeground;
+
   final Color fieldFill;
   final Color fieldForeground;
   final Color fieldHint;
@@ -104,6 +112,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navForeground: AppColors.primaryColor,
     navSelectedFill: AppColors.primaryColor,
     navSelectedForeground: AppColors.accentColor,
+    cardArrowFill: AppColors.textDarkColor,
+    cardArrowForeground: AppColors.whiteColor,
     fieldFill: Color(0xFFC3E7DF),
     fieldForeground: AppColors.primaryColor,
     fieldHint: Color(0xFF316A64),
@@ -141,7 +151,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     ),
     navForeground: Color(0xFF91E5D6),
     navSelectedFill: Color(0xFF91E5D6),
-    navSelectedForeground: Color(0xFF06211D),
+    navSelectedForeground: Color(0xFF115048),
+    cardArrowFill: AppColors.whiteColor,
+    cardArrowForeground: Color(0xFF06211D),
     fieldFill: Color(0xFF173B35),
     fieldForeground: Color(0xFFE1F5EE),
     fieldHint: Color(0xFF93BFB6),
@@ -180,6 +192,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? navForeground,
     Color? navSelectedFill,
     Color? navSelectedForeground,
+    Color? cardArrowFill,
+    Color? cardArrowForeground,
     Color? fieldFill,
     Color? fieldForeground,
     Color? fieldHint,
@@ -212,6 +226,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navForeground: navForeground ?? this.navForeground,
     navSelectedFill: navSelectedFill ?? this.navSelectedFill,
     navSelectedForeground: navSelectedForeground ?? this.navSelectedForeground,
+    cardArrowFill: cardArrowFill ?? this.cardArrowFill,
+    cardArrowForeground: cardArrowForeground ?? this.cardArrowForeground,
     fieldFill: fieldFill ?? this.fieldFill,
     fieldForeground: fieldForeground ?? this.fieldForeground,
     fieldHint: fieldHint ?? this.fieldHint,
@@ -255,6 +271,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
         navSelectedForeground,
         other.navSelectedForeground,
       ),
+      cardArrowFill: mix(cardArrowFill, other.cardArrowFill),
+      cardArrowForeground: mix(cardArrowForeground, other.cardArrowForeground),
       fieldFill: mix(fieldFill, other.fieldFill),
       fieldForeground: mix(fieldForeground, other.fieldForeground),
       fieldHint: mix(fieldHint, other.fieldHint),

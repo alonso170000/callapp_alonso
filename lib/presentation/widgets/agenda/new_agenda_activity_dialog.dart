@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/services/agenda_service.dart';
+import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -10,12 +11,14 @@ class NewAgendaActivityDialog extends StatefulWidget {
   final DateTime initialDate;
   final AgendaActivity? activity;
   final AgendaService? agendaService;
+  final AgendaRepository? agendaRepository;
   final ProspectsService? prospectsService;
   const NewAgendaActivityDialog({
     super.key,
     required this.initialDate,
     this.activity,
     this.agendaService,
+    this.agendaRepository,
     this.prospectsService,
   });
   @override
@@ -27,6 +30,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   final _form = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   late final AgendaService _agenda;
+  late final AgendaRepository _repository;
   late final ProspectsService _prospectsService;
   List<ProspectRecord> _prospects = [];
   String _type = 'seguimiento', _medium = 'llamada', _location = 'Lote';
@@ -40,6 +44,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   void initState() {
     super.initState();
     _agenda = widget.agendaService ?? AgendaService();
+    _repository = widget.agendaRepository ?? AgendaRepository(service: _agenda);
     _prospectsService = widget.prospectsService ?? ProspectsService();
     final activity = widget.activity;
     if (activity != null) {
@@ -94,6 +99,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
   void dispose() {
     _descriptionController.dispose();
     if (widget.agendaService == null) _agenda.dispose();
+    if (widget.agendaRepository == null) _repository.dispose();
     if (widget.prospectsService == null) _prospectsService.dispose();
     super.dispose();
   }
@@ -164,10 +170,59 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
         if (_type == 'visita_presencial') 'ubicacion': _location,
       };
       final activityId = widget.activity?.id;
+      if (widget.agendaRepository == null && widget.agendaService != null) {
+        if (activityId == null) {
+          await _agenda.create(fields);
+        } else {
+          await _agenda.update(activityId, fields);
+        }
+        if (mounted) {
+          setState(() => _saving = false);
+          await WidgetsBinding.instance.endOfFrame;
+          if (mounted) Navigator.pop(context, scheduled);
+        }
+        return;
+      }
       if (activityId == null) {
-        await _agenda.create(fields);
+        await _repository.create(
+          fields,
+          optimisticActivity: AgendaActivity(
+            prospectId: _prospect == 0 ? null : _prospect,
+            type: _type,
+            medium: _type == 'seguimiento' ? _medium : null,
+            title: _type.replaceAll('_', ' ').toUpperCase(),
+            prospect: _prospectLabel(_prospect),
+            description: _descriptionController.text.trim().isEmpty
+                ? 'Sin descripción'
+                : _descriptionController.text.trim(),
+            date: scheduled,
+            status: AgendaStatus.pending,
+            location: _type == 'visita_presencial'
+                ? _location
+                : 'Sin ubicación',
+            reminderMinutes: _reminder,
+          ),
+        );
       } else {
-        await _agenda.update(activityId, fields);
+        final current = widget.activity!;
+        await _repository.update(
+          current,
+          fields,
+          optimisticActivity: current.copyWith(
+            type: _type,
+            medium: _type == 'seguimiento' ? _medium : null,
+            title: _type.replaceAll('_', ' ').toUpperCase(),
+            prospect: _prospectLabel(_prospect),
+            description: _descriptionController.text.trim().isEmpty
+                ? 'Sin descripción'
+                : _descriptionController.text.trim(),
+            date: scheduled,
+            location: _type == 'visita_presencial'
+                ? _location
+                : 'Sin ubicación',
+            reminderMinutes: _reminder,
+          ),
+        );
       }
       if (mounted) {
         setState(() => _saving = false);

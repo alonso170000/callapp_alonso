@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/session_store.dart';
 
 class AuthException implements Exception {
   final String message;
@@ -11,17 +12,22 @@ class AuthException implements Exception {
 }
 
 class AuthService extends ChangeNotifier {
-  AuthService({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
-      _baseUrl =
-          baseUrl ??
-          const String.fromEnvironment(
-            'API_BASE_URL',
-            defaultValue: 'https://api-crm-mx9l.onrender.com',
-          );
+  AuthService({
+    http.Client? client,
+    String? baseUrl,
+    SessionStore? sessionStore,
+  }) : _client = client ?? http.Client(),
+       _sessions = sessionStore ?? SecureSessionStore(),
+       _baseUrl =
+           baseUrl ??
+           const String.fromEnvironment(
+             'API_BASE_URL',
+             defaultValue: 'https://api-crm-mx9l.onrender.com',
+           );
 
   static final instance = AuthService();
   final http.Client _client;
+  final SessionStore _sessions;
   final String _baseUrl;
   String? _token;
   String? _userName;
@@ -131,6 +137,7 @@ class AuthService extends ChangeNotifier {
       activeDevelopment = data['desarrollo_activo'] is Map<String, dynamic>
           ? data['desarrollo_activo'] as Map<String, dynamic>
           : null;
+      await _persistSession();
       notifyListeners();
     } on TimeoutException {
       throw const AuthException(
@@ -164,15 +171,70 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Restaura la sesión guardada al arrancar la app.
+  ///
+  /// Si el token ya expiró según el JWT, se descarta y la app pide login.
+  /// No se valida contra la red: el primer 401/403 la cierra.
+  Future<void> restoreSession() async {
+    if (_token != null) return;
+    final stored = await _sessions.read();
+    if (stored == null) return;
+    final expiresAt = _readIntClaim(stored.token, 'exp');
+    if (expiresAt != null &&
+        DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
+            .isBefore(DateTime.now())) {
+      await _sessions.clear();
+      return;
+    }
+    _token = stored.token;
+    _userId = stored.userId ?? _readIntClaim(stored.token, 'usuario_id');
+    _userName = stored.userName ?? _readUserName(stored.token) ?? 'Usuario';
+    _email = stored.email;
+    _phone = stored.phone;
+    activeDevelopment = stored.activeDevelopment;
+    notifyListeners();
+  }
+
+  /// Cierra la sesión por vencimiento o rechazo del servidor.
+  ///
+  /// Es idempotente y conserva la caché local para el mismo ámbito.
+  Future<void> expireSession() async {
+    if (_token == null) return;
+    unawaited(NotificationService.instance.endSession());
+    await _sessions.clear();
+    _clearSessionData();
+    notifyListeners();
+  }
+
   void logout() {
     unawaited(NotificationService.instance.endSession());
+    unawaited(_sessions.clear());
+    _clearSessionData();
+    notifyListeners();
+  }
+
+  void _clearSessionData() {
     _token = null;
     _userName = null;
     _email = null;
     _phone = null;
     _userId = null;
     activeDevelopment = null;
-    notifyListeners();
+  }
+
+  Future<void> _persistSession() async {
+    final token = _token;
+    if (token == null) return;
+    await _sessions.write(
+      StoredSession(
+        token: token,
+        userId: _userId,
+        userName: _userName,
+        email: _email,
+        phone: _phone,
+        activeDevelopment: activeDevelopment,
+      ),
+    );
   }
 
   static String? _readUserName(String token) {

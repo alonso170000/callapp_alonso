@@ -97,32 +97,37 @@ class _AddProspectTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return SizedBox(
       width: 58,
       child: Column(
         children: [
           Material(
-            color: Colors.white,
+            color: palette.cardArrowForeground,
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(10),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 52,
                 height: 52,
-                child: Icon(Icons.add_rounded, color: Colors.black, size: 42),
+                child: Icon(
+                  Icons.add_rounded,
+                  color: palette.cardArrowFill,
+                  size: 42,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Agregar',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.black,
               fontFamily: 'SulphurPoint',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),

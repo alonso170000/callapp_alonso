@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/data/local/app_database.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter/material.dart';
@@ -15,8 +16,8 @@ void main() {
     );
     addTearDown(database.close);
     final cache = ProspectsCache(database: database);
-    const firstScope = ProspectCacheScope(userId: 1, developmentId: 10);
-    const secondScope = ProspectCacheScope(userId: 1, developmentId: 20);
+    const firstScope = LocalScope(userId: 1, developmentId: 10);
+    const secondScope = LocalScope(userId: 1, developmentId: 20);
 
     await cache.replace(firstScope, [_prospect(11, 'Ana')]);
     await cache.replace(secondScope, [_prospect(22, 'Brenda')]);
@@ -40,7 +41,7 @@ void main() {
     );
     addTearDown(database.close);
     final cache = ProspectsCache(database: database);
-    const scope = ProspectCacheScope(userId: 2, developmentId: 30);
+    const scope = LocalScope(userId: 2, developmentId: 30);
     final nextContact = DateTime(2026, 10, 22, 14, 30);
     final prospect = ProspectRecord(
       id: 7,

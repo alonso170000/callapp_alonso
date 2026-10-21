@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/repositories/agenda_repository.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -77,6 +79,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   DateTime _date = DateUtils.dateOnly(businessNow());
   final List<AgendaActivity> _activities = [];
   final _service = AgendaService();
+  late final AgendaRepository _repository = AgendaRepository(service: _service);
+  final _prospects = ProspectsRepository();
   bool _loading = false;
   String? _error;
   int _request = 0;
@@ -88,13 +92,49 @@ class _AgendaScreenState extends State<AgendaScreen> {
       _error = null;
     });
     try {
-      final activities =
-          await (widget.loadActivities?.call() ?? _service.fetch());
-      if (!mounted || request != _request) return;
-      setState(() {
-        _activities.clear();
-        _activities.addAll(activities);
-      });
+      if (widget.loadActivities != null) {
+        final activities = await widget.loadActivities!.call();
+        if (!mounted || request != _request) return;
+        setState(() {
+          _activities.clear();
+          _activities.addAll(activities);
+        });
+        return;
+      }
+
+      var hasCachedActivities = false;
+      try {
+        final cached = await _repository.readCache();
+        if (!mounted || request != _request) return;
+        if (cached.isNotEmpty) {
+          hasCachedActivities = true;
+          setState(() {
+            _activities
+              ..clear()
+              ..addAll(cached);
+          });
+        }
+      } catch (_) {
+        // Una caché dañada no debe impedir la consulta remota.
+      }
+
+      try {
+        final activities = await _repository.refresh();
+        if (!mounted || request != _request) return;
+        setState(() {
+          _activities
+            ..clear()
+            ..addAll(activities);
+          _error = null;
+        });
+      } on AgendaException catch (error) {
+        if (!mounted || request != _request) return;
+        setState(() {
+          _error = hasCachedActivities
+              ? 'Mostrando datos guardados. ${error.message}'
+              : error.message;
+        });
+      }
     } on AgendaException catch (error) {
       if (mounted && request == _request) {
         setState(() => _error = error.message);
@@ -105,6 +145,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   void _sessionChanged() {
+    ++_request;
     _activities.clear();
     _filters = AgendaFilters();
     _load();
@@ -142,7 +183,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
     widget.controller?._show = null;
     widget.controller?._showActivity = null;
     AuthService.instance.removeListener(_sessionChanged);
+    _repository.dispose();
     _service.dispose();
+    _prospects.dispose();
     super.dispose();
   }
 
@@ -171,7 +214,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       clipBehavior: Clip.antiAlias,
-      builder: (context) => NewAgendaActivityDialog(initialDate: _date),
+      builder: (context) => NewAgendaActivityDialog(
+        initialDate: _date,
+        agendaRepository: _repository,
+      ),
     );
     if (!mounted || scheduled == null) return;
     setState(() {
@@ -264,7 +310,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
             bottom: false,
             child: AgendaActivityDetail(
               activity: activity,
-              loadProspects: widget.loadProspects,
+              loadProspects: widget.loadProspects ?? _cachedProspects,
               onClose: () => Navigator.pop(detailContext),
               onMessage: () => _showActionMessage(
                 'Mensaje para ${activity.prospect}',
@@ -316,7 +362,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       builder: (_) => NewAgendaActivityDialog(
         initialDate: activity.date,
         activity: activity,
-        agendaService: _service,
+        agendaRepository: _repository,
       ),
     );
     if (scheduled == null || !mounted) return;
@@ -324,6 +370,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
     setState(() => _date = DateUtils.dateOnly(scheduled));
     _showActionMessage('Actividad actualizada.');
     await _load();
+  }
+
+  Future<List<ProspectRecord>> _cachedProspects() async {
+    final loader = widget.loadProspects;
+    if (loader != null) return loader();
+    final cached = await _prospects.readCache();
+    if (cached.isNotEmpty) return cached;
+    return _prospects.refresh();
   }
 
   Future<void> _openProspect(
@@ -339,11 +393,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
       return;
     }
     _openingProspect = true;
-    final service = ProspectsService();
     try {
-      final prospects = await (widget.loadProspects?.call() ?? service.fetch());
+      var prospects = await _cachedProspects();
+      var matches = prospects.where((p) => p.id == activity.prospectId);
+      if (matches.isEmpty) {
+        prospects = await _prospects.refresh();
+        matches = prospects.where((p) => p.id == activity.prospectId);
+      }
       if (!detailContext.mounted) return;
-      final matches = prospects.where((p) => p.id == activity.prospectId);
       if (matches.isEmpty) {
         _showActionMessage(
           'El prospecto ya no está disponible en tu sesión.',
@@ -364,7 +421,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
         _showActionMessage(error.message, detailContext);
       }
     } finally {
-      service.dispose();
       _openingProspect = false;
     }
   }
@@ -394,11 +450,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ),
       );
       if (confirmed != true || !detailContext.mounted) return;
-      await _service.delete(id);
+      final result = await _repository.delete(activity);
       if (!detailContext.mounted) return;
       Navigator.pop(detailContext);
       if (mounted) {
-        _showActionMessage('Actividad eliminada.');
+        _showActionMessage(
+          result.isPending
+              ? 'Actividad eliminada. Pendiente de sincronizar.'
+              : 'Actividad eliminada.',
+        );
         await _load();
       }
     } on AgendaException catch (error) {
@@ -539,11 +599,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
     if (id != null) {
       if (!_changingStatus.add(id)) return;
       try {
-        await _service.complete(id);
+        final result = await _repository.complete(activity);
         if (!detailContext.mounted) return;
         Navigator.pop(detailContext);
         if (mounted) {
-          _showActionMessage('Actividad completada.');
+          _showActionMessage(
+            result.isPending
+                ? 'Actividad completada. Pendiente de sincronizar.'
+                : 'Actividad completada.',
+          );
           await _load();
         }
       } on AgendaException catch (error) {
@@ -584,11 +648,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
     if (id != null) {
       if (!_changingStatus.add(id)) return;
       try {
-        await _service.cancel(id);
+        final result = await _repository.cancel(activity);
         if (!detailContext.mounted) return;
         Navigator.pop(detailContext);
         if (mounted) {
-          _showActionMessage('Actividad cancelada.');
+          _showActionMessage(
+            result.isPending
+                ? 'Actividad cancelada. Pendiente de sincronizar.'
+                : 'Actividad cancelada.',
+          );
           await _load();
         }
       } on AgendaException catch (error) {
