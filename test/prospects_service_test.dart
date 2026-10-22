@@ -87,6 +87,7 @@ void main() {
             request.url.toString(),
             'https://example.com/api/v1/leads/17/follow-ups',
           );
+          expect(request.headers['Idempotency-Key'], 'follow-key');
           expect(jsonDecode(request.body), fields);
           return http.Response(
             '{"success":true,"data":{"contact_id":4,"activity_id":9}}',
@@ -95,7 +96,7 @@ void main() {
         }),
       );
       addTearDown(service.dispose);
-      await service.createFollowUp(17, fields);
+      await service.createFollowUp(17, fields, operationKey: 'follow-key');
     },
   );
 
@@ -121,6 +122,7 @@ void main() {
               headers: {'content-type': 'application/json; charset=utf-8'},
             );
           }
+          expect(request.headers['Idempotency-Key'], 'discovery-key');
           expect(jsonDecode(request.body), {
             'seccion': 'motivadores_compra',
             'motivo_compra': ['precio', 'otro'],
@@ -137,7 +139,7 @@ void main() {
         'seccion': 'motivadores_compra',
         'motivo_compra': ['precio', 'otro'],
         'otro_motivo_compra': 'Promoción',
-      });
+      }, operationKey: 'discovery-key');
 
       expect(requests, hasLength(2));
       expect(
@@ -167,6 +169,47 @@ void main() {
     final closers = await service.availableClosers();
     expect(closers.single['id'], 8);
     expect(closers.single['nombre_completo'], 'Cerrador Dos');
+  });
+
+  test(
+    'Un 409 con la operación en proceso se trata como recuperable',
+    () async {
+      final service = ProspectsService(
+        auth: await login(),
+        client: MockClient(
+          (_) async => http.Response(
+            '{"success":false,"message":"La operación todavía está en proceso. Intenta nuevamente."}',
+            409,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          ),
+        ),
+      );
+      addTearDown(service.dispose);
+
+      await expectLater(
+        service.update(15, {'nombre': 'Ana'}, operationKey: 'repetida'),
+        throwsA(isA<ProspectsRecoverableException>()),
+      );
+    },
+  );
+
+  test('Un 409 con la clave reusada sigue siendo un conflicto', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient(
+        (_) async => http.Response(
+          '{"success":false,"message":"La clave de idempotencia ya fue usada con otra operación."}',
+          409,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+
+    await expectLater(
+      service.update(15, {'nombre': 'Ana'}, operationKey: 'reusada'),
+      throwsA(isA<ProspectsBusinessException>()),
+    );
   });
 
   for (final width in [320.0, 390.0]) {

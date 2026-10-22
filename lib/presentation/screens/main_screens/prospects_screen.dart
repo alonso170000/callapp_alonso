@@ -19,12 +19,15 @@ class ProspectsController {
   void showFromHome(Set<int> ids, String label) => _show?.call(ids, label);
   VoidCallback? _open;
   void Function(int)? _openProspect;
+  VoidCallback? _refresh;
   void openNewProspect() => _open?.call();
   void openProspect(int prospectId) => _openProspect?.call(prospectId);
+  void refresh() => _refresh?.call();
   void dispose() {
     _open = null;
     _show = null;
     _openProspect = null;
+    _refresh = null;
   }
 }
 
@@ -122,6 +125,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     widget.controller?._open = _addProspect;
     widget.controller?._show = _showFromHome;
     widget.controller?._openProspect = _openProspectById;
+    widget.controller?._refresh = _load;
     AuthService.instance.addListener(_sessionChanged);
     _load();
   }
@@ -133,9 +137,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       oldWidget.controller?._open = null;
       oldWidget.controller?._show = null;
       oldWidget.controller?._openProspect = null;
+      oldWidget.controller?._refresh = null;
       widget.controller?._open = _addProspect;
       widget.controller?._show = _showFromHome;
       widget.controller?._openProspect = _openProspectById;
+      widget.controller?._refresh = _load;
     }
   }
 
@@ -183,7 +189,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       clipBehavior: Clip.antiAlias,
-      builder: (_) => const NewProspectSheet(),
+      builder: (_) => NewProspectSheet(repository: _repository),
     );
     if (!mounted || created != true) return;
     setState(() {
@@ -216,6 +222,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     widget.controller?._open = null;
     widget.controller?._show = null;
     widget.controller?._openProspect = null;
+    widget.controller?._refresh = null;
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
     _repository.dispose();

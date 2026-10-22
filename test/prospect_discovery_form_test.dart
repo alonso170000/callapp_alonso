@@ -44,8 +44,9 @@ class _RecordingProspectsService extends ProspectsService {
   @override
   Future<void> saveDiscoverySection(
     int prospectId,
-    Map<String, dynamic> fields,
-  ) async {
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
     expect(prospectId, 17);
     this.fields = fields;
   }

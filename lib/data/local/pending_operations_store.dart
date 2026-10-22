@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:sqflite/sqflite.dart';
+
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -152,6 +154,31 @@ class PendingOperationsStore {
     required int temporaryId,
     required int serverId,
   }) async {
+    await remapEntityId(
+      creation,
+      temporaryId: temporaryId,
+      serverId: serverId,
+      entity: 'activity',
+    );
+  }
+
+  Future<void> remapProspectId(
+    PendingOperation creation, {
+    required int temporaryId,
+    required int serverId,
+  }) => remapEntityId(
+    creation,
+    temporaryId: temporaryId,
+    serverId: serverId,
+    entity: 'prospect',
+  );
+
+  Future<void> remapEntityId(
+    PendingOperation creation, {
+    required int temporaryId,
+    required int serverId,
+    required String entity,
+  }) async {
     final database = await _database.databaseOrNull;
     if (database == null) return;
     await database.transaction((transaction) async {
@@ -160,14 +187,35 @@ class PendingOperationsStore {
         creation.scope.developmentId,
         temporaryId,
       ];
-      await transaction.rawUpdate(
-        'UPDATE cached_activities SET activity_id = ? WHERE user_id = ? AND development_id = ? AND activity_id = ?',
-        [serverId, ...args],
-      );
-      await transaction.rawUpdate(
-        'UPDATE activity_notifications SET activity_id = ? WHERE user_id = ? AND development_id = ? AND activity_id = ?',
-        [serverId, ...args],
-      );
+      if (entity == 'activity') {
+        await transaction.rawUpdate(
+          'UPDATE cached_activities SET activity_id = ? WHERE user_id = ? AND development_id = ? AND activity_id = ?',
+          [serverId, ...args],
+        );
+        await transaction.rawUpdate(
+          'UPDATE activity_notifications SET activity_id = ? WHERE user_id = ? AND development_id = ? AND activity_id = ?',
+          [serverId, ...args],
+        );
+      } else if (entity == 'prospect') {
+        await transaction.rawUpdate(
+          'UPDATE cached_prospects SET prospect_id = ? WHERE user_id = ? AND development_id = ? AND prospect_id = ?',
+          [serverId, ...args],
+        );
+        await transaction.rawUpdate(
+          'UPDATE cached_activities SET prospect_id = ? WHERE user_id = ? AND development_id = ? AND prospect_id = ?',
+          [serverId, ...args],
+        );
+        await transaction.rawUpdate(
+          'UPDATE activity_notifications SET prospect_id = ? WHERE user_id = ? AND development_id = ? AND prospect_id = ?',
+          [serverId, ...args],
+        );
+      } else {
+        throw ArgumentError.value(
+          entity,
+          'entity',
+          'Entidad local desconocida',
+        );
+      }
       final following = await transaction.query(
         'pending_operations',
         where: 'user_id = ? AND development_id = ? AND id > ?',
@@ -200,7 +248,95 @@ class PendingOperationsStore {
         where: 'id = ?',
         whereArgs: [creation.id],
       );
+      if (entity == 'prospect') {
+        await _saveAlias(transaction, creation.scope, serverId);
+      }
     });
+  }
+
+  static const _aliasesPrefix = 'local_prospect_aliases';
+  static const _maxAliases = 100;
+
+  static String _aliasesKey(LocalScope scope) =>
+      '$_aliasesPrefix:${scope.userId}:${scope.developmentId}';
+
+  /// Recuerda un id del servidor que nació de una creación local. Evita que el
+  /// siguiente refresco lo anuncie como un prospecto recién asignado.
+  Future<void> recordLocallyCreated(LocalScope scope, int serverId) async {
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
+    await _saveAlias(database, scope, serverId);
+  }
+
+  static Future<void> _saveAlias(
+    DatabaseExecutor database,
+    LocalScope scope,
+    int serverId,
+  ) async {
+    final key = _aliasesKey(scope);
+    final stored = await _readAliases(database, key);
+    if (!stored.add(serverId)) return;
+    final values = stored.toList()..sort();
+    final kept = values.length <= _maxAliases
+        ? values
+        : values.sublist(values.length - _maxAliases);
+    await _writeAliases(database, key, kept);
+  }
+
+  /// Consume los alias que ya aparecieron en el snapshot remoto y devuelve
+  /// cuáles deben excluirse de los avisos de asignación.
+  Future<Set<int>> consumeLocallyCreated(
+    LocalScope scope,
+    Set<int> visible,
+  ) async {
+    final database = await _database.databaseOrNull;
+    if (database == null || visible.isEmpty) return const {};
+    final key = _aliasesKey(scope);
+    final stored = await _readAliases(database, key);
+    final matched = stored.intersection(visible);
+    if (matched.isEmpty) return const {};
+    stored.removeAll(matched);
+    if (stored.isEmpty) {
+      await database.delete('app_metadata', where: 'key = ?', whereArgs: [key]);
+    } else {
+      await _writeAliases(database, key, stored.toList()..sort());
+    }
+    return matched;
+  }
+
+  static Future<Set<int>> _readAliases(
+    DatabaseExecutor database,
+    String key,
+  ) async {
+    final rows = await database.query(
+      'app_metadata',
+      columns: const ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (rows.isEmpty) return <int>{};
+    try {
+      final decoded = jsonDecode('${rows.single['value']}');
+      if (decoded is! List) return <int>{};
+      return {
+        for (final value in decoded)
+          if (value is int) value,
+      };
+    } on FormatException {
+      return <int>{};
+    }
+  }
+
+  static Future<void> _writeAliases(
+    DatabaseExecutor database,
+    String key,
+    List<int> values,
+  ) async {
+    await database.insert('app_metadata', {
+      'key': key,
+      'value': jsonEncode(values),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static dynamic _replaceId(dynamic value, int from, int to) {

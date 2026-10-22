@@ -1,7 +1,14 @@
 import 'dart:convert';
 
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/data/local/catalog_cache.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
+import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
+import 'package:callerapp_frontend/data/local/prospects_cache.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +29,7 @@ void main() {
         final auth = AuthService(
           client: MockClient(
             (_) async => http.Response(
-              '{"status":"success","token":"test","desarrollo_activo":{"id":4,"nombre":"Runa"}}',
+              '{"status":"success","token":"test","usuario":{"id":3},"desarrollo_activo":{"id":4,"nombre":"Runa"}}',
               200,
             ),
           ),
@@ -68,6 +75,15 @@ void main() {
               'Enviar información del desarrollo',
             );
             expect(body['primer_seguimiento']['recordatorio_at'], isNotNull);
+            final scheduledAt = DateTime.parse(
+              body['primer_seguimiento']['programada_at'] as String,
+            );
+            final reminderAt = DateTime.parse(
+              body['primer_seguimiento']['recordatorio_at'] as String,
+            );
+            expect(scheduledAt.isUtc, isTrue);
+            expect(reminderAt.isUtc, isTrue);
+            expect(reminderAt.isBefore(scheduledAt), isTrue);
             expect(body.containsKey('agente_id'), isFalse);
             posts++;
             if (posts == 1) {
@@ -165,5 +181,268 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  testWidgets('usa catálogos cacheados sin conexión', (tester) async {
+    final auth = await _auth();
+    final cache = _MemoryCatalogCache();
+    const scope = LocalScope(userId: 3, developmentId: 4);
+    await cache.write(scope, 'canales', const [
+      {'id': 9, 'nombre': 'Referido'},
+    ]);
+    await cache.write(scope, 'estatus-prospecto', const [
+      {'id': 22, 'nombre': 'Nuevo'},
+    ]);
+    final service = _OfflineCatalogService(auth: auth);
+    final repository = ProspectsRepository(
+      auth: auth,
+      service: service,
+      catalogs: cache,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: NewProspectSheet(service: service, repository: repository),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Origen*'), findsOneWidget);
+    expect(find.text('Status*'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('save-prospect')))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('sin caché explica que requiere una primera conexión', (
+    tester,
+  ) async {
+    final auth = await _auth();
+    final service = _OfflineCatalogService(auth: auth);
+    final repository = ProspectsRepository(
+      auth: auth,
+      service: service,
+      catalogs: _MemoryCatalogCache(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: NewProspectSheet(service: service, repository: repository),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.textContaining('Conéctate una vez para descargarlos'),
+      findsOneWidget,
+    );
+    expect(find.text('Reintentar'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('save-prospect')))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('sin conexión encola el prospecto y lo cachea', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
+
+    final auth = await _auth();
+    const scope = LocalScope(userId: 3, developmentId: 4);
+    final catalogs = _MemoryCatalogCache();
+    await catalogs.write(scope, 'canales', const [
+      {'id': 9, 'nombre': 'Referido'},
+    ]);
+    await catalogs.write(scope, 'estatus-prospecto', const [
+      {'id': 22, 'nombre': 'Nuevo'},
+    ]);
+    final service = _OfflineCatalogService(auth: auth);
+    final outbox = _MemoryOutbox();
+    final prospectsCache = _MemoryProspectsCache();
+    final repository = ProspectsRepository(
+      auth: auth,
+      service: service,
+      catalogs: catalogs,
+      cache: prospectsCache,
+      outbox: outbox,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) =>
+                    NewProspectSheet(service: service, repository: repository),
+              ),
+              child: const Text('Abrir'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+    for (final entry in {
+      'Nombre': 'Ana Offline',
+      'Email': 'ana@example.com',
+      'Ciudad': 'Cancun',
+      'Teléfono': '9981234567',
+    }.entries) {
+      final field = find.byKey(ValueKey('prospect-${entry.key}'));
+      await tester.ensureVisible(field);
+      await tester.enterText(field, entry.value);
+    }
+    await tester.ensureVisible(find.byKey(const ValueKey('save-prospect')));
+    await tester.tap(find.byKey(const ValueKey('save-prospect')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Se sincronizará'), findsOneWidget);
+    expect(find.byType(NewProspectSheet), findsNothing);
+    expect(outbox.operations, hasLength(1));
+    expect(outbox.operations.single.kind, 'prospect.create');
+    expect(outbox.operations.single.entityId, -1);
+    expect(outbox.operations.single.state, PendingOperationState.pending);
+
+    final cached = await prospectsCache.read(scope);
+    expect(cached, hasLength(1));
+    expect(cached.single.id, -1);
+    expect(cached.single.name, 'Ana Offline');
+    expect(cached.single.channelId, 9);
+  });
+}
+
+Future<AuthService> _auth() async {
+  final auth = AuthService(
+    client: MockClient(
+      (_) async => http.Response(
+        '{"status":"success","token":"test","usuario":{"id":3},"desarrollo_activo":{"id":4,"nombre":"Runa"}}',
+        200,
+      ),
+    ),
+  );
+  await auth.login('agente', 'password');
+  return auth;
+}
+
+class _OfflineCatalogService extends ProspectsService {
+  _OfflineCatalogService({required super.auth});
+
+  @override
+  Future<List<Map<String, dynamic>>> catalog(String name) async =>
+      throw const ProspectsRecoverableException('Sin conexión');
+
+  @override
+  Future<List<Map<String, dynamic>>> availableLots([
+    int? developmentId,
+  ]) async => throw const ProspectsRecoverableException('Sin conexión');
+
+  @override
+  Future<int> create(
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async => throw const ProspectsRecoverableException('Sin conexión');
+
+  @override
+  void dispose() {}
+}
+
+class _MemoryCatalogCache extends CatalogCache {
+  final Map<String, List<Map<String, dynamic>>> values = {};
+
+  String _key(LocalScope scope, String name) =>
+      '${scope.userId}:${scope.developmentId}:$name';
+
+  @override
+  Future<List<Map<String, dynamic>>?> read(
+    LocalScope scope,
+    String name,
+  ) async => values[_key(scope, name)];
+
+  @override
+  Future<void> write(
+    LocalScope scope,
+    String name,
+    List<Map<String, dynamic>> rows,
+  ) async => values[_key(scope, name)] = rows;
+}
+
+class _MemoryProspectsCache extends ProspectsCache {
+  final Map<String, List<ProspectRecord>> values = {};
+
+  String _key(LocalScope scope) => '${scope.userId}:${scope.developmentId}';
+
+  @override
+  Future<List<ProspectRecord>> read(LocalScope scope) async =>
+      values[_key(scope)] ?? const [];
+
+  @override
+  Future<void> replace(
+    LocalScope scope,
+    List<ProspectRecord> prospects,
+  ) async => values[_key(scope)] = prospects;
+
+  @override
+  Future<void> upsert(LocalScope scope, ProspectRecord prospect) async {
+    final current = [...(values[_key(scope)] ?? const <ProspectRecord>[])];
+    final index = current.indexWhere((item) => item.id == prospect.id);
+    if (index == -1) {
+      current.add(prospect);
+    } else {
+      current[index] = prospect;
+    }
+    values[_key(scope)] = current;
+  }
+}
+
+class _MemoryOutbox extends PendingOperationsStore {
+  final List<PendingOperation> operations = [];
+  int _nextId = 1;
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  Future<int?> enqueue(
+    LocalScope scope, {
+    required String kind,
+    required Map<String, dynamic> payload,
+    int? entityId,
+    String? operationKey,
+  }) async {
+    final id = _nextId++;
+    operations.add(
+      PendingOperation(
+        id: id,
+        scope: scope,
+        operationKey: operationKey ?? 'op-$id',
+        kind: kind,
+        entityId: entityId,
+        payload: payload,
+        createdAt: businessNow(),
+        attemptCount: 0,
+        state: PendingOperationState.pending,
+      ),
+    );
+    return id;
   }
 }

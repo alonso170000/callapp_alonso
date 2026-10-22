@@ -2,30 +2,43 @@ import 'package:flutter/foundation.dart';
 import 'package:callerapp_frontend/data/local/activities_cache.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
+import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
 
 class OutboxService extends ChangeNotifier {
   OutboxService({
     PendingOperationsStore? store,
     AgendaService? agenda,
     ActivitiesCache? activities,
+    ProspectsService? prospects,
+    ProspectsCache? prospectsCache,
     AuthService? auth,
   }) : _store = store ?? PendingOperationsStore(),
        _agenda = agenda ?? AgendaService(auth: auth),
        _activities = activities ?? ActivitiesCache(),
+       _prospects = prospects ?? ProspectsService(auth: auth),
+       _prospectsCache = prospectsCache ?? ProspectsCache(),
        _auth = auth ?? AuthService.instance;
   static final instance = OutboxService();
   final PendingOperationsStore _store;
   final AgendaService _agenda;
   final ActivitiesCache _activities;
+  final ProspectsService _prospects;
+  final ProspectsCache _prospectsCache;
   final AuthService _auth;
   bool _syncing = false;
   List<PendingOperation> _operations = const [];
   bool _initialized = false;
+  int _revision = 0;
 
   bool get isSyncing => _syncing;
+
+  /// Aumenta cada vez que se procesa una operación pendiente. Permite a las
+  /// pantallas distinguir una sincronización real de un vaciado sin trabajo.
+  int get revision => _revision;
   int get pendingCount => _operations
       .where((value) => value.state != PendingOperationState.conflict)
       .length;
@@ -68,27 +81,45 @@ class OutboxService extends ChangeNotifier {
       while (true) {
         final queue = await _store.read(current);
         PendingOperation? operation;
+        var orphan = false;
         for (final candidate in queue) {
           if (candidate.state == PendingOperationState.conflict) continue;
-          final waitingForCreation =
-              candidate.entityId != null &&
-              candidate.entityId! < 0 &&
-              candidate.kind != 'agenda.create' &&
-              queue.any(
-                (value) =>
-                    value.kind == 'agenda.create' &&
-                    value.entityId == candidate.entityId,
-              );
-          if (!waitingForCreation) {
+          final references = _temporaryReferences(candidate);
+          if (references.isEmpty) {
             operation = candidate;
             break;
           }
+          final waitingForCreation = references.any(
+            (temporaryId) => queue.any(
+              (value) =>
+                  (value.kind == 'agenda.create' ||
+                      value.kind == 'prospect.create') &&
+                  value.state != PendingOperationState.conflict &&
+                  value.entityId == temporaryId,
+            ),
+          );
+          if (waitingForCreation) continue;
+          operation = candidate;
+          orphan = true;
+          break;
         }
         if (operation == null) break;
+        if (orphan) {
+          _revision++;
+          await _store.markConflict(
+            operation,
+            'El registro local del que depende no se pudo crear.',
+          );
+          continue;
+        }
+        _revision++;
         await _store.markSyncing(operation);
         try {
           await _execute(operation);
-          if (operation.kind != 'agenda.create') await _store.remove(operation);
+          if (operation.kind != 'agenda.create' &&
+              operation.kind != 'prospect.create') {
+            await _store.remove(operation);
+          }
         } on AgendaSessionException {
           await _store.markPending(
             operation,
@@ -101,6 +132,30 @@ class OutboxService extends ChangeNotifier {
         } on AgendaBusinessException catch (error) {
           await _store.markConflict(operation, error.message);
           await _restoreRemote(operation);
+        } on ProspectsSessionException {
+          await _store.markPending(
+            operation,
+            'La sesión debe renovarse para sincronizar.',
+          );
+          break;
+        } on ProspectsRecoverableException catch (error) {
+          await _store.markPending(operation, error.message);
+          break;
+        } on ProspectsBusinessException catch (error) {
+          await _store.markConflict(operation, error.message);
+          await _restoreRemote(operation);
+        } on AgendaException catch (error) {
+          await _store.markConflict(operation, error.message);
+          await _restoreRemote(operation);
+        } on ProspectsException catch (error) {
+          await _store.markConflict(operation, error.message);
+          await _restoreRemote(operation);
+        } catch (_) {
+          await _store.markPending(
+            operation,
+            'No se pudo sincronizar este cambio.',
+          );
+          break;
         }
       }
     } finally {
@@ -109,23 +164,74 @@ class OutboxService extends ChangeNotifier {
     }
   }
 
-  Future<void> _restoreRemote(PendingOperation operation) async {
-    final id = operation.entityId;
-    if (id == null) return;
-    try {
-      if (id < 0) {
-        await _activities.remove(operation.scope, id);
+  /// Ids temporales (negativos) a los que apunta la operación. Solo se miran
+  /// claves que representan identificadores para no confundir valores de
+  /// negocio con ids locales.
+  Set<int> _temporaryReferences(PendingOperation operation) {
+    final result = <int>{};
+    bool isIdKey(String? key) =>
+        key == null || key == 'id' || key.endsWith('_id');
+
+    void collect(dynamic value, [String? key]) {
+      if (value is int && value < 0 && isIdKey(key)) {
+        result.add(value);
         return;
       }
-      final remote = await _agenda.fetch();
-      final matches = remote.where((activity) => activity.id == id);
-      if (matches.isEmpty) {
-        await _activities.remove(operation.scope, id);
-      } else {
-        await _activities.upsert(operation.scope, matches.first);
+      if (value is List) {
+        for (final item in value) {
+          collect(item, key);
+        }
+      } else if (value is Map) {
+        for (final entry in value.entries) {
+          collect(entry.value, '${entry.key}');
+        }
       }
+    }
+
+    collect(operation.payload);
+    if (operation.entityId case final id? when id < 0) result.add(id);
+    if (operation.kind == 'agenda.create' ||
+        operation.kind == 'prospect.create') {
+      result.remove(operation.entityId);
+    }
+    return result;
+  }
+
+  Future<bool> _restoreRemote(PendingOperation operation) async {
+    final id = operation.entityId;
+    if (id == null) return false;
+    try {
+      if (id < 0) {
+        if (operation.kind.startsWith('prospect.')) {
+          await _prospectsCache.remove(operation.scope, id);
+        } else {
+          await _activities.remove(operation.scope, id);
+        }
+        return true;
+      }
+      if (operation.kind.startsWith('prospect.')) {
+        final remote = await _prospects.fetch();
+        final matches = remote.where((prospect) => prospect.id == id);
+        if (matches.isEmpty) {
+          await _prospectsCache.remove(operation.scope, id);
+        } else {
+          await _prospectsCache.upsert(operation.scope, matches.first);
+        }
+      } else {
+        final remote = await _agenda.fetch();
+        final matches = remote.where((activity) => activity.id == id);
+        if (matches.isEmpty) {
+          await _activities.remove(operation.scope, id);
+        } else {
+          await _activities.upsert(operation.scope, matches.first);
+        }
+      }
+      return true;
     } on AgendaException {
       // El conflicto queda visible y el siguiente refresh reintentará restaurar.
+      return false;
+    } on ProspectsException {
+      return false;
     }
   }
 
@@ -159,6 +265,34 @@ class OutboxService extends ChangeNotifier {
         await _agenda.cancel(id!, operationKey: operation.operationKey);
       case 'agenda.delete':
         await _agenda.delete(id!, operationKey: operation.operationKey);
+      case 'prospect.create':
+        final serverId = await _prospects.create(
+          Map<String, dynamic>.from(operation.payload['fields'] as Map),
+          operationKey: operation.operationKey,
+        );
+        await _store.remapProspectId(
+          operation,
+          temporaryId: id!,
+          serverId: serverId,
+        );
+      case 'prospect.update':
+        await _prospects.update(
+          id!,
+          Map<String, dynamic>.from(operation.payload['fields'] as Map),
+          operationKey: operation.operationKey,
+        );
+      case 'prospect.follow_up':
+        await _prospects.createFollowUp(
+          id!,
+          Map<String, dynamic>.from(operation.payload['fields'] as Map),
+          operationKey: operation.operationKey,
+        );
+      case 'prospect.discovery':
+        await _prospects.saveDiscoverySection(
+          id!,
+          Map<String, dynamic>.from(operation.payload['fields'] as Map),
+          operationKey: operation.operationKey,
+        );
     }
   }
 
@@ -166,10 +300,31 @@ class OutboxService extends ChangeNotifier {
     if (operation.scope != _scope) return;
     await _store.retryConflict(operation);
     await flush();
+    final unresolved = _operations.where(
+      (value) =>
+          value.id == operation.id &&
+          value.state == PendingOperationState.conflict,
+    );
+    if (unresolved.isNotEmpty) {
+      final message =
+          unresolved.first.lastError ??
+          'El servidor volvió a rechazar el cambio.';
+      throw operation.kind.startsWith('prospect.')
+          ? ProspectsBusinessException(message)
+          : AgendaBusinessException(message);
+    }
   }
 
   Future<void> discard(PendingOperation operation) async {
     if (operation.scope != _scope) return;
+    final restored = await _restoreRemote(operation);
+    if (!restored) {
+      const message =
+          'No se pudo recuperar la versión del servidor. Intenta nuevamente.';
+      throw operation.kind.startsWith('prospect.')
+          ? const ProspectsRecoverableException(message)
+          : const AgendaRecoverableException(message);
+    }
     await _store.remove(operation);
     await load();
   }

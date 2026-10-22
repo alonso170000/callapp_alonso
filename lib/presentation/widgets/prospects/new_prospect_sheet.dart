@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/presentation/models/first_follow_up_schedule.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/validators/prospect_validators.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class NewProspectSheet extends StatefulWidget {
-  const NewProspectSheet({super.key, this.service});
+  const NewProspectSheet({super.key, this.service, this.repository});
   final ProspectsService? service;
+  final ProspectsRepository? repository;
 
   @override
   State<NewProspectSheet> createState() => _NewProspectSheetState();
@@ -33,6 +37,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     'Pasó a TO': false,
   };
   late final ProspectsService _service;
+  late final ProspectsRepository _repository;
   List<Map<String, dynamic>> _origins = [], _statuses = [];
   List<Map<String, dynamic>> _lots = [];
   int? _origin, _status;
@@ -49,10 +54,12 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   TimeOfDay _activityTime = const TimeOfDay(hour: 12, minute: 30);
   bool _loading = true, _saving = false;
   String? _error;
+  String? _scheduleError;
   @override
   void initState() {
     super.initState();
     _service = widget.service ?? ProspectsService();
+    _repository = widget.repository ?? ProspectsRepository(service: _service);
     _loadCatalogs();
   }
 
@@ -62,39 +69,33 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       _error = null;
     });
     try {
-      final catalogs = await Future.wait([
-        _service.catalog('canales'),
-        _service.catalog('estatus-prospecto'),
-        _service.availableLots(),
-      ]);
+      final catalogs = await _repository.loadCatalogs();
       if (!mounted) return;
-      if (catalogs[0].isEmpty || catalogs[1].isEmpty) {
-        throw const ProspectsException(
-          'No hay orígenes o estatus disponibles.',
-        );
-      }
-      if (_service.activeDevelopment?['id'] is! int) {
-        throw const ProspectsException(
-          'No hay un desarrollo activo en la sesión.',
-        );
-      }
       setState(() {
-        _origins = catalogs[0];
-        _statuses = catalogs[1];
-        _lots = catalogs[2];
+        _origins = catalogs.origins;
+        _statuses = catalogs.statuses;
+        _lots = catalogs.lots;
         _origin = _origins.first['id'] as int;
-        _status =
-            (_statuses
-                        .where(
-                          (s) =>
-                              (s['nombre'] as String).toLowerCase() == 'nuevo',
-                        )
-                        .firstOrNull ??
-                    _statuses.first)['id']
-                as int;
+        _status = _statuses.isEmpty
+            ? null
+            : (_statuses
+                          .where(
+                            (s) =>
+                                (s['nombre'] as String).toLowerCase() ==
+                                'nuevo',
+                          )
+                          .firstOrNull ??
+                      _statuses.first)['id']
+                  as int;
       });
-    } on ProspectsException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+    } on ProspectsException {
+      if (mounted) {
+        setState(
+          () => _error =
+              'No pudimos cargar los orígenes. Conéctate una vez para '
+              'descargarlos; después podrás crear prospectos sin conexión.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -106,30 +107,38 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       controller.dispose();
     }
     if (widget.service == null) _service.dispose();
+    if (widget.repository == null) _repository.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (_saving ||
-        _origin == null ||
-        _status == null ||
-        !_form.currentState!.validate()) {
+    if (_saving || _origin == null || !_form.currentState!.validate()) {
       return;
     }
     String text(String name) => _fields[name]!.text.trim();
+    final scheduledAt = DateTime(
+      _activityDate.year,
+      _activityDate.month,
+      _activityDate.day,
+      _activityTime.hour,
+      _activityTime.minute,
+    );
+    final followUp = FirstFollowUpSchedule.fromBusinessTime(
+      scheduledAt,
+      reminderBefore: Duration(minutes: _reminderMinutes),
+    );
+    final scheduleError = _firstFollowUp ? followUp.validationError() : null;
+    if (scheduleError != null) {
+      setState(() => _scheduleError = scheduleError);
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
+      _scheduleError = null;
     });
     try {
-      final scheduledAt = DateTime(
-        _activityDate.year,
-        _activityDate.month,
-        _activityDate.day,
-        _activityTime.hour,
-        _activityTime.minute,
-      );
-      await _service.create({
+      final fields = <String, dynamic>{
         'nombre': text('Nombre'),
         'correo': text('Email'),
         'telefono_normalizado': text('Teléfono').replaceAll(RegExp(r'\D'), ''),
@@ -138,17 +147,15 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         'ocupacion': text('Ocupación'),
         'comentario': text('Comentarios acerca del prospecto'),
         'canal_id': _origin,
-        'estatus_id': _status,
+        if (_status != null) 'estatus_id': _status,
         'prioridad': _priority,
         if (_lot != 0) 'lote_id': _lot,
         'desarrollo_interes_id': _service.activeDevelopment?['id'],
         if (_firstFollowUp)
           'primer_seguimiento': {
             'tipo': _activityType,
-            'programada_at': scheduledAt.toIso8601String(),
-            'recordatorio_at': scheduledAt
-                .subtract(Duration(minutes: _reminderMinutes))
-                .toIso8601String(),
+            'programada_at': followUp.programadaAt,
+            'recordatorio_at': followUp.recordatorioAt,
             if (_activityType != 'visita_presencial' ||
                 text('Descripción del primer seguimiento').isNotEmpty)
               'descripcion': text('Descripción del primer seguimiento'),
@@ -164,7 +171,54 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
           if (_qualification['Dinero']!) 'dinero',
           if (_qualification['Pasó a TO']!) 'paso_to',
         ],
-      });
+      };
+      final status = _status == null
+          ? null
+          : _statuses.firstWhere((item) => item['id'] == _status);
+      final origin = _origins.firstWhere((item) => item['id'] == _origin);
+      final optimistic = ProspectRecord(
+        name: text('Nombre'),
+        phone: text('Teléfono'),
+        email: text('Email'),
+        city: text('Ciudad'),
+        company: text('Empresa donde trabaja'),
+        occupation: text('Ocupación'),
+        comments: text('Comentarios acerca del prospecto'),
+        status: status?['nombre'] as String? ?? 'Nuevo',
+        temperature: switch (_priority) {
+          'frio' => 'Frío',
+          'tibio' => 'Tibio',
+          _ => 'Caliente',
+        },
+        avatarColor: const Color(0xFFBF4242),
+        statusColor: const Color(0xFFFFA3A6),
+        origin: origin['nombre'] as String? ?? '',
+        channelId: _origin,
+        statusId: _status,
+        interestDevelopmentId: _service.activeDevelopment?['id'] as int?,
+        interestLotId: _lot == 0 ? null : _lot,
+        qualification: [
+          if (_qualification['Decisión']!) 'decision',
+          if (_qualification['Disposición']!) 'disposicion',
+          if (_qualification['Dinero']!) 'dinero',
+          if (_qualification['Pasó a TO']!) 'paso_to',
+        ],
+      );
+      final result = widget.repository == null && widget.service != null
+          ? null
+          : await _repository.create(fields, optimisticProspect: optimistic);
+      if (result == null) {
+        await _service.create(fields);
+      }
+      if (mounted && result?.isPending == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Prospecto guardado. Se sincronizará cuando haya conexión.',
+            ),
+          ),
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -257,7 +311,12 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       firstDate: DateUtils.dateOnly(DateTime.now()),
       lastDate: DateTime.now().add(const Duration(days: 3650)),
     );
-    if (mounted && selected != null) setState(() => _activityDate = selected);
+    if (mounted && selected != null) {
+      setState(() {
+        _activityDate = selected;
+        _scheduleError = null;
+      });
+    }
   }
 
   Future<void> _selectActivityTime() async {
@@ -265,7 +324,12 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       context: context,
       initialTime: _activityTime,
     );
-    if (mounted && selected != null) setState(() => _activityTime = selected);
+    if (mounted && selected != null) {
+      setState(() {
+        _activityTime = selected;
+        _scheduleError = null;
+      });
+    }
   }
 
   Widget _heading(String title) => Padding(
@@ -376,7 +440,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                         color: AppColors.primaryColor,
                         backgroundColor: Theme.of(context).colorScheme.surface,
                       ),
-                    if (_origins.isNotEmpty && _statuses.isNotEmpty) ...[
+                    if (_origins.isNotEmpty) ...[
                       _dropdown<int>(
                         'Origen*',
                         _origin!,
@@ -386,15 +450,18 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                             _origins.firstWhere((v) => v['id'] == id)['nombre']
                                 as String,
                       ),
-                      _dropdown<int>(
-                        'Status*',
-                        _status!,
-                        _statuses.map((v) => v['id'] as int).toList(),
-                        (v) => _status = v,
-                        format: (id) =>
-                            _statuses.firstWhere((v) => v['id'] == id)['nombre']
-                                as String,
-                      ),
+                      if (_statuses.isNotEmpty)
+                        _dropdown<int>(
+                          'Status*',
+                          _status!,
+                          _statuses.map((v) => v['id'] as int).toList(),
+                          (v) => _status = v,
+                          format: (id) =>
+                              _statuses.firstWhere(
+                                    (v) => v['id'] == id,
+                                  )['nombre']
+                                  as String,
+                        ),
                       _dropdown<String>(
                         'Prioridad*',
                         _priority,
@@ -457,7 +524,10 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                         '¿Agendar primer seguimiento?',
                         _firstFollowUp,
                         const [false, true],
-                        (value) => _firstFollowUp = value,
+                        (value) {
+                          _firstFollowUp = value;
+                          _scheduleError = null;
+                        },
                         format: (value) =>
                             value ? 'Sí, agregar seguimiento' : 'No, por ahora',
                       ),
@@ -516,7 +586,10 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                         'Recordatorio*',
                         _reminderMinutes,
                         const [5, 15, 30, 60],
-                        (value) => _reminderMinutes = value,
+                        (value) {
+                          _reminderMinutes = value;
+                          _scheduleError = null;
+                        },
                         format: (value) => '$value minutos antes',
                       ),
                       _field(
@@ -540,39 +613,57 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
               ),
             ),
             padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF696969),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                if (_scheduleError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _scheduleError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                      textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                     ),
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    key: const ValueKey('save-prospect'),
-                    onPressed: _saving || _loading || _origin == null
-                        ? null
-                        : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF008FA0),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF696969),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          textStyle: const TextStyle(fontFamily: 'BebasNeue'),
+                        ),
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
                       ),
-                      textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                     ),
-                    child: Text(_saving ? 'Guardando…' : 'Guardar'),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        key: const ValueKey('save-prospect'),
+                        onPressed: _saving || _loading || _origin == null
+                            ? null
+                            : _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF008FA0),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          textStyle: const TextStyle(fontFamily: 'BebasNeue'),
+                        ),
+                        child: Text(_saving ? 'Guardando…' : 'Guardar'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

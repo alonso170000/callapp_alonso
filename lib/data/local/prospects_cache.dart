@@ -52,6 +52,31 @@ class ProspectsCache {
     });
   }
 
+  Future<void> upsert(LocalScope scope, ProspectRecord prospect) async {
+    if (prospect.id == null) return;
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
+    await database.insert(
+      'cached_prospects',
+      ProspectCacheMapper.toRow(
+        prospect,
+        userId: scope.userId,
+        developmentId: scope.developmentId,
+      ),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> remove(LocalScope scope, int prospectId) async {
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
+    await database.delete(
+      'cached_prospects',
+      where: 'user_id = ? AND development_id = ? AND prospect_id = ?',
+      whereArgs: [scope.userId, scope.developmentId, prospectId],
+    );
+  }
+
   /// Momento de la última actualización confirmada, o `null` si no hay caché.
   Future<DateTime?> cachedAt(LocalScope scope) async {
     final database = await _database.databaseOrNull;

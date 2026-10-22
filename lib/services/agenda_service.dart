@@ -35,6 +35,10 @@ class AgendaService {
   final http.Client _client;
   final AuthService _auth;
 
+  /// Las mutaciones no deben dejar la interfaz bloqueada mucho tiempo cuando
+  /// no hay red; se degrada a la cola local cuanto antes.
+  static const _mutationTimeout = Duration(seconds: 12);
+
   Future<void> complete(int id, {String? operationKey}) =>
       _changeStatus(id, 'completada', operationKey: operationKey);
 
@@ -47,7 +51,9 @@ class AgendaService {
     String? operationKey,
   }) async {
     final token = _auth.token;
-    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    if (token == null) {
+      throw const AgendaSessionException('Inicia sesión nuevamente.');
+    }
     try {
       final response = await _client
           .patch(
@@ -60,9 +66,14 @@ class AgendaService {
             },
             body: jsonEncode({'estado': status}),
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(_mutationTimeout);
       final data = _decode(response);
       await _ensureSession(response, data);
+      if (_idempotencyInProgress(response, data)) {
+        throw const AgendaRecoverableException(
+          'El servidor todavía procesa la operación. Se reintentará.',
+        );
+      }
       if (response.statusCode >= 500) {
         throw const AgendaRecoverableException(
           'El servidor no pudo actualizar la actividad. Se reintentará.',
@@ -94,7 +105,9 @@ class AgendaService {
 
   Future<void> delete(int id, {String? operationKey}) async {
     final token = _auth.token;
-    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    if (token == null) {
+      throw const AgendaSessionException('Inicia sesión nuevamente.');
+    }
     try {
       final response = await _client
           .delete(
@@ -105,9 +118,14 @@ class AgendaService {
               'Idempotency-Key': ?operationKey,
             },
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(_mutationTimeout);
       final data = _decode(response);
       await _ensureSession(response, data);
+      if (_idempotencyInProgress(response, data)) {
+        throw const AgendaRecoverableException(
+          'El servidor todavía procesa la operación. Se reintentará.',
+        );
+      }
       if (response.statusCode >= 500) {
         throw const AgendaRecoverableException(
           'El servidor no pudo eliminar la actividad. Se reintentará.',
@@ -142,7 +160,9 @@ class AgendaService {
     String? operationKey,
   }) async {
     final token = _auth.token;
-    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    if (token == null) {
+      throw const AgendaSessionException('Inicia sesión nuevamente.');
+    }
     try {
       final response = await _client
           .post(
@@ -155,9 +175,14 @@ class AgendaService {
             },
             body: jsonEncode(fields),
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(_mutationTimeout);
       final data = _decode(response);
       await _ensureSession(response, data);
+      if (_idempotencyInProgress(response, data)) {
+        throw const AgendaRecoverableException(
+          'El servidor todavía procesa la operación. Se reintentará.',
+        );
+      }
       if (response.statusCode >= 500) {
         throw const AgendaRecoverableException(
           'No se pudo guardar la actividad. Intenta nuevamente.',
@@ -188,7 +213,9 @@ class AgendaService {
           type: type,
           medium: fields['medio'] as String?,
           title: type.toUpperCase(),
-          prospect: fields['prospecto_id'] == null ? 'Actividad personal' : 'Prospecto',
+          prospect: fields['prospecto_id'] == null
+              ? 'Actividad personal'
+              : 'Prospecto',
           description: fields['descripcion'] as String? ?? 'Sin descripción',
           date: businessTimeFromInstant(instant),
           status: AgendaStatus.pending,
@@ -216,7 +243,9 @@ class AgendaService {
     String? operationKey,
   }) async {
     final token = _auth.token;
-    if (token == null) throw const AgendaException('Inicia sesión nuevamente.');
+    if (token == null) {
+      throw const AgendaSessionException('Inicia sesión nuevamente.');
+    }
     try {
       final response = await _client
           .put(
@@ -229,9 +258,14 @@ class AgendaService {
             },
             body: jsonEncode(fields),
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(_mutationTimeout);
       final data = _decode(response);
       await _ensureSession(response, data);
+      if (_idempotencyInProgress(response, data)) {
+        throw const AgendaRecoverableException(
+          'El servidor todavía procesa la operación. Se reintentará.',
+        );
+      }
       if (response.statusCode >= 500) {
         throw const AgendaRecoverableException(
           'El servidor no pudo editar la actividad. Se reintentará.',
@@ -332,13 +366,31 @@ class AgendaService {
     }
   }
 
-  static dynamic _decode(http.Response response) =>
-      jsonDecode(utf8.decode(response.bodyBytes));
+  /// Decodifica el cuerpo sin fallar antes de mirar el código HTTP: un proxy o
+  /// el servidor pueden responder HTML en los errores. Un 2xx ilegible sigue
+  /// siendo una confirmación indeterminada, igual que antes.
+  static dynamic _decode(http.Response response) {
+    try {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } on FormatException {
+      if (response.statusCode >= 200 && response.statusCode < 300) rethrow;
+      return null;
+    }
+  }
+
+  /// El backend responde 409 mientras una operación con la misma clave de
+  /// idempotencia sigue en proceso; es transitorio y debe reintentarse.
+  static bool _idempotencyInProgress(http.Response response, dynamic data) =>
+      response.statusCode == 409 &&
+      data is Map &&
+      data['message'] is String &&
+      (data['message'] as String).contains('en proceso');
 
   Future<void> _ensureSession(http.Response response, dynamic data) async {
     final sessionFailure =
-        data is Map &&
-        (data['status'] == 'error' || data['code'] == 'TOKEN_EXPIRED');
+        response.statusCode == 401 ||
+        (data is Map &&
+            (data['status'] == 'error' || data['code'] == 'TOKEN_EXPIRED'));
     if (!sessionFailure) return;
     await _auth.expireSession();
     throw const AgendaSessionException(

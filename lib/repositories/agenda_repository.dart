@@ -78,6 +78,7 @@ class AgendaRepository {
         operationKey: key,
         payload: {'fields': fields, 'local_activity': _activityJson(local)},
       );
+      unawaited(OutboxService.instance.flush());
       return AgendaMutationResult(AgendaMutationState.pending, activity: local);
     }
   }
@@ -142,6 +143,7 @@ class AgendaRepository {
         operationKey: key,
         payload: const {},
       );
+      unawaited(OutboxService.instance.flush());
       return const AgendaMutationResult(AgendaMutationState.pending);
     }
   }
@@ -169,6 +171,7 @@ class AgendaRepository {
         operationKey: key,
         payload: payload,
       );
+      unawaited(OutboxService.instance.flush());
       return AgendaMutationResult(
         AgendaMutationState.pending,
         activity: optimistic,
@@ -191,6 +194,7 @@ class AgendaRepository {
         operationKey: key,
         payload: payload,
       );
+      unawaited(OutboxService.instance.flush());
       return AgendaMutationResult(
         AgendaMutationState.pending,
         activity: optimistic,

@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 
 class ProspectDataForm extends StatefulWidget {
   final ProspectRecord prospect;
   final ValueChanged<String> onSaved;
   final ProspectsService? prospectsService;
+  final ProspectsRepository? repository;
 
   const ProspectDataForm({
     super.key,
     required this.prospect,
     required this.onSaved,
     this.prospectsService,
+    this.repository,
   });
 
   @override
@@ -34,6 +37,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   Map<String, String>? _saved;
   int? _savedDevelopmentId, _savedLotId;
   late final ProspectsService _service;
+  late final ProspectsRepository _repository;
   List<Map<String, dynamic>> _developments = const [];
   List<Map<String, dynamic>> _lots = const [];
   late int? _developmentId = widget.prospect.interestDevelopmentId;
@@ -46,20 +50,21 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   void initState() {
     super.initState();
     _service = widget.prospectsService ?? ProspectsService();
+    _repository = widget.repository ?? ProspectsRepository(service: _service);
     _loadInterests();
   }
 
   Future<void> _loadInterests() async {
     setState(() => _loading = true);
     try {
-      final developments = await _service.availableDevelopments();
+      final developments = await _repository.loadDevelopments();
       if (!mounted) return;
       _developmentId ??= developments.length == 1
           ? developments.single['id'] as int
           : null;
       final lots = _developmentId == null
           ? <Map<String, dynamic>>[]
-          : await _service.availableLots(_developmentId);
+          : await _repository.loadLots(_developmentId!);
       if (mounted) {
         setState(() {
           _developments = developments;
@@ -89,6 +94,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       controller.dispose();
     }
     if (widget.prospectsService == null) _service.dispose();
+    if (widget.repository == null) _repository.dispose();
     super.dispose();
   }
 
@@ -203,7 +209,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       _error = null;
     });
     try {
-      await _service.update(widget.prospect.id!, {
+      final fields = <String, dynamic>{
         'nombre': _name.text.trim(),
         'ciudad': _city.text.trim(),
         'telefono_normalizado': _phone.text.replaceAll(RegExp(r'\D'), ''),
@@ -217,7 +223,28 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         'calificacion': widget.prospect.qualification,
         'desarrollo_interes_id': _developmentId,
         'lote_id': _lotId,
-      });
+      };
+      final optimistic = widget.prospect.copyWith(
+        name: _name.text.trim(),
+        city: _city.text.trim(),
+        phone: _phone.text.trim(),
+        email: _email.text.trim(),
+        company: _company.text.trim(),
+        occupation: _occupation.text.trim(),
+        interestDevelopmentId: _developmentId,
+        interestLotId: _lotId,
+      );
+      final result =
+          widget.repository == null && widget.prospectsService != null
+          ? null
+          : await _repository.update(
+              widget.prospect,
+              fields,
+              optimisticProspect: optimistic,
+            );
+      if (result == null) {
+        await _service.update(widget.prospect.id!, fields);
+      }
       _saved = {
         'name': _name.text.trim(),
         'city': _city.text.trim(),
@@ -232,7 +259,13 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       if (!mounted) return;
       widget.onSaved('Prospecto · Datos actualizados');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Datos del prospecto actualizados.')),
+        SnackBar(
+          content: Text(
+            result?.isPending == true
+                ? 'Datos guardados. Se sincronizarán cuando haya conexión.'
+                : 'Datos del prospecto actualizados.',
+          ),
+        ),
       );
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -303,7 +336,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                     });
                     if (value != null) {
                       try {
-                        final lots = await _service.availableLots(value);
+                        final lots = await _repository.loadLots(value);
                         if (mounted) setState(() => _lots = lots);
                       } on ProspectsException catch (error) {
                         if (mounted) setState(() => _error = error.message);

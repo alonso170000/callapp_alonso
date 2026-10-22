@@ -16,6 +16,12 @@ import 'package:callerapp_frontend/services/business_clock.dart';
 
 import 'home_dashboard_widgets.dart';
 
+class HomeDashboardController {
+  VoidCallback? _refresh;
+  void refresh() => _refresh?.call();
+  void dispose() => _refresh = null;
+}
+
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({
     super.key,
@@ -26,6 +32,8 @@ class HomeDashboard extends StatefulWidget {
     required this.onAddProspect,
     this.loadActivities,
     this.loadProspects,
+    this.syncStatus,
+    this.controller,
   });
   final bool active;
   final void Function(DateTime, Set<int>, String) onAgenda;
@@ -34,6 +42,8 @@ class HomeDashboard extends StatefulWidget {
   final VoidCallback onAddProspect;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final Future<List<ProspectRecord>> Function()? loadProspects;
+  final Widget? syncStatus;
+  final HomeDashboardController? controller;
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
 }
@@ -80,19 +90,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
   @override
   void initState() {
     super.initState();
+    widget.controller?._refresh = _load;
     AuthService.instance.addListener(_sessionChanged);
-    _load();
-  }
-
-  void _sessionChanged() {
-    _data = null;
     _load();
   }
 
   @override
   void didUpdateWidget(covariant HomeDashboard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._refresh = null;
+      widget.controller?._refresh = _load;
+    }
     if (widget.active && !oldWidget.active) _load();
+  }
+
+  void _sessionChanged() {
+    _data = null;
+    _load();
   }
 
   Future<void> _load() async {
@@ -203,6 +218,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   void dispose() {
+    widget.controller?._refresh = null;
     AuthService.instance.removeListener(_sessionChanged);
     _agenda.dispose();
     _prospects.dispose();
@@ -311,6 +327,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   userName: AuthService.instance.userName,
                   onNotificationActivity: widget.onActivity,
                 ),
+                if (widget.syncStatus != null) widget.syncStatus!,
                 if (_loading)
                   LinearProgressIndicator(
                     color: Theme.of(context).colorScheme.primary,

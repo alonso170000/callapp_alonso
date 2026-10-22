@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class _FollowUpActivityDraft {
@@ -27,6 +28,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final ProspectRecord prospect;
   final ValueChanged<String> onSaved;
   final ProspectsService? prospectsService;
+  final ProspectsRepository? repository;
   final bool telephoneCallCompleted;
   final AgendaActivity? sourceActivity;
   final Future<List<AgendaActivity>> Function()? loadActivities;
@@ -36,6 +38,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     required this.prospect,
     required this.onSaved,
     this.prospectsService,
+    this.repository,
     this.telephoneCallCompleted = false,
     this.sourceActivity,
     this.loadActivities,
@@ -50,6 +53,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   final _activityDescription = TextEditingController();
   final _activityForm = GlobalKey<FormState>();
   late final ProspectsService _service;
+  late final ProspectsRepository _repository;
   late final AgendaService _agendaService;
   String _status = 'Nuevo';
   late String _method;
@@ -81,6 +85,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   void initState() {
     super.initState();
     _service = widget.prospectsService ?? ProspectsService();
+    _repository = widget.repository ?? ProspectsRepository(service: _service);
     _agendaService = AgendaService();
     _method = widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp';
     if (widget.sourceActivity?.medium != null) {
@@ -101,6 +106,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _notes.dispose();
     _activityDescription.dispose();
     if (widget.prospectsService == null) _service.dispose();
+    if (widget.repository == null) _repository.dispose();
     _agendaService.dispose();
     super.dispose();
   }
@@ -423,7 +429,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     };
     try {
       final activity = _schedule ? _activityDraft : null;
-      await _service.createFollowUp(widget.prospect.id!, {
+      final fields = <String, dynamic>{
         'estatus': _status,
         'prioridad': priority,
         'medio': contactMedium,
@@ -444,7 +450,14 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               ),
             ),
           },
-      });
+      };
+      final result =
+          widget.repository == null && widget.prospectsService != null
+          ? null
+          : await _repository.createFollowUp(widget.prospect, fields);
+      if (result == null) {
+        await _service.createFollowUp(widget.prospect.id!, fields);
+      }
       _saved = {
         'status': _status,
         'method': _method,
@@ -461,7 +474,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              activity == null
+              result?.isPending == true
+                  ? 'Seguimiento guardado. Se sincronizará cuando haya conexión.'
+                  : activity == null
                   ? 'Seguimiento guardado.'
                   : 'Seguimiento y siguiente actividad guardados.',
             ),

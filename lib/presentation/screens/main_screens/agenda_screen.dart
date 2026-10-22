@@ -23,12 +23,15 @@ class AgendaController {
   void showFromHome(DateTime date, Set<int> ids, String label) =>
       _show?.call(date, ids, label);
   VoidCallback? _openNewActivity;
+  VoidCallback? _refresh;
 
   void openNewActivity() => _openNewActivity?.call();
+  void refresh() => _refresh?.call();
   void openActivity(AgendaActivity activity) => _showActivity?.call(activity);
 
   void dispose() {
     _openNewActivity = null;
+    _refresh = null;
     _show = null;
     _showActivity = null;
   }
@@ -39,6 +42,7 @@ class AgendaScreen extends StatefulWidget {
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final Future<List<ProspectRecord>> Function()? loadProspects;
   final ValueChanged<AgendaActivity>? onNotificationActivity;
+  final Widget? syncStatus;
 
   const AgendaScreen({
     super.key,
@@ -46,6 +50,7 @@ class AgendaScreen extends StatefulWidget {
     this.loadActivities,
     this.loadProspects,
     this.onNotificationActivity,
+    this.syncStatus,
   });
 
   @override
@@ -158,6 +163,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void initState() {
     super.initState();
     widget.controller?._openNewActivity = _showNewActivityDialog;
+    widget.controller?._refresh = _load;
     widget.controller?._show = _showFromHome;
     widget.controller?._showActivity = _showActivity;
     AuthService.instance.addListener(_sessionChanged);
@@ -169,9 +175,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._openNewActivity = null;
+      oldWidget.controller?._refresh = null;
       oldWidget.controller?._show = null;
       oldWidget.controller?._showActivity = null;
       widget.controller?._openNewActivity = _showNewActivityDialog;
+      widget.controller?._refresh = _load;
       widget.controller?._show = _showFromHome;
       widget.controller?._showActivity = _showActivity;
     }
@@ -180,6 +188,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   @override
   void dispose() {
     widget.controller?._openNewActivity = null;
+    widget.controller?._refresh = null;
     widget.controller?._show = null;
     widget.controller?._showActivity = null;
     AuthService.instance.removeListener(_sessionChanged);
@@ -706,6 +715,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   onNotificationActivity:
                       widget.onNotificationActivity ?? _showActivity,
                 ),
+                if (widget.syncStatus != null) widget.syncStatus!,
                 const SizedBox(height: 20),
                 if (_loading)
                   LinearProgressIndicator(

@@ -2,7 +2,10 @@ import 'package:callerapp_frontend/data/local/activities_cache.dart';
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
+import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -120,4 +123,71 @@ void main() {
     expect(remaining.entityId, 44);
     expect(remaining.payload['activity_id'], 44);
   });
+
+  test(
+    'recuerda la creación local y consume el alias solo cuando aparece',
+    () async {
+      await store.recordLocallyCreated(first, 100);
+
+      expect(await store.consumeLocallyCreated(first, {7}), isEmpty);
+      expect(await store.consumeLocallyCreated(second, {100}), isEmpty);
+      expect(await store.consumeLocallyCreated(first, {100, 7}), {100});
+      expect(await store.consumeLocallyCreated(first, {100}), isEmpty);
+    },
+  );
+
+  test(
+    'remapea prospecto y toda operación dependiente sin enviar el id temporal',
+    () async {
+      final prospects = ProspectsCache(database: database);
+      await prospects.upsert(
+        first,
+        const ProspectRecord(
+          id: -1,
+          name: 'Local',
+          phone: '9980000000',
+          email: 'local@example.com',
+          status: 'Nuevo',
+          temperature: 'Tibio',
+          avatarColor: Colors.teal,
+          statusColor: Colors.blue,
+        ),
+      );
+      await store.enqueue(
+        first,
+        kind: 'prospect.create',
+        entityId: -1,
+        operationKey: 'create-prospect',
+        payload: const {
+          'fields': <String, dynamic>{},
+          'local_prospect': {'prospect_id': -1},
+        },
+      );
+      await store.enqueue(
+        first,
+        kind: 'prospect.follow_up',
+        entityId: -1,
+        operationKey: 'follow-up',
+        payload: const {
+          'fields': {
+            'actividad': {'prospecto_id': -1},
+          },
+        },
+      );
+
+      final creation = (await store.read(first)).first;
+      await store.remapProspectId(creation, temporaryId: -1, serverId: 88);
+
+      expect((await prospects.read(first)).single.id, 88);
+      final remaining = (await store.read(first)).single;
+      expect(remaining.entityId, 88);
+      expect(remaining.payload.toString(), isNot(contains('-1')));
+      expect(
+        ((remaining.payload['fields'] as Map)['actividad']
+            as Map)['prospecto_id'],
+        88,
+      );
+      expect(await store.consumeLocallyCreated(first, {88}), {88});
+    },
+  );
 }

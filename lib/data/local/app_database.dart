@@ -350,6 +350,20 @@ class AppDatabase {
     return int.tryParse('${rows.single['value']}');
   }
 
+  Future<String?> readMetadata(String key) async {
+    final database = await databaseOrNull;
+    if (database == null) return null;
+    final rows = await database.query(
+      'app_metadata',
+      columns: const ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.single['value'] as String?;
+  }
+
   Future<void> writeMetadata(String key, String value) async {
     final database = await databaseOrNull;
     if (database == null) return;

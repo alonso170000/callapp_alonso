@@ -13,8 +13,9 @@ class _RecordingProspectsService extends ProspectsService {
   @override
   Future<void> createFollowUp(
     int prospectId,
-    Map<String, dynamic> fields,
-  ) async {
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
     this.prospectId = prospectId;
     this.fields = fields;
   }

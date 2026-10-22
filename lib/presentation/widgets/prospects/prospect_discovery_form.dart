@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
@@ -9,13 +11,17 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 class ProspectDiscoveryForm extends StatefulWidget {
   final ValueChanged<String> onSaved;
   final int? prospectId;
+  final ProspectRecord? prospect;
   final ProspectsService? prospectsService;
+  final ProspectsRepository? repository;
 
   const ProspectDiscoveryForm({
     super.key,
     required this.onSaved,
     this.prospectId,
+    this.prospect,
     this.prospectsService,
+    this.repository,
   });
 
   @override
@@ -48,6 +54,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   final _participantsOther = TextEditingController();
   final _additionalNotes = TextEditingController();
   late final ProspectsService _service;
+  late final ProspectsRepository _repository;
   List<Map<String, dynamic>> _lots = const [];
   List<Map<String, dynamic>> _developments = const [];
   List<Map<String, dynamic>> _closers = const [];
@@ -148,6 +155,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   void initState() {
     super.initState();
     _service = widget.prospectsService ?? ProspectsService();
+    _repository = widget.repository ?? ProspectsRepository(service: _service);
     if (widget.prospectId != null) {
       _loadDiscovery();
       _loadDevelopments();
@@ -165,6 +173,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     _participantsOther.dispose();
     _additionalNotes.dispose();
     if (widget.prospectsService == null) _service.dispose();
+    if (widget.repository == null) _repository.dispose();
     super.dispose();
   }
 
@@ -643,10 +652,23 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       _serviceError = null;
     });
     try {
-      await _service.saveDiscoverySection(widget.prospectId!, {
-        'seccion': section,
-        ...fields,
-      });
+      final payload = <String, dynamic>{'seccion': section, ...fields};
+      final prospect = widget.prospect;
+      final result = prospect == null
+          ? null
+          : await _repository.saveDiscoverySection(prospect, payload);
+      if (prospect == null) {
+        await _service.saveDiscoverySection(widget.prospectId!, payload);
+      }
+      if (mounted && result?.isPending == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cambios guardados. Se sincronizarán cuando haya conexión.',
+            ),
+          ),
+        );
+      }
       return true;
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _serviceError = error.message);
