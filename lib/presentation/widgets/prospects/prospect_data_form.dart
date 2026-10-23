@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectDataForm extends StatefulWidget {
   final ProspectRecord prospect;
@@ -107,7 +108,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
     ),
-    errorStyle: const TextStyle(color: Color(0xFF8B1116)),
+    errorStyle: TextStyle(color: AppPalette.of(context).fieldErrorInk),
   );
 
   Widget _field(
@@ -122,7 +123,13 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 15)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            color: AppPalette.of(context).textColor,
+          ),
+        ),
         const SizedBox(height: 3),
         TextFormField(
           controller: controller,
@@ -148,7 +155,13 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 15)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            color: AppPalette.of(context).textColor,
+          ),
+        ),
         const SizedBox(height: 3),
         DropdownButtonFormField<int>(
           initialValue: items.any((item) => item['id'] == value) ? value : null,
@@ -209,6 +222,9 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       _error = null;
     });
     try {
+      final qualification = widget.prospect.qualification
+          .where((value) => value.trim().isNotEmpty)
+          .toList();
       final fields = <String, dynamic>{
         'nombre': _name.text.trim(),
         'ciudad': _city.text.trim(),
@@ -220,7 +236,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         'estatus_id': widget.prospect.statusId,
         'campania_id': widget.prospect.campaignId,
         'comentario': widget.prospect.comments,
-        'calificacion': widget.prospect.qualification,
+        if (qualification.isNotEmpty) 'calificacion': qualification,
         'desarrollo_interes_id': _developmentId,
         'lote_id': _lotId,
       };
@@ -278,7 +294,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(9),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFCED1),
+      color: AppPalette.of(context).dataSurfaceFill,
       borderRadius: BorderRadius.circular(11),
     ),
     child: Form(

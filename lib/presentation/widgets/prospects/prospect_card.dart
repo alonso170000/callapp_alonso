@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
@@ -101,34 +102,7 @@ class ProspectCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: prospect.avatarColor,
-                  child: prospect.id != null
-                      ? ClipOval(
-                          child: prospect.avatarUrl == null
-                              ? const Icon(
-                                  Icons.person,
-                                  color: AppColors.homeWarmText,
-                                )
-                              : Image.network(
-                                  prospect.avatarUrl!,
-                                  width: 32,
-                                  height: 32,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const Icon(
-                                    Icons.person,
-                                    color: AppColors.homeWarmText,
-                                  ),
-                                ),
-                        )
-                      : Image.asset(
-                          'lib/resources/images/Frame.png',
-                          width: 28,
-                          height: 28,
-                          excludeFromSemantics: true,
-                        ),
-                ),
+                ProspectAvatarBadge(prospect: prospect),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Column(

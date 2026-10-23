@@ -40,6 +40,42 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.iconChipForeground,
     required this.warmBannerFill,
     required this.warmBannerForeground,
+    required this.headerBadgeFill,
+    required this.headerBadgeForeground,
+    required this.headerChipFill,
+    required this.headerChipForeground,
+    required this.headerForeground,
+    required this.insertFollowUpFill,
+    required this.insertFollowUpInk,
+    required this.insertDiscoveryFill,
+    required this.insertDiscoveryInk,
+    required this.insertScriptsFill,
+    required this.insertScriptsInk,
+    required this.insertDataFill,
+    required this.insertDataInk,
+    required this.insertHistoryFill,
+    required this.insertHistoryInk,
+    required this.panelArrowFill,
+    required this.panelArrowForeground,
+    required this.panelSyncIcon,
+    required this.panelSyncIconNested,
+    required this.panelSyncAlert,
+    required this.insertChipInk,
+    required this.panelHeaderInk,
+    required this.nestedSurfaceFill,
+    required this.discoverySurfaceFill,
+    required this.dataSurfaceFill,
+    required this.historySurfaceFill,
+    required this.historySurfaceInk,
+    required this.fieldErrorInk,
+    required this.errorSurfaceFill,
+    required this.noticeSurfaceFill,
+    required this.noticeSurfaceInk,
+    required this.historyCardFill,
+    required this.historyCardInk,
+    required this.scriptSurfaceFill,
+    required this.scriptSurfaceInk,
+    required this.textColor,
   });
 
   /// Texto oscuro que se usa sobre las tarjetas pastel en ambos modos.
@@ -94,10 +130,70 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color warmBannerFill;
   final Color warmBannerForeground;
 
+  /// Cromo del encabezado del detalle del prospecto (franja de marca).
+  final Color headerBadgeFill;
+  final Color headerBadgeForeground;
+  final Color headerChipFill;
+  final Color headerChipForeground;
+  final Color headerForeground;
+
+  /// Tarjetas de cada sección del detalle. El relleno es el color de la
+  /// sección y [insert*Ink] el texto que va encima.
+  final Color insertFollowUpFill;
+  final Color insertFollowUpInk;
+  final Color insertDiscoveryFill;
+  final Color insertDiscoveryInk;
+  final Color insertScriptsFill;
+  final Color insertScriptsInk;
+  final Color insertDataFill;
+  final Color insertDataInk;
+  final Color insertHistoryFill;
+  final Color insertHistoryInk;
+
+  /// Botón de plegado de los paneles del detalle.
+  final Color panelArrowFill;
+  final Color panelArrowForeground;
+
+  /// Texto del chip de sección cuando está seleccionado.
+  final Color insertChipInk;
+
+  /// Tinta de los títulos de los paneles anidados, que siempre van sobre un
+  /// encabezado de color saturado en ambos modos.
+  final Color panelHeaderInk;
+
+  /// Superficies internas de los paneles anidados de cada sección.
+  final Color nestedSurfaceFill;
+  final Color discoverySurfaceFill;
+  final Color dataSurfaceFill;
+  final Color historySurfaceFill;
+  final Color historySurfaceInk;
+
+  /// Texto de error de los formularios.
+  final Color fieldErrorInk;
+
+  /// Avisos dentro de los formularios (error y recordatorio cálido).
+  final Color errorSurfaceFill;
+  final Color noticeSurfaceFill;
+  final Color noticeSurfaceInk;
+
+  /// Tarjetas dentro de la superficie del historial de contactos.
+  final Color historyCardFill;
+  final Color historyCardInk;
+
+  /// "Papel" de los guiones de llamada y la tinta de sus títulos.
+  final Color scriptSurfaceFill;
+  final Color scriptSurfaceInk;
+
+  /// Icono de estado de sincronización de los paneles.
+  final Color panelSyncIcon;
+  final Color panelSyncIconNested;
+  final Color panelSyncAlert;
+  final Color textColor;
+
   static const AppPalette light = AppPalette(
     cardInk: Colors.black,
     brandFill: AppColors.primaryColor,
-    onBrand: AppColors.whiteColor,
+    onBrand: AppColors.accentColor,
     selectedFill: AppColors.primaryColor,
     selectedForeground: AppColors.homeBackground,
     todayFill: AppColors.homeGreenToday,
@@ -128,12 +224,48 @@ class AppPalette extends ThemeExtension<AppPalette> {
     iconChipForeground: AppColors.primaryColor,
     warmBannerFill: Color(0xFFE9EECA),
     warmBannerForeground: AppColors.primaryColor,
+    headerBadgeFill: Color(0xFF004C49),
+    headerBadgeForeground: AppColors.homeWarmText,
+    headerChipFill: Color(0xFF004F4B),
+    headerChipForeground: Color(0xFFA9DCD3),
+    headerForeground: AppColors.homeBackground,
+    insertFollowUpFill: Color(0xFF96E3F4),
+    insertFollowUpInk: Colors.black,
+    insertDiscoveryFill: Color(0xFF95FF90),
+    insertDiscoveryInk: Colors.black,
+    insertScriptsFill: Color(0xFFFFF18A),
+    insertScriptsInk: Colors.black,
+    insertDataFill: Color(0xFFFF929C),
+    insertDataInk: Colors.black,
+    insertHistoryFill: Color(0xFFCE82F3),
+    insertHistoryInk: Colors.black,
+    panelArrowFill: AppColors.whiteColor,
+    panelArrowForeground: Color(0xFF172D33),
+    panelSyncIcon: Color(0xFF398AA0),
+    panelSyncIconNested: Color(0xFF48A7BC),
+    panelSyncAlert: Color(0xFFB80009),
+    insertChipInk: Color(0xFF185465),
+    panelHeaderInk: AppColors.whiteColor,
+    nestedSurfaceFill: Color(0xFFB2EFFA),
+    discoverySurfaceFill: Color(0xFFADFAC4),
+    dataSurfaceFill: Color(0xFFFFCED1),
+    historySurfaceFill: Color(0xFFE3B3FF),
+    historySurfaceInk: Colors.black,
+    fieldErrorInk: Color(0xFF8B1116),
+    errorSurfaceFill: Color(0xFFFFD6D8),
+    noticeSurfaceFill: AppColors.accentColor,
+    noticeSurfaceInk: Color(0xFF195768),
+    historyCardFill: Color(0xFFF0D1FF),
+    historyCardInk: Color(0xFF713080),
+    scriptSurfaceFill: AppColors.scriptBackground,
+    scriptSurfaceInk: AppColors.scriptHeading,
+    textColor: AppColors.textDarkColor,
   );
 
   static const AppPalette dark = AppPalette(
     cardInk: Colors.black,
     brandFill: Color(0xFF0B4F48),
-    onBrand: Color(0xFFEAFBF6),
+    onBrand: AppColors.accentColor,
     selectedFill: Color(0xFF91E5D6),
     selectedForeground: Color(0xFF06211D),
     todayFill: Color(0xFF1E4A43),
@@ -153,7 +285,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navSelectedFill: Color(0xFF91E5D6),
     navSelectedForeground: Color(0xFF115048),
     cardArrowFill: AppColors.whiteColor,
-    cardArrowForeground: Color(0xFF06211D),
+    cardArrowForeground: AppColors.darkSurface,
     fieldFill: Color(0xFF173B35),
     fieldForeground: Color(0xFFE1F5EE),
     fieldHint: Color(0xFF93BFB6),
@@ -168,6 +300,42 @@ class AppPalette extends ThemeExtension<AppPalette> {
     iconChipForeground: Color(0xFF91E5D6),
     warmBannerFill: Color(0xFF3A3320),
     warmBannerForeground: Color(0xFFFFE6A8),
+    headerBadgeFill: Color(0xFF06322D),
+    headerBadgeForeground: Color(0xFFFFD98A),
+    headerChipFill: Color(0xFF06322D),
+    headerChipForeground: Color(0xFFA9DCD3),
+    headerForeground: Color(0xFFD6EFE8),
+    insertFollowUpFill: Color.fromARGB(255, 20, 72, 85),
+    insertFollowUpInk: Color(0xFFCDEFFA),
+    insertDiscoveryFill: Color(0xFF8DE58A),
+    insertDiscoveryInk: Color(0xFF123B1B),
+    insertScriptsFill: Color(0xFFE8D96F),
+    insertScriptsInk: Color(0xFF403A12),
+    insertDataFill: Color(0xFFE9828B),
+    insertDataInk: Color(0xFF4A171C),
+    insertHistoryFill: Color(0xFFC278E6),
+    insertHistoryInk: Color(0xFF351441),
+    panelArrowFill: Color(0x2EFFFFFF),
+    panelArrowForeground: Color(0xFF91E5D6),
+    panelSyncIcon: Color(0xFF8FD8CB),
+    panelSyncIconNested: Color(0xFF8FD8CB),
+    panelSyncAlert: Color(0xFF8B1116),
+    insertChipInk: Color(0xFF06211D),
+    panelHeaderInk: Color(0xFFF2FFFC),
+    nestedSurfaceFill: Color.fromARGB(255, 132, 209, 228),
+    discoverySurfaceFill: Color(0xFFA4E7B7),
+    dataSurfaceFill: Color(0xFFF0B9BE),
+    historySurfaceFill: Color(0xFF33203E),
+    historySurfaceInk: Color(0xFFEFD3FA),
+    fieldErrorInk: Color(0xFF8B1116),
+    errorSurfaceFill: Color(0xFF3A1F22),
+    noticeSurfaceFill: Color(0xFF3A3320),
+    noticeSurfaceInk: Color(0xFFFFE6A8),
+    historyCardFill: Color(0xFF3D2551),
+    historyCardInk: Color(0xFFEFD3FA),
+    scriptSurfaceFill: Color(0xFF2F2A12),
+    scriptSurfaceInk: Color(0xFFF0E2A6),
+    textColor: AppColors.textDarkColor,
   );
 
   static AppPalette of(BuildContext context) =>
@@ -208,6 +376,42 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? iconChipForeground,
     Color? warmBannerFill,
     Color? warmBannerForeground,
+    Color? headerBadgeFill,
+    Color? headerBadgeForeground,
+    Color? headerChipFill,
+    Color? headerChipForeground,
+    Color? headerForeground,
+    Color? insertFollowUpFill,
+    Color? insertFollowUpInk,
+    Color? insertDiscoveryFill,
+    Color? insertDiscoveryInk,
+    Color? insertScriptsFill,
+    Color? insertScriptsInk,
+    Color? insertDataFill,
+    Color? insertDataInk,
+    Color? insertHistoryFill,
+    Color? insertHistoryInk,
+    Color? panelArrowFill,
+    Color? panelArrowForeground,
+    Color? panelSyncIcon,
+    Color? panelSyncIconNested,
+    Color? panelSyncAlert,
+    Color? insertChipInk,
+    Color? panelHeaderInk,
+    Color? nestedSurfaceFill,
+    Color? discoverySurfaceFill,
+    Color? dataSurfaceFill,
+    Color? historySurfaceFill,
+    Color? historySurfaceInk,
+    Color? fieldErrorInk,
+    Color? errorSurfaceFill,
+    Color? noticeSurfaceFill,
+    Color? noticeSurfaceInk,
+    Color? historyCardFill,
+    Color? historyCardInk,
+    Color? scriptSurfaceFill,
+    Color? scriptSurfaceInk,
+    Color? textColor,
   }) => AppPalette(
     cardInk: cardInk ?? this.cardInk,
     brandFill: brandFill ?? this.brandFill,
@@ -244,6 +448,42 @@ class AppPalette extends ThemeExtension<AppPalette> {
     iconChipForeground: iconChipForeground ?? this.iconChipForeground,
     warmBannerFill: warmBannerFill ?? this.warmBannerFill,
     warmBannerForeground: warmBannerForeground ?? this.warmBannerForeground,
+    headerBadgeFill: headerBadgeFill ?? this.headerBadgeFill,
+    headerBadgeForeground: headerBadgeForeground ?? this.headerBadgeForeground,
+    headerChipFill: headerChipFill ?? this.headerChipFill,
+    headerChipForeground: headerChipForeground ?? this.headerChipForeground,
+    headerForeground: headerForeground ?? this.headerForeground,
+    insertFollowUpFill: insertFollowUpFill ?? this.insertFollowUpFill,
+    insertFollowUpInk: insertFollowUpInk ?? this.insertFollowUpInk,
+    insertDiscoveryFill: insertDiscoveryFill ?? this.insertDiscoveryFill,
+    insertDiscoveryInk: insertDiscoveryInk ?? this.insertDiscoveryInk,
+    insertScriptsFill: insertScriptsFill ?? this.insertScriptsFill,
+    insertScriptsInk: insertScriptsInk ?? this.insertScriptsInk,
+    insertDataFill: insertDataFill ?? this.insertDataFill,
+    insertDataInk: insertDataInk ?? this.insertDataInk,
+    insertHistoryFill: insertHistoryFill ?? this.insertHistoryFill,
+    insertHistoryInk: insertHistoryInk ?? this.insertHistoryInk,
+    panelArrowFill: panelArrowFill ?? this.panelArrowFill,
+    panelArrowForeground: panelArrowForeground ?? this.panelArrowForeground,
+    panelSyncIcon: panelSyncIcon ?? this.panelSyncIcon,
+    panelSyncIconNested: panelSyncIconNested ?? this.panelSyncIconNested,
+    panelSyncAlert: panelSyncAlert ?? this.panelSyncAlert,
+    insertChipInk: insertChipInk ?? this.insertChipInk,
+    panelHeaderInk: panelHeaderInk ?? this.panelHeaderInk,
+    nestedSurfaceFill: nestedSurfaceFill ?? this.nestedSurfaceFill,
+    discoverySurfaceFill: discoverySurfaceFill ?? this.discoverySurfaceFill,
+    dataSurfaceFill: dataSurfaceFill ?? this.dataSurfaceFill,
+    historySurfaceFill: historySurfaceFill ?? this.historySurfaceFill,
+    historySurfaceInk: historySurfaceInk ?? this.historySurfaceInk,
+    fieldErrorInk: fieldErrorInk ?? this.fieldErrorInk,
+    errorSurfaceFill: errorSurfaceFill ?? this.errorSurfaceFill,
+    noticeSurfaceFill: noticeSurfaceFill ?? this.noticeSurfaceFill,
+    noticeSurfaceInk: noticeSurfaceInk ?? this.noticeSurfaceInk,
+    historyCardFill: historyCardFill ?? this.historyCardFill,
+    historyCardInk: historyCardInk ?? this.historyCardInk,
+    scriptSurfaceFill: scriptSurfaceFill ?? this.scriptSurfaceFill,
+    scriptSurfaceInk: scriptSurfaceInk ?? this.scriptSurfaceInk,
+    textColor: textColor ?? this.textColor,
   );
 
   @override
@@ -296,6 +536,54 @@ class AppPalette extends ThemeExtension<AppPalette> {
         warmBannerForeground,
         other.warmBannerForeground,
       ),
+      headerBadgeFill: mix(headerBadgeFill, other.headerBadgeFill),
+      headerBadgeForeground: mix(
+        headerBadgeForeground,
+        other.headerBadgeForeground,
+      ),
+      headerChipFill: mix(headerChipFill, other.headerChipFill),
+      headerChipForeground: mix(
+        headerChipForeground,
+        other.headerChipForeground,
+      ),
+      headerForeground: mix(headerForeground, other.headerForeground),
+      insertFollowUpFill: mix(insertFollowUpFill, other.insertFollowUpFill),
+      insertFollowUpInk: mix(insertFollowUpInk, other.insertFollowUpInk),
+      insertDiscoveryFill: mix(insertDiscoveryFill, other.insertDiscoveryFill),
+      insertDiscoveryInk: mix(insertDiscoveryInk, other.insertDiscoveryInk),
+      insertScriptsFill: mix(insertScriptsFill, other.insertScriptsFill),
+      insertScriptsInk: mix(insertScriptsInk, other.insertScriptsInk),
+      insertDataFill: mix(insertDataFill, other.insertDataFill),
+      insertDataInk: mix(insertDataInk, other.insertDataInk),
+      insertHistoryFill: mix(insertHistoryFill, other.insertHistoryFill),
+      insertHistoryInk: mix(insertHistoryInk, other.insertHistoryInk),
+      panelArrowFill: mix(panelArrowFill, other.panelArrowFill),
+      panelArrowForeground: mix(
+        panelArrowForeground,
+        other.panelArrowForeground,
+      ),
+      panelSyncIcon: mix(panelSyncIcon, other.panelSyncIcon),
+      panelSyncIconNested: mix(panelSyncIconNested, other.panelSyncIconNested),
+      panelSyncAlert: mix(panelSyncAlert, other.panelSyncAlert),
+      insertChipInk: mix(insertChipInk, other.insertChipInk),
+      panelHeaderInk: mix(panelHeaderInk, other.panelHeaderInk),
+      nestedSurfaceFill: mix(nestedSurfaceFill, other.nestedSurfaceFill),
+      discoverySurfaceFill: mix(
+        discoverySurfaceFill,
+        other.discoverySurfaceFill,
+      ),
+      dataSurfaceFill: mix(dataSurfaceFill, other.dataSurfaceFill),
+      historySurfaceFill: mix(historySurfaceFill, other.historySurfaceFill),
+      historySurfaceInk: mix(historySurfaceInk, other.historySurfaceInk),
+      fieldErrorInk: mix(fieldErrorInk, other.fieldErrorInk),
+      errorSurfaceFill: mix(errorSurfaceFill, other.errorSurfaceFill),
+      noticeSurfaceFill: mix(noticeSurfaceFill, other.noticeSurfaceFill),
+      noticeSurfaceInk: mix(noticeSurfaceInk, other.noticeSurfaceInk),
+      historyCardFill: mix(historyCardFill, other.historyCardFill),
+      historyCardInk: mix(historyCardInk, other.historyCardInk),
+      scriptSurfaceFill: mix(scriptSurfaceFill, other.scriptSurfaceFill),
+      scriptSurfaceInk: mix(scriptSurfaceInk, other.scriptSurfaceInk),
+      textColor: mix(textColor, other.textColor),
     );
   }
 }

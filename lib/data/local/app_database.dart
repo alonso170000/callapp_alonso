@@ -20,6 +20,7 @@ class AppDatabase {
   static const schemaVersion = 4;
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
+  static const catalogsResource = 'catalogs';
   static const maintenanceKey = 'last_maintenance_at_ms';
 
   final DatabaseFactory? _factory;
@@ -256,56 +257,92 @@ class AppDatabase {
 
   /// Elimina los ámbitos cuya última actualización es anterior a [cutoff].
   ///
-  /// Devuelve la cantidad de filas eliminadas entre cachés y metadata.
+  /// Un ámbito se considera vencido cuando su recurso más reciente (prospectos,
+  /// actividades o catálogos) es más viejo que [cutoff]. En ese momento se borra
+  /// por completo: cachés, avisos, metadata y las claves de `app_metadata` del
+  /// ámbito (catálogos, precarga y mapa temporal→real).
+  ///
+  /// Devuelve la cantidad de filas eliminadas.
   Future<int> purgeExpiredScopes(DateTime cutoff) async {
     final database = await databaseOrNull;
     if (database == null) return 0;
     final cutoffMs = cutoff.millisecondsSinceEpoch;
     return database.transaction((transaction) async {
+      final scopes = await transaction.rawQuery(
+        '''
+        SELECT user_id, development_id, MAX(refreshed_at_ms) AS last_ms
+        FROM cache_metadata
+        GROUP BY user_id, development_id
+        HAVING last_ms < ?
+        ''',
+        [cutoffMs],
+      );
       var removed = 0;
-      for (final entry in const {
-        prospectsResource: 'cached_prospects',
-        activitiesResource: 'cached_activities',
-      }.entries) {
-        final scopes = await transaction.query(
-          'cache_metadata',
-          columns: const ['user_id', 'development_id'],
-          where: 'resource = ? AND refreshed_at_ms < ?',
-          whereArgs: [entry.key, cutoffMs],
-        );
-        for (final scope in scopes) {
-          removed += await transaction.delete(
-            entry.value,
-            where: 'user_id = ? AND development_id = ?',
-            whereArgs: [scope['user_id'], scope['development_id']],
-          );
-        }
-        removed += await transaction.delete(
-          'cache_metadata',
-          where: 'resource = ? AND refreshed_at_ms < ?',
-          whereArgs: [entry.key, cutoffMs],
+      for (final scope in scopes) {
+        removed += await _purgeScope(
+          transaction,
+          userId: scope['user_id'] as int,
+          developmentId: scope['development_id'] as int,
         );
       }
       return removed;
     });
   }
 
+  static Future<int> _purgeScope(
+    DatabaseExecutor transaction, {
+    required int userId,
+    required int developmentId,
+  }) async {
+    final where = 'user_id = ? AND development_id = ?';
+    final args = [userId, developmentId];
+    var removed = 0;
+    for (final table in const [
+      'cached_prospects',
+      'cached_activities',
+      'activity_notifications',
+      'cache_metadata',
+    ]) {
+      removed += await transaction.delete(table, where: where, whereArgs: args);
+    }
+    removed += await transaction.delete(
+      'app_metadata',
+      where: _scopeKeyFilter,
+      whereArgs: [userId, developmentId],
+    );
+    return removed;
+  }
+
+  /// Filtro para las claves de `app_metadata` que pertenecen a un ámbito. Todas
+  /// terminan con `:<userId>:<developmentId>`.
+  static const _scopeKeyFilter = "key LIKE '%:' || ? || ':' || ?";
+
   /// Elimina los datos locales de un usuario y desarrollo concretos.
   Future<void> clearScope(LocalScope scope) async {
     final database = await databaseOrNull;
     if (database == null) return;
-    final where = 'user_id = ? AND development_id = ?';
-    final args = [scope.userId, scope.developmentId];
     await database.transaction((transaction) async {
-      for (final table in const [
-        'cached_prospects',
-        'cached_activities',
-        'cache_metadata',
-        'activity_notifications',
-      ]) {
-        await transaction.delete(table, where: where, whereArgs: args);
-      }
+      await _purgeScope(
+        transaction,
+        userId: scope.userId,
+        developmentId: scope.developmentId,
+      );
     });
+  }
+
+  /// Registra la última actualización confirmada de un recurso del ámbito.
+  ///
+  /// Es la marca que usa [purgeExpiredScopes] para decidir si un ámbito venció;
+  /// los catálogos la escriben para no quedar fuera de la limpieza.
+  Future<void> touchMetadata(LocalScope scope, String resource) async {
+    final database = await databaseOrNull;
+    if (database == null) return;
+    await database.insert('cache_metadata', {
+      'user_id': scope.userId,
+      'development_id': scope.developmentId,
+      'resource': resource,
+      'refreshed_at_ms': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// Elimina todos los datos locales. Se conserva solo la estructura.

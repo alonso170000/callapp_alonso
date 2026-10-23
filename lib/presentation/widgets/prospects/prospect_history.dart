@@ -1,5 +1,7 @@
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -20,7 +22,6 @@ class ProspectHistory extends StatelessWidget {
   });
 
   static const _panelColor = Color(0xFF713080);
-  static const _contentColor = Color(0xFFE3B3FF);
   static const _fieldColor = Color(0xFF9139A8);
 
   String _date(DateTime value) =>
@@ -50,74 +51,77 @@ class ProspectHistory extends StatelessWidget {
     ),
   );
 
-  Widget _emailHistory() => ProspectDetailPanel(
-    title: 'Historial de correos',
-    color: _panelColor,
-    nested: true,
-    initiallyExpanded: true,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: _contentColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: emails
-            .map(
-              (email) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0D1FF),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.mail_outline,
-                        color: _fieldColor,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              email.templateName,
-                              style: const TextStyle(
-                                fontFamily: 'BebasNeue',
-                                fontSize: 14,
-                                color: _panelColor,
-                              ),
-                            ),
-                            Text(
-                              email.description,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ],
+  Widget _emailHistory(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return ProspectDetailPanel(
+      title: 'Historial de correos',
+      color: _panelColor,
+      nested: true,
+      initiallyExpanded: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: palette.historySurfaceFill,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: emails
+              .map(
+                (email) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: palette.historyCardFill,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.mail_outline,
+                          color: palette.historyCardInk,
+                          size: 20,
                         ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${_date(email.sentAt)}\n${email.sentAt.hour.toString().padLeft(2, '0')}:'
-                        '${email.sentAt.minute.toString().padLeft(2, '0')}',
-                        textAlign: TextAlign.end,
-                        style: const TextStyle(fontSize: 9),
-                      ),
-                    ],
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                email.templateName,
+                                style: TextStyle(
+                                  fontFamily: 'BebasNeue',
+                                  fontSize: 14,
+                                  color: palette.historyCardInk,
+                                ),
+                              ),
+                              Text(
+                                email.description,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${_date(email.sentAt)}\n${email.sentAt.hour.toString().padLeft(2, '0')}:'
+                          '${email.sentAt.minute.toString().padLeft(2, '0')}',
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(fontSize: 9),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Color _hourColor(int weekday, int hour) {
     for (final entry in callHours) {
@@ -139,7 +143,7 @@ class ProspectHistory extends StatelessWidget {
     ],
   );
 
-  Widget _callHistory() {
+  Widget _callHistory(BuildContext context) {
     const days = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
     return ProspectDetailPanel(
       title: 'Historial de llamadas por horario',
@@ -150,7 +154,7 @@ class ProspectHistory extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(8, 9, 8, 10),
         decoration: BoxDecoration(
-          color: _contentColor,
+          color: AppPalette.of(context).historySurfaceFill,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -279,7 +283,7 @@ class ProspectHistory extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: _contentColor,
+            color: AppPalette.of(context).historySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -302,7 +306,7 @@ class ProspectHistory extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
           decoration: BoxDecoration(
-            color: _contentColor,
+            color: AppPalette.of(context).historySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -311,14 +315,15 @@ class ProspectHistory extends StatelessWidget {
               _summaryField('Disposición', discoverySummary.disposition),
               _summaryField('Dinero', discoverySummary.money),
               _summaryField('Pasó a TO', discoverySummary.transferredTo),
+              _summaryField('Discovery Completo', discoverySummary.completed),
             ],
           ),
         ),
       ),
       const SizedBox(height: 10),
-      _emailHistory(),
+      _emailHistory(context),
       const SizedBox(height: 10),
-      _callHistory(),
+      _callHistory(context),
       if (sessionEntries.isNotEmpty) ...[
         const SizedBox(height: 10),
         ProspectDetailPanel(
@@ -329,7 +334,7 @@ class ProspectHistory extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _contentColor,
+              color: AppPalette.of(context).historySurfaceFill,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -380,65 +385,76 @@ class ProspectHistoryCommentCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFF75334F)),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12, color: AppColors.textDarkColor),
+      ),
     );
   }
 
-  Widget _commentCard(ProspectHistoryComment comment) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF0D1FF),
-      borderRadius: BorderRadius.circular(11),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: 4,
-          runSpacing: 4,
+  Widget _commentCard(BuildContext context, ProspectHistoryComment comment) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
+        decoration: BoxDecoration(
+          color: AppPalette.of(context).historyCardFill,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEF86),
-                border: Border.all(color: const Color(0xFF776315)),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(switch (comment.medium) {
-                'correo' => Icons.mail_outline,
-                'whatsapp' => Icons.chat_outlined,
-                'presencial' => Icons.people_outline,
-                'telefono' => Iconsax.call_calling_copy,
-                _ => Icons.message_outlined,
-              }, size: 15),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEF86),
+                    border: Border.all(color: const Color(0xFF776315)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    switch (comment.medium) {
+                      'correo' => Icons.mail_outline,
+                      'whatsapp' => Icons.chat_outlined,
+                      'presencial' => Icons.people_outline,
+                      'telefono' => Iconsax.call_calling_copy,
+                      _ => Icons.message_outlined,
+                    },
+                    size: 15,
+                    color: AppColors.textDarkColor,
+                  ),
+                ),
+                ...comment.results.map(_resultBadge),
+              ],
             ),
-            ...comment.results.map(_resultBadge),
+            const SizedBox(height: 7),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: _fieldColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Text(
+                comment.comment,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              '${_date(comment.createdAt)}    ${_time(comment.createdAt)}',
+              style: const TextStyle(fontSize: 9),
+            ),
           ],
         ),
-        const SizedBox(height: 7),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: _fieldColor,
-            borderRadius: BorderRadius.circular(7),
-          ),
-          child: Text(
-            comment.comment,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          '${_date(comment.createdAt)}    ${_time(comment.createdAt)}',
-          style: const TextStyle(fontSize: 9),
-        ),
-      ],
-    ),
-  );
+      );
 
   @override
-  Widget build(BuildContext context) => _commentCard(comment);
+  Widget build(BuildContext context) => _commentCard(context, comment);
 }

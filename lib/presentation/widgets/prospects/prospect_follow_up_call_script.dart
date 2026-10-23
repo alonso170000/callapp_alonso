@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_script_components.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectFollowUpCallScript extends StatelessWidget {
   final VoidCallback onContinue;
@@ -44,18 +45,18 @@ class ProspectFollowUpCallScript extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       decoration: BoxDecoration(
-        color: AppColors.scriptBackground,
+        color: AppPalette.of(context).scriptSurfaceFill,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Llamada de Seguimiento (Día 2)',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: AppColors.scriptHeading,
+              color: AppPalette.of(context).scriptSurfaceInk,
             ),
           ),
           const SizedBox(height: 12),
@@ -76,12 +77,12 @@ class ProspectFollowUpCallScript extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Center(
+          Center(
             child: Text(
               '“Inversión inteligente en un proyecto completo”',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.scriptHeading,
+                color: AppPalette.of(context).scriptSurfaceInk,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),

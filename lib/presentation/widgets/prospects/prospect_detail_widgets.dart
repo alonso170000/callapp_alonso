@@ -1,6 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
-import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+/// Secciones plegables del detalle del prospecto: etiqueta del chip, título
+/// del panel y colores con los que se pintan (se adaptan al modo claro/oscuro).
+enum ProspectSection {
+  followUp('Seguimiento', 'Registrar seguimiento'),
+  discovery('Discovery', 'Registrar discovery'),
+  scripts('Guiones', 'Guiones de llamadas'),
+  data('Prospecto', 'Datos del prospecto'),
+  history('Historial', 'Historial');
+
+  const ProspectSection(this.label, this.title);
+
+  final String label;
+  final String title;
+
+  static ProspectSection? byLabel(String label) {
+    for (final section in values) {
+      if (section.label == label) return section;
+    }
+    return null;
+  }
+
+  Color fill(AppPalette palette) => switch (this) {
+    ProspectSection.followUp => palette.insertFollowUpFill,
+    ProspectSection.discovery => palette.insertDiscoveryFill,
+    ProspectSection.scripts => palette.insertScriptsFill,
+    ProspectSection.data => palette.insertDataFill,
+    ProspectSection.history => palette.insertHistoryFill,
+  };
+
+  Color ink(AppPalette palette) => switch (this) {
+    ProspectSection.followUp => palette.insertFollowUpInk,
+    ProspectSection.discovery => palette.insertDiscoveryInk,
+    ProspectSection.scripts => palette.insertScriptsInk,
+    ProspectSection.data => palette.insertDataInk,
+    ProspectSection.history => palette.insertHistoryInk,
+  };
+}
 
 class ProspectDetailHeader extends StatelessWidget {
   final ProspectRecord prospect;
@@ -13,7 +53,7 @@ class ProspectDetailHeader extends StatelessWidget {
     required this.onToggle,
   });
 
-  Widget _date(DateTime? date) {
+  Widget _date(BuildContext context, DateTime? date) {
     const days = [
       'lunes',
       'martes',
@@ -38,6 +78,7 @@ class ProspectDetailHeader extends StatelessWidget {
       'Dic',
     ];
     return _badge(
+      context,
       date == null
           ? const Text('Sin fecha')
           : Column(
@@ -67,176 +108,195 @@ class ProspectDetailHeader extends StatelessWidget {
     );
   }
 
-  Widget _badge(Widget child) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xFF004C49),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: DefaultTextStyle(
-      style: const TextStyle(
-        fontFamily: 'SulphurPoint',
-        color: AppColors.homeWarmText,
+  Widget _badge(BuildContext context, Widget child) {
+    final palette = AppPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.headerBadgeFill,
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: child,
-    ),
-  );
-  Widget _group(String label, Widget child) => Column(
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontFamily: 'SulphurPoint',
+          color: palette.headerBadgeForeground,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _group(BuildContext context, String label, Widget child) => Column(
     children: [
       child,
       const SizedBox(height: 6),
-      Text(label, style: const TextStyle(fontSize: 13, color: Colors.white)),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          color: AppPalette.of(context).headerForeground,
+        ),
+      ),
     ],
   );
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final next = prospect.nextContact;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const BackButton(color: Colors.white),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      prospect.name.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'BebasNeue',
-                        color: AppColors.homeWarmText,
-                        fontSize: 20,
-                      ),
-                    ),
-                    Text(
-                      prospect.status.toUpperCase(),
-                      style: const TextStyle(
-                        fontFamily: 'BebasNeue',
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.brandFill,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Volver',
+                  color: palette.headerForeground,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_ios_new, size: 24),
                 ),
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: prospect.avatarColor,
-                child: Image.asset('lib/resources/images/Frame.png'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              _group(
-                'Próximo contacto',
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _date(next),
-                    if (next != null) ...[
-                      _badge(
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontSize: 30, height: 1.1),
-                            ),
-                            Text(
-                              next.hour < 12 ? 'am' : 'pm',
-                              style: const TextStyle(fontSize: 13, height: 1.2),
-                            ),
-                          ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        prospect.name.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'BebasNeue',
+                          color: palette.headerBadgeForeground,
+                          fontSize: 20,
+                        ),
+                      ),
+                      Text(
+                        prospect.status.toUpperCase(),
+                        style: TextStyle(
+                          fontFamily: 'BebasNeue',
+                          color: palette.headerForeground,
+                          fontSize: 12,
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ),
-              _group('Fecha de asignación', _date(prospect.assignedAt)),
-              _group(
-                'Venta',
-                _badge(
-                  Text(
-                    prospect.status == 'Venta realizada' ? 'SÍ' : 'NO',
-                    style: const TextStyle(fontSize: 32),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children:
-                  [
-                        'Seguimiento',
-                        'Discovery',
-                        'Guiones',
-                        'Prospecto',
-                        'Historial',
-                      ]
-                      .map(
-                        (name) => Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: FilterChip(
-                            label: Text(name),
-                            selected: selected.contains(name),
-                            onSelected: (_) => onToggle(name),
-                            showCheckmark: false,
-                            side: BorderSide.none,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            labelPadding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                            ),
-                            backgroundColor: const Color(0xFF004F4B),
-                            selectedColor: switch (name) {
-                              'Discovery' => const Color(0xFF95FF90),
-                              'Guiones' => const Color(0xFFFFF47A),
-                              'Prospecto' => const Color(0xFFFF929C),
-                              'Historial' => const Color.fromRGBO(
-                                207,
-                                149,
-                                255,
-                                1,
+                const SizedBox(width: 8),
+                ProspectAvatarBadge(prospect: prospect),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _group(
+                  context,
+                  'Próximo contacto',
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _date(context, next),
+                      if (next != null) ...[
+                        _badge(
+                          context,
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  height: 1.1,
+                                ),
                               ),
-                              _ => const Color(0xFF96E3F4),
-                            },
-                            labelStyle: TextStyle(
-                              fontFamily: 'SulphurPoint',
-                              fontSize: 11,
-                              color: selected.contains(name)
-                                  ? const Color(0xFF185465)
-                                  : const Color(0xFFA9DCD3),
-                            ),
+                              Text(
+                                next.hour < 12 ? 'am' : 'pm',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                      .toList(),
+                      ],
+                    ],
+                  ),
+                ),
+                _group(
+                  context,
+                  'Fecha de asignación',
+                  _date(context, prospect.assignedAt),
+                ),
+                _group(
+                  context,
+                  'Venta',
+                  _badge(
+                    context,
+                    Text(
+                      prospect.status == 'Venta realizada' ? 'SÍ' : 'NO',
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 18),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ProspectSection.values
+                    .map(
+                      (section) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(section.label),
+                          selected: selected.contains(section.label),
+                          onSelected: (_) => onToggle(section.label),
+                          showCheckmark: false,
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                          ),
+                          backgroundColor: palette.headerChipFill,
+                          selectedColor: section.fill(palette),
+                          labelStyle: TextStyle(
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 11,
+                            color: selected.contains(section.label)
+                                ? section.ink(palette)
+                                : palette.headerChipForeground,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -245,6 +305,9 @@ class ProspectDetailHeader extends StatelessWidget {
 class ProspectDetailPanel extends StatefulWidget {
   final String title;
   final Color color;
+
+  /// Tinta del título. Por defecto se resuelve según [nested].
+  final Color? foreground;
   final Widget child;
   final bool initiallyExpanded;
   final bool nested;
@@ -252,6 +315,7 @@ class ProspectDetailPanel extends StatefulWidget {
     super.key,
     required this.title,
     required this.color,
+    this.foreground,
     required this.child,
     this.initiallyExpanded = false,
     this.nested = false,
@@ -263,67 +327,64 @@ class ProspectDetailPanel extends StatefulWidget {
 class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
   late bool _expanded = widget.initiallyExpanded;
   @override
-  Widget build(BuildContext context) => Material(
-    color: widget.color,
-    borderRadius: BorderRadius.circular(13),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-            child: Row(
-              children: [
-                if (widget.title.contains('seguimiento') ||
-                    widget.title == 'Datos del prospecto') ...[
-                  Icon(
-                    Icons.cloud_done,
-                    size: 21,
-                    color: widget.title == 'Datos del prospecto'
-                        ? const Color(0xFFB80009)
-                        : widget.nested
-                        ? const Color(0xFF48A7BC)
-                        : const Color(0xFF398AA0),
-                  ),
-                  const SizedBox(width: 5),
-                ],
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: TextStyle(
-                      fontSize: widget.nested ? 16 : 18,
-                      fontFamily: 'SulphurPoint',
-                      color: widget.nested ? Colors.white : Colors.black,
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final isData = widget.title == 'Datos del prospecto';
+    final syncs = widget.title.contains('seguimiento') || isData;
+    return Material(
+      color: widget.color,
+      borderRadius: BorderRadius.circular(13),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              child: Row(
+                children: [
+                  
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: widget.nested ? 16 : 18,
+                        fontFamily: 'SulphurPoint',
+                        color:
+                            widget.foreground ??
+                            (widget.nested
+                                ? palette.headerForeground
+                                : palette.cardInk),
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: palette.panelArrowFill,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: palette.panelArrowForeground,
+                      size: 26,
+                    ),
                   ),
-                  child: Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: const Color(0xFF172D33),
-                    size: 26,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Visibility(
-          visible: _expanded,
-          maintainState: true,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            child: widget.child,
+          Visibility(
+            visible: _expanded,
+            maintainState: true,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: widget.child,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

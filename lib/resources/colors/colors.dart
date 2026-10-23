@@ -64,6 +64,19 @@ class AppColors {
   static const Color notificationUnread = Color(0xFF78F0A1);
   static const Color notificationDismissBackground = Color(0xFFB94D52);
 
+  // Paleta compartida por el detalle del prospecto y sus formularios. Estos
+  // colores no dependen del brillo del tema: son las "hojas" claras sobre las
+  // que se leen los formularios en claro y en oscuro.
+  static const Color prospectFollowUpHeader = Color(0xFF21758C);
+  static const Color prospectCallHeader = Color(0xFF195768);
+  static const Color prospectFormField = Color(0xFF398FA3);
+  static const Color prospectFormFieldText = Color(0xFFFFFFFF);
+  static const Color prospectFormEditor = Color(0xFFC7F7FF);
+  static const Color prospectFormNotice = Color(0xFF983F3F);
+  static const Color prospectDataField = Color(0xFFAD393E);
+  static const Color prospectHistoryHeader = Color(0xFF713080);
+  static const Color prospectHistoryField = Color(0xFF9139A8);
+
   // Paleta compartida por las secciones del formulario de discovery.
   static const Color discoveryHeader = Color(0xFF438E72);
   static const Color discoveryPanel = Color(0xFFADFAC4);

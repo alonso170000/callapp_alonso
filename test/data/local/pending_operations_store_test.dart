@@ -190,4 +190,38 @@ void main() {
       expect(await store.consumeLocallyCreated(first, {88}), {88});
     },
   );
+
+  test('recuerda la equivalencia temporal y la aísla por ámbito', () async {
+    final prospects = ProspectsCache(database: database);
+    await prospects.upsert(
+      first,
+      const ProspectRecord(
+        id: -3,
+        name: 'Local',
+        phone: '9980000001',
+        email: 'local2@example.com',
+        status: 'Nuevo',
+        temperature: 'Tibio',
+        avatarColor: Colors.teal,
+        statusColor: Colors.blue,
+      ),
+    );
+    await store.enqueue(
+      first,
+      kind: 'prospect.create',
+      entityId: -3,
+      operationKey: 'create-mapping',
+      payload: const {
+        'fields': <String, dynamic>{},
+        'local_prospect': {'prospect_id': -3},
+      },
+    );
+    final creation = (await store.read(first)).single;
+    await store.remapProspectId(creation, temporaryId: -3, serverId: 77);
+
+    expect(await store.resolveLocalId(first, 'prospect', -3), 77);
+    expect(await store.resolveLocalId(second, 'prospect', -3), isNull);
+    expect(await store.resolveLocalId(first, 'activity', -3), isNull);
+    expect(await store.resolveLocalId(first, 'prospect', -999), isNull);
+  });
 }

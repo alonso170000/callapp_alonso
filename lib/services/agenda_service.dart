@@ -20,6 +20,12 @@ class AgendaIndeterminateException extends AgendaRecoverableException {
   const AgendaIndeterminateException(super.message);
 }
 
+/// No hubo conexión con el servidor. A diferencia de un fallo de servidor, no
+/// consume el presupuesto de reintentos automáticos del outbox.
+class AgendaOfflineException extends AgendaRecoverableException {
+  const AgendaOfflineException(super.message);
+}
+
 class AgendaSessionException extends AgendaException {
   const AgendaSessionException(super.message);
 }
@@ -93,7 +99,7 @@ class AgendaService {
         'El servidor tardó demasiado. Actualiza la agenda para comprobar el estado de la actividad.',
       );
     } on http.ClientException {
-      throw const AgendaRecoverableException(
+      throw const AgendaOfflineException(
         'No se pudo conectar. El cambio se sincronizará después.',
       );
     } on FormatException {
@@ -145,7 +151,7 @@ class AgendaService {
         'El servidor tardó demasiado. Actualiza la agenda para comprobar si se eliminó.',
       );
     } on http.ClientException {
-      throw const AgendaRecoverableException(
+      throw const AgendaOfflineException(
         'No se pudo conectar. La eliminación se sincronizará después.',
       );
     } on FormatException {
@@ -227,7 +233,7 @@ class AgendaService {
         'El servidor tardó demasiado. Actualiza la agenda antes de volver a guardar para comprobar si se creó.',
       );
     } on http.ClientException {
-      throw const AgendaRecoverableException(
+      throw const AgendaOfflineException(
         'No se pudo conectar. La actividad se sincronizará después.',
       );
     } on FormatException {
@@ -285,7 +291,7 @@ class AgendaService {
         'El servidor tardó demasiado. Actualiza la agenda para comprobar si se guardaron los cambios.',
       );
     } on http.ClientException {
-      throw const AgendaRecoverableException(
+      throw const AgendaOfflineException(
         'No se pudo conectar. Los cambios se sincronizarán después.',
       );
     } on FormatException {

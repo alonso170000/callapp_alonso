@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectDiscoveryForm extends StatefulWidget {
   final ValueChanged<String> onSaved;
@@ -193,7 +194,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(text, style: const TextStyle(fontSize: 13)),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppPalette.of(context).textColor,
+          ),
+        ),
         const SizedBox(height: 3),
         child,
       ],
@@ -351,7 +358,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         padding: const EdgeInsets.only(bottom: 7),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppPalette.of(context).textColor,
+                ),
+              ),
+            ),
             Semantics(
               toggled: value,
               label: label,
@@ -379,7 +394,11 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           : AppColors.discoveryToggleOffThumb,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(value ? Icons.check : Icons.close, size: 17),
+                    child: Icon(
+                      value ? Icons.check : Icons.close,
+                      size: 17,
+                      color: AppColors.textDarkColor,
+                    ),
                   ),
                 ),
               ),
@@ -560,7 +579,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       _serviceError = null;
     });
     try {
-      final data = await _service.discovery(widget.prospectId!);
+      final data = await _repository.loadDiscovery(widget.prospectId!);
       if (!mounted || data == null) return;
       setState(() {
         _property = _labelForCode(_propertyCodes, data['tipo_propiedad']);
@@ -659,6 +678,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           : await _repository.saveDiscoverySection(prospect, payload);
       if (prospect == null) {
         await _service.saveDiscoverySection(widget.prospectId!, payload);
+        await _repository.rememberDiscovery(widget.prospectId!, payload);
       }
       if (mounted && result?.isPending == true) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -875,7 +895,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -940,7 +960,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -999,7 +1019,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -1047,7 +1067,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -1090,7 +1110,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -1304,7 +1324,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.discoveryPanel,
+            color: AppPalette.of(context).discoverySurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(

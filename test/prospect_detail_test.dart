@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
@@ -474,4 +475,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('the detail header stays fixed while the forms scroll', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      MaterialApp(home: ProspectDetailScreen(prospect: demoProspects[1])),
+    );
+
+    final headerTop = tester.getTopLeft(find.byType(ProspectDetailHeader)).dy;
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+
+    await tester.drag(
+      find.text('Acerca del seguimiento'),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, greaterThan(0));
+    expect(tester.getTopLeft(find.byType(ProspectDetailHeader)).dy, headerTop);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -6,6 +6,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/call_script_co
 
 import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 export 'prospect_follow_up_call_script.dart';
 
@@ -58,7 +59,7 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFBC6),
+          color: AppPalette.of(context).scriptSurfaceFill,
 
           borderRadius: BorderRadius.circular(10),
         ),
@@ -80,17 +81,17 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                     ),
                     iconSize: 20,
                     onPressed: () => setState(() => _history.removeLast()),
-                    color: AppColors.scriptPanel,
+                    color: AppPalette.of(context).scriptSurfaceInk,
                     icon: const Icon(Iconsax.arrow_left_copy),
                   ),
                 Expanded(
                   child: Text(
                     current.title,
                     textAlign: TextAlign.start,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       height: 1.3,
-                      color: AppColors.scriptHeading,
+                      color: AppPalette.of(context).scriptSurfaceInk,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

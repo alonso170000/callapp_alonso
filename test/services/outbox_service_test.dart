@@ -544,6 +544,201 @@ void main() {
     expect(remaining.state, PendingOperationState.pending);
     expect(remaining.lastError, isNotNull);
   });
+
+  test(
+    'la falta de conexión no consume el presupuesto de reintentos',
+    () async {
+      final auth = await _auth();
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      final store = PendingOperationsStore(database: database);
+      const scope = LocalScope(userId: 3, developmentId: 6);
+      await store.enqueue(
+        scope,
+        kind: 'prospect.update',
+        entityId: 15,
+        operationKey: 'update',
+        payload: const {
+          'fields': {'nombre': 'Nuevo'},
+        },
+      );
+      final service = OutboxService(
+        store: store,
+        prospects: _RecordingProspectsService(failUpdateOffline: true),
+        activities: ActivitiesCache(database: database),
+        prospectsCache: ProspectsCache(database: database),
+        auth: auth,
+      );
+
+      for (var attempt = 0; attempt < 12; attempt++) {
+        await service.flush();
+      }
+
+      final remaining = (await store.read(scope)).single;
+      expect(remaining.state, PendingOperationState.pending);
+      expect(remaining.attemptCount, 0);
+    },
+  );
+
+  test(
+    'un fallo de servidor reiterado acaba aparcado como conflicto',
+    () async {
+      final auth = await _auth();
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      final store = PendingOperationsStore(database: database);
+      const scope = LocalScope(userId: 3, developmentId: 6);
+      await store.enqueue(
+        scope,
+        kind: 'prospect.update',
+        entityId: 15,
+        operationKey: 'update',
+        payload: const {
+          'fields': {'nombre': 'Nuevo'},
+        },
+      );
+      final service = OutboxService(
+        store: store,
+        prospects: _RecordingProspectsService(failUpdateRecoverable: true),
+        activities: ActivitiesCache(database: database),
+        prospectsCache: ProspectsCache(database: database),
+        auth: auth,
+      );
+
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await service.flush();
+      }
+
+      final remaining = (await store.read(scope)).single;
+      expect(remaining.state, PendingOperationState.conflict);
+      expect(
+        remaining.lastError,
+        contains('Se pausaron los reintentos automáticos'),
+      );
+      expect(service.conflictCount, 1);
+    },
+  );
+
+  test('reintentar tras aparcar reinicia el presupuesto de intentos', () async {
+    final auth = await _auth();
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    final store = PendingOperationsStore(database: database);
+    const scope = LocalScope(userId: 3, developmentId: 6);
+    await store.enqueue(
+      scope,
+      kind: 'prospect.update',
+      entityId: 15,
+      operationKey: 'update',
+      payload: const {
+        'fields': {'nombre': 'Nuevo'},
+      },
+    );
+    final service = OutboxService(
+      store: store,
+      prospects: _RecordingProspectsService(failUpdateRecoverable: true),
+      activities: ActivitiesCache(database: database),
+      prospectsCache: ProspectsCache(database: database),
+      auth: auth,
+    );
+
+    for (var attempt = 0; attempt < 5; attempt++) {
+      await service.flush();
+    }
+    final parked = (await store.read(scope)).single;
+    expect(parked.state, PendingOperationState.conflict);
+
+    await service.retry(parked);
+
+    final retried = (await store.read(scope)).single;
+    expect(retried.state, PendingOperationState.pending);
+    expect(retried.attemptCount, 1);
+  });
+
+  test(
+    'el reintento automático vacía la cola sin esperar una acción',
+    () async {
+      final auth = await _auth();
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      final store = PendingOperationsStore(database: database);
+      const scope = LocalScope(userId: 3, developmentId: 6);
+      final agenda = _RecordingAgendaService();
+      final service = OutboxService(
+        store: store,
+        agenda: agenda,
+        activities: ActivitiesCache(database: database),
+        auth: auth,
+      );
+
+      await service.load();
+      await service.maybeAutoSync();
+      expect(agenda.calls, isEmpty);
+      expect(service.revision, 0);
+
+      await store.enqueue(
+        scope,
+        kind: 'agenda.complete',
+        entityId: 1,
+        operationKey: 'auto',
+        payload: const {},
+      );
+      await service.load();
+      await service.maybeAutoSync();
+
+      expect(agenda.calls, ['complete:1:auto']);
+      expect(service.revision, 1);
+      expect(await store.read(scope), isEmpty);
+    },
+  );
+
+  test('el reintento automático no revive un conflicto aparcado', () async {
+    final auth = await _auth();
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    final store = PendingOperationsStore(database: database);
+    const scope = LocalScope(userId: 3, developmentId: 6);
+    await store.enqueue(
+      scope,
+      kind: 'agenda.delete',
+      entityId: 1,
+      operationKey: 'parked',
+      payload: const {},
+    );
+    final operation = (await store.read(scope)).single;
+    await store.markConflict(operation, 'Datos inválidos.');
+    final agenda = _RecordingAgendaService();
+    final service = OutboxService(
+      store: store,
+      agenda: agenda,
+      activities: ActivitiesCache(database: database),
+      auth: auth,
+    );
+
+    await service.load();
+    await service.maybeAutoSync();
+
+    expect(agenda.calls, isEmpty);
+    expect(
+      (await store.read(scope)).single.state,
+      PendingOperationState.conflict,
+    );
+  });
 }
 
 Future<AuthService> _auth() async {
@@ -611,6 +806,8 @@ class _RecordingProspectsService extends ProspectsService {
     this.createdId = 100,
     this.failUpdate = false,
     this.failCreateRecoverable = false,
+    this.failUpdateRecoverable = false,
+    this.failUpdateOffline = false,
     this.failUpdateWithBase = false,
     this.failUpdateWithError = false,
   });
@@ -618,6 +815,8 @@ class _RecordingProspectsService extends ProspectsService {
   final int createdId;
   final bool failUpdate;
   final bool failCreateRecoverable;
+  final bool failUpdateRecoverable;
+  final bool failUpdateOffline;
   final bool failUpdateWithBase;
   final bool failUpdateWithError;
   final List<String> calls = [];
@@ -643,6 +842,14 @@ class _RecordingProspectsService extends ProspectsService {
     calls.add('update:$prospectId:$operationKey');
     if (failUpdate) {
       throw const ProspectsBusinessException('Datos inválidos.');
+    }
+    if (failUpdateRecoverable) {
+      throw const ProspectsRecoverableException(
+        'El servidor no pudo completar la solicitud.',
+      );
+    }
+    if (failUpdateOffline) {
+      throw const ProspectsOfflineException('No se pudo conectar.');
     }
     if (failUpdateWithBase) {
       throw const ProspectsException(

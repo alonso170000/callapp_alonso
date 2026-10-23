@@ -8,6 +8,7 @@ import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class _FollowUpActivityDraft {
@@ -241,7 +242,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppPalette.of(context).textColor,
+          ),
+        ),
         const SizedBox(height: 3),
         child,
       ],
@@ -278,7 +285,15 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         padding: const EdgeInsets.only(bottom: 5),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppPalette.of(context).textColor,
+                ),
+              ),
+            ),
             Semantics(
               toggled: value,
               label: label,
@@ -305,7 +320,11 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                           : const Color(0xFFFFB1B1),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(value ? Icons.check : Icons.close, size: 17),
+                    child: Icon(
+                      value ? Icons.check : Icons.close,
+                      size: 17,
+                      color: AppColors.textDarkColor,
+                    ),
                   ),
                 ),
               ),
@@ -611,7 +630,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         margin: const EdgeInsets.only(top: 6, bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFD6D8),
+          color: AppPalette.of(context).errorSurfaceFill,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -643,7 +662,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       margin: const EdgeInsets.only(top: 6, bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 166, 86, 86),
+        color: const Color.fromARGB(255, 28, 99, 111),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -661,12 +680,21 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                       _completionAcknowledged = true;
                       _error = null;
                     }),
+              style: FilledButton.styleFrom(
+                backgroundColor: _completionAcknowledged
+                    ? const Color.fromARGB(255, 90, 125, 195)
+                    : const Color.fromARGB(255, 22, 163, 224),
+              ),
               icon: Icon(
                 _completionAcknowledged
                     ? Iconsax.tick_circle
                     : Icons.info_outline,
+                color: _completionAcknowledged ? Color.fromARGB(255, 170, 237, 255) : Colors.white,
               ),
-              label: Text(_completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO'),
+              label: Text(
+                _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
+                style: TextStyle(color: _completionAcknowledged ? Color.fromARGB(255, 170, 237, 255) : Colors.white),
+              ),
             ),
           ),
         ],
@@ -685,13 +713,16 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.accentColor,
+        color: AppPalette.of(context).noticeSurfaceFill,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: Color(0xFF195768)),
+          Icon(
+            Icons.info_outline,
+            color: AppPalette.of(context).noticeSurfaceInk,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -699,7 +730,10 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
             ),
           ),
           if (widget.onOpenActivity != null)
-            const Icon(Icons.chevron_right, color: Color(0xFF195768)),
+            Icon(
+              Icons.chevron_right,
+              color: AppPalette.of(context).noticeSurfaceInk,
+            ),
         ],
       ),
     ),
@@ -711,12 +745,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       ProspectDetailPanel(
         initiallyExpanded: true,
         nested: true,
-        color: const Color(0xFF195768),
+        color: const Color.fromARGB(255, 33, 117, 140),
         title: 'Acerca del seguimiento',
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFB2EFFA),
+            color: AppPalette.of(context).nestedSurfaceFill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -786,7 +820,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   child: Text(
                     _error!,
                     key: const ValueKey('follow-up-save-error'),
-                    style: const TextStyle(color: Color(0xFFA34D4D)),
+                    style: TextStyle(
+                      color: AppPalette.of(context).fieldErrorInk,
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),

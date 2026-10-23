@@ -108,26 +108,46 @@ class PendingOperationsStore {
   Future<void> markPending(PendingOperation operation, [String? error]) =>
       _setState(operation, PendingOperationState.pending, error: error);
 
+  /// Deja la operación pendiente y reinicia el contador de intentos. Se usa
+  /// cuando el motivo es la falta de conexión: estar sin red no debe consumir
+  /// el presupuesto de reintentos automáticos.
+  Future<void> markPendingOffline(
+    PendingOperation operation, [
+    String? error,
+  ]) => _setState(
+    operation,
+    PendingOperationState.pending,
+    error: error,
+    resetAttempt: true,
+  );
+
   Future<void> markConflict(PendingOperation operation, String error) =>
       _setState(operation, PendingOperationState.conflict, error: error);
 
-  Future<void> retryConflict(PendingOperation operation) =>
-      _setState(operation, PendingOperationState.pending, error: null);
+  Future<void> retryConflict(PendingOperation operation) => _setState(
+    operation,
+    PendingOperationState.pending,
+    error: null,
+    resetAttempt: true,
+  );
 
   Future<void> _setState(
     PendingOperation operation,
     PendingOperationState state, {
     String? error,
     bool incrementAttempt = false,
+    bool resetAttempt = false,
   }) async {
     final database = await _database.databaseOrNull;
     if (database == null) return;
+    final attempts = resetAttempt
+        ? '0'
+        : 'attempt_count + ${incrementAttempt ? 1 : 0}';
     await database.rawUpdate(
-      'UPDATE pending_operations SET state = ?, last_error = ?, attempt_count = attempt_count + ? WHERE id = ? AND user_id = ? AND development_id = ?',
+      'UPDATE pending_operations SET state = ?, last_error = ?, attempt_count = $attempts WHERE id = ? AND user_id = ? AND development_id = ?',
       [
         state.name,
         error,
-        incrementAttempt ? 1 : 0,
         operation.id,
         operation.scope.userId,
         operation.scope.developmentId,
@@ -251,6 +271,13 @@ class PendingOperationsStore {
       if (entity == 'prospect') {
         await _saveAlias(transaction, creation.scope, serverId);
       }
+      await _saveIdMapping(
+        transaction,
+        creation.scope,
+        entity,
+        temporaryId,
+        serverId,
+      );
     });
   }
 
@@ -336,6 +363,81 @@ class PendingOperationsStore {
     await database.insert('app_metadata', {
       'key': key,
       'value': jsonEncode(values),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  static const _idMapPrefix = 'local_id_map';
+  static const _maxIdMapEntries = 200;
+
+  static String _idMapKey(LocalScope scope, String entity) =>
+      '$_idMapPrefix:$entity:${scope.userId}:${scope.developmentId}';
+
+  /// Equivalencia entre un id temporal (negativo) y el id real que el servidor
+  /// asignó al sincronizar su creación. Permite que una edición hecha desde una
+  /// pantalla que todavía tenía el id temporal apunte al registro correcto en
+  /// vez de quedar huérfana.
+  Future<int?> resolveLocalId(
+    LocalScope scope,
+    String entity,
+    int temporaryId,
+  ) async {
+    final database = await _database.databaseOrNull;
+    if (database == null) return null;
+    final rows = await database.query(
+      'app_metadata',
+      columns: const ['value'],
+      where: 'key = ?',
+      whereArgs: [_idMapKey(scope, entity)],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    try {
+      final decoded = jsonDecode('${rows.single['value']}');
+      if (decoded is! Map) return null;
+      final value = decoded['$temporaryId'];
+      return value is int ? value : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static Future<void> _saveIdMapping(
+    DatabaseExecutor database,
+    LocalScope scope,
+    String entity,
+    int temporaryId,
+    int serverId,
+  ) async {
+    final key = _idMapKey(scope, entity);
+    final rows = await database.query(
+      'app_metadata',
+      columns: const ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    final mapping = <String, int>{};
+    if (rows.isNotEmpty) {
+      try {
+        final decoded = jsonDecode('${rows.single['value']}');
+        if (decoded is Map) {
+          for (final entry in decoded.entries) {
+            if (entry.value is int) {
+              mapping['${entry.key}'] = entry.value as int;
+            }
+          }
+        }
+      } on FormatException {
+        mapping.clear();
+      }
+    }
+    mapping['$temporaryId'] = serverId;
+    while (mapping.length > _maxIdMapEntries) {
+      mapping.remove(mapping.keys.first);
+    }
+    await database.insert('app_metadata', {
+      'key': key,
+      'value': jsonEncode(mapping),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

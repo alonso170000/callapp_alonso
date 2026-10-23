@@ -113,22 +113,30 @@ class AgendaRepository {
   );
 
   Future<AgendaMutationResult> delete(AgendaActivity activity) async {
-    final current = scope, id = activity.id;
+    final current = scope;
+    var id = activity.id;
     if (id == null) {
       throw const AgendaBusinessException(
         'La actividad no tiene un identificador válido.',
       );
     }
-    final key = PendingOperationsStore.newOperationKey();
     if (id < 0) {
-      for (final item in await _outbox.read(current)) {
-        if (item.kind == 'agenda.create' && item.entityId == id) {
-          await _outbox.remove(item);
+      // Si la creación ya se sincronizó, la pantalla puede seguir mostrando el
+      // id temporal; se resuelve para eliminar la actividad real.
+      final resolved = await _outbox.resolveLocalId(current, 'activity', id);
+      if (resolved != null && resolved > 0) {
+        id = resolved;
+      } else {
+        for (final item in await _outbox.read(current)) {
+          if (item.kind == 'agenda.create' && item.entityId == id) {
+            await _outbox.remove(item);
+          }
         }
+        await _cache.remove(current, id);
+        return const AgendaMutationResult(AgendaMutationState.saved);
       }
-      await _cache.remove(current, id);
-      return const AgendaMutationResult(AgendaMutationState.saved);
     }
+    final key = PendingOperationsStore.newOperationKey();
     try {
       await _service.delete(id, operationKey: key);
       await _cache.remove(current, id);
@@ -155,49 +163,65 @@ class AgendaRepository {
     required AgendaActivity optimistic,
     required Future<void> Function(int, String) remote,
   }) async {
-    final current = scope, id = activity.id;
+    final current = scope;
+    var id = activity.id;
     if (id == null) {
       throw const AgendaBusinessException(
         'La actividad no tiene un identificador válido.',
       );
     }
+    var projected = optimistic;
+    var effectivePayload = payload;
+    if (id < 0) {
+      final resolved = await _outbox.resolveLocalId(current, 'activity', id);
+      if (resolved != null && resolved > 0) {
+        id = resolved;
+        projected = optimistic.copyWith(id: resolved);
+        if (effectivePayload['local_activity'] != null) {
+          effectivePayload = {
+            ...effectivePayload,
+            'local_activity': _activityJson(projected),
+          };
+        }
+      }
+    }
     final key = PendingOperationsStore.newOperationKey();
     if (id < 0) {
-      await _cache.upsert(current, optimistic);
+      await _cache.upsert(current, projected);
       await _outbox.enqueue(
         current,
         kind: kind,
         entityId: id,
         operationKey: key,
-        payload: payload,
+        payload: effectivePayload,
       );
       unawaited(OutboxService.instance.flush());
       return AgendaMutationResult(
         AgendaMutationState.pending,
-        activity: optimistic,
+        activity: projected,
       );
     }
     try {
       await remote(id, key);
-      await _cache.upsert(current, optimistic);
+      await _cache.upsert(current, projected);
       return AgendaMutationResult(
         AgendaMutationState.saved,
-        activity: optimistic,
+        activity: projected,
       );
     } on AgendaRecoverableException {
       if (!_outbox.isAvailable) rethrow;
-      await _cache.upsert(current, optimistic);
+      await _cache.upsert(current, projected);
       await _outbox.enqueue(
         current,
         kind: kind,
         entityId: id,
         operationKey: key,
-        payload: payload,
+        payload: effectivePayload,
       );
       unawaited(OutboxService.instance.flush());
       return AgendaMutationResult(
         AgendaMutationState.pending,
-        activity: optimistic,
+        activity: projected,
       );
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:callerapp_frontend/data/local/activities_cache.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
@@ -34,6 +36,17 @@ class OutboxService extends ChangeNotifier {
   bool _initialized = false;
   int _revision = 0;
 
+  /// Tras estos fallos de servidor, la operación deja de reintentarse sola y
+  /// pasa a conflicto para que el usuario decida.
+  static const _maxAutoAttempts = 5;
+
+  /// Cada cuánto se reintenta sincronizar mientras la app está abierta y hay
+  /// operaciones pendientes. Sin paquete de conectividad, es la forma de que la
+  /// cola se vacíe sola al volver la red.
+  static const autoSyncInterval = Duration(seconds: 90);
+
+  Timer? _autoSyncTimer;
+
   bool get isSyncing => _syncing;
 
   /// Aumenta cada vez que se procesa una operación pendiente. Permite a las
@@ -59,6 +72,25 @@ class OutboxService extends ChangeNotifier {
     _auth.addListener(_sessionChanged);
     await load();
     await flush();
+    _autoSyncTimer ??= Timer.periodic(
+      autoSyncInterval,
+      (_) => unawaited(maybeAutoSync()),
+    );
+  }
+
+  /// Reintenta el vaciado si hay pendientes y no hay conflictos. Es lo que llama
+  /// el temporizador para vaciar la cola sola al recuperar la conexión, sin
+  /// esperar a que el usuario haga una acción.
+  Future<void> maybeAutoSync() async {
+    if (_syncing || _operations.isEmpty || pendingCount == 0) return;
+    await flush();
+  }
+
+  @override
+  void dispose() {
+    _autoSyncTimer?.cancel();
+    _autoSyncTimer = null;
+    super.dispose();
   }
 
   void _sessionChanged() {
@@ -126,8 +158,11 @@ class OutboxService extends ChangeNotifier {
             'La sesión debe renovarse para sincronizar.',
           );
           break;
+        } on AgendaOfflineException catch (error) {
+          await _store.markPendingOffline(operation, error.message);
+          break;
         } on AgendaRecoverableException catch (error) {
-          await _store.markPending(operation, error.message);
+          await _pauseRetries(operation, error.message);
           break;
         } on AgendaBusinessException catch (error) {
           await _store.markConflict(operation, error.message);
@@ -138,8 +173,11 @@ class OutboxService extends ChangeNotifier {
             'La sesión debe renovarse para sincronizar.',
           );
           break;
+        } on ProspectsOfflineException catch (error) {
+          await _store.markPendingOffline(operation, error.message);
+          break;
         } on ProspectsRecoverableException catch (error) {
-          await _store.markPending(operation, error.message);
+          await _pauseRetries(operation, error.message);
           break;
         } on ProspectsBusinessException catch (error) {
           await _store.markConflict(operation, error.message);
@@ -162,6 +200,21 @@ class OutboxService extends ChangeNotifier {
       _syncing = false;
       await load();
     }
+  }
+
+  /// Tras [operation] deja la operación pendiente o, si ya agotó el presupuesto
+  /// de reintentos, la marca como conflicto para que el usuario decida. Los
+  /// fallos por falta de conexión no llegan aquí porque no consumen intentos.
+  Future<void> _pauseRetries(PendingOperation operation, String message) async {
+    final attempt = operation.attemptCount + 1;
+    if (attempt >= _maxAutoAttempts) {
+      await _store.markConflict(
+        operation,
+        'Se pausaron los reintentos automáticos tras $_maxAutoAttempts intentos. $message',
+      );
+      return;
+    }
+    await _store.markPending(operation, message);
   }
 
   /// Ids temporales (negativos) a los que apunta la operación. Solo se miran

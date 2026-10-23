@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_week_selector.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/app_themes.dart';
@@ -106,6 +107,114 @@ void main() {
     _expectContrast('brand card', dark.onBrand, dark.brandFill, 4.5);
     _expectContrast('completed icon', dark.completedIcon, surface, 3);
     _expectContrast('pending icon', dark.pendingIcon, surface, 3);
+  });
+
+  test('dark palette keeps the prospect detail readable', () {
+    final dark = AppPalette.dark;
+    const onSurface = Color(0xFFE1F5EE);
+
+    _expectContrast(
+      'detail header title',
+      dark.headerBadgeForeground,
+      dark.brandFill,
+      4.5,
+    );
+    _expectContrast(
+      'detail header status',
+      dark.headerForeground,
+      dark.brandFill,
+      4.5,
+    );
+    _expectContrast(
+      'detail header badge',
+      dark.headerBadgeForeground,
+      dark.headerBadgeFill,
+      4.5,
+    );
+    _expectContrast(
+      'detail header chip',
+      dark.headerChipForeground,
+      dark.headerChipFill,
+      4.5,
+    );
+
+    for (final section in ProspectSection.values) {
+      _expectContrast(
+        '${section.label} panel title',
+        section.ink(dark),
+        section.fill(dark),
+        4.5,
+      );
+      _expectContrast(
+        '${section.label} selected chip',
+        section.ink(dark),
+        section.fill(dark),
+        4.5,
+      );
+    }
+
+    for (final surface in [
+      dark.nestedSurfaceFill,
+      dark.discoverySurfaceFill,
+      dark.dataSurfaceFill,
+    ]) {
+      _expectContrast('detail form body', dark.textColor, surface, 4.5);
+    }
+
+    _expectContrast(
+      'history placeholder',
+      dark.historySurfaceInk,
+      dark.historySurfaceFill,
+      4.5,
+    );
+    _expectContrast(
+      'detail error notice',
+      onSurface,
+      dark.errorSurfaceFill,
+      4.5,
+    );
+    _expectContrast(
+      'detail warm notice',
+      dark.noticeSurfaceInk,
+      dark.noticeSurfaceFill,
+      4.5,
+    );
+    _expectContrast(
+      'history card',
+      dark.historyCardInk,
+      dark.historyCardFill,
+      4.5,
+    );
+    _expectContrast(
+      'field error',
+      dark.fieldErrorInk,
+      dark.dataSurfaceFill,
+      4.5,
+    );
+    _expectContrast(
+      'notice',
+      dark.noticeSurfaceInk,
+      dark.noticeSurfaceFill,
+      4.5,
+    );
+    _expectContrast(
+      'sync alert icon',
+      dark.panelSyncAlert,
+      dark.insertDataFill,
+      3,
+    );
+    _expectContrast(
+      'sync icon',
+      dark.panelSyncIcon,
+      dark.insertFollowUpFill,
+      3,
+    );
+    _expectContrast(
+      'script paper',
+      dark.scriptSurfaceInk,
+      dark.scriptSurfaceFill,
+      4.5,
+    );
   });
 
   testWidgets('dark theme exposes the semantic palette', (tester) async {

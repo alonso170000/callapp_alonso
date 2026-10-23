@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/catalog_cache.dart';
+import 'package:callerapp_frontend/data/local/discovery_cache.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/data/mappers/prospect_cache_mapper.dart';
@@ -25,6 +26,7 @@ class ProspectsRepository {
   ProspectsRepository({
     ProspectsService? service,
     ProspectsCache? cache,
+    DiscoveryCache? discoveries,
     PendingOperationsStore? outbox,
     OutboxService? sync,
     CatalogCache? catalogs,
@@ -32,6 +34,7 @@ class ProspectsRepository {
   }) : _service = service ?? ProspectsService(auth: auth),
        _ownsService = service == null,
        _cache = cache ?? ProspectsCache(),
+       _discoveries = discoveries ?? DiscoveryCache(),
        _outbox = outbox ?? PendingOperationsStore(),
        _sync = sync ?? OutboxService.instance,
        _catalogs = catalogs ?? CatalogCache(),
@@ -40,6 +43,7 @@ class ProspectsRepository {
   final ProspectsService _service;
   final bool _ownsService;
   final ProspectsCache _cache;
+  final DiscoveryCache _discoveries;
   final PendingOperationsStore _outbox;
   final OutboxService _sync;
   final CatalogCache _catalogs;
@@ -278,14 +282,56 @@ class ProspectsRepository {
   Future<ProspectMutationResult> saveDiscoverySection(
     ProspectRecord prospect,
     Map<String, dynamic> fields,
-  ) => _mutate(
-    prospect,
-    kind: 'prospect.discovery',
-    fields: fields,
-    optimistic: prospect,
-    remote: (id, key) =>
-        _service.saveDiscoverySection(id, fields, operationKey: key),
-  );
+  ) async {
+    final result = await _mutate(
+      prospect,
+      kind: 'prospect.discovery',
+      fields: fields,
+      optimistic: prospect,
+      remote: (id, key) =>
+          _service.saveDiscoverySection(id, fields, operationKey: key),
+    );
+    final id = result.prospect?.id;
+    if (id != null && id > 0) await rememberDiscovery(id, fields);
+    return result;
+  }
+
+  /// Devuelve el discovery del prospecto priorizando la red, cayendo a la caché
+  /// local cuando no hay conexión y superponiendo las secciones que aún están
+  /// pendientes de sincronizar.
+  Future<Map<String, dynamic>?> loadDiscovery(int prospectId) async {
+    final currentScope = scope;
+    final cached = await _discoveries.read(currentScope, prospectId);
+    Map<String, dynamic>? remote;
+    try {
+      remote = await _service.discovery(prospectId);
+    } on ProspectsRecoverableException {
+      if (cached == null) rethrow;
+    }
+    final merged = <String, dynamic>{...?cached, ...?remote};
+    for (final operation in await _outbox.read(
+      currentScope,
+      includeConflicts: false,
+    )) {
+      if (operation.kind != 'prospect.discovery') continue;
+      if (operation.entityId != prospectId) continue;
+      final fields = operation.payload['fields'];
+      if (fields is Map) {
+        merged.addAll(Map<String, dynamic>.from(fields)..remove('seccion'));
+      }
+    }
+    if (remote?.isNotEmpty == true) {
+      await _discoveries.write(currentScope, prospectId, merged);
+    }
+    return merged.isEmpty ? remote : merged;
+  }
+
+  /// Guarda localmente los campos de una sección de discovery para que sigan
+  /// visibles sin conexión, aunque la operación todavía esté pendiente.
+  Future<void> rememberDiscovery(int prospectId, Map<String, dynamic> fields) {
+    final payload = Map<String, dynamic>.from(fields)..remove('seccion');
+    return _discoveries.merge(scope, prospectId, payload);
+  }
 
   Future<ProspectMutationResult> _mutate(
     ProspectRecord prospect, {
@@ -295,55 +341,63 @@ class ProspectsRepository {
     required Future<void> Function(int id, String key) remote,
   }) async {
     final currentScope = scope;
-    final id = prospect.id;
+    var id = prospect.id;
     if (id == null) {
       throw const ProspectsBusinessException(
         'El prospecto no tiene un identificador válido.',
       );
     }
+    var projected = optimistic;
+    if (id < 0) {
+      // La pantalla todavía puede tener el id temporal de una creación que ya
+      // se sincronizó; se resuelve al id real para no perder la edición.
+      final resolved = await _outbox.resolveLocalId(
+        currentScope,
+        'prospect',
+        id,
+      );
+      if (resolved != null && resolved > 0) {
+        id = resolved;
+        projected = optimistic.copyWith(id: resolved);
+      }
+    }
     final key = PendingOperationsStore.newOperationKey();
     if (id < 0) {
-      await _cache.upsert(currentScope, optimistic);
+      await _cache.upsert(currentScope, projected);
       await _outbox.enqueue(
         currentScope,
         kind: kind,
         entityId: id,
         operationKey: key,
-        payload: {
-          'fields': fields,
-          'local_prospect': _prospectJson(optimistic),
-        },
+        payload: {'fields': fields, 'local_prospect': _prospectJson(projected)},
       );
       unawaited(_sync.flush());
       return ProspectMutationResult(
         ProspectMutationState.pending,
-        prospect: optimistic,
+        prospect: projected,
       );
     }
     try {
       await remote(id, key);
-      await _cache.upsert(currentScope, optimistic);
+      await _cache.upsert(currentScope, projected);
       return ProspectMutationResult(
         ProspectMutationState.saved,
-        prospect: optimistic,
+        prospect: projected,
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;
-      await _cache.upsert(currentScope, optimistic);
+      await _cache.upsert(currentScope, projected);
       await _outbox.enqueue(
         currentScope,
         kind: kind,
         entityId: id,
         operationKey: key,
-        payload: {
-          'fields': fields,
-          'local_prospect': _prospectJson(optimistic),
-        },
+        payload: {'fields': fields, 'local_prospect': _prospectJson(projected)},
       );
       unawaited(_sync.flush());
       return ProspectMutationResult(
         ProspectMutationState.pending,
-        prospect: optimistic,
+        prospect: projected,
       );
     }
   }

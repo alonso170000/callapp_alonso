@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 
 void main() {
   for (final width in [320.0, 390.0]) {
@@ -58,9 +59,13 @@ void main() {
         alignment: 0.5,
       );
       await tester.pumpAndSettle();
+      final notificationsWereEnabled = NotificationService.instance.enabled;
       await tester.tap(find.byTooltip('Cambiar notificaciones'));
       await tester.pumpAndSettle();
-      expect(find.text('DESACTIVADO'), findsOneWidget);
+      expect(
+        find.text(notificationsWereEnabled ? 'DESACTIVADO' : 'ACTIVADO'),
+        findsOneWidget,
+      );
       await tester.scrollUntilVisible(
         find.text('CERRAR SESIÓN'),
         150,

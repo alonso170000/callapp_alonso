@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:callerapp_frontend/data/local/activities_cache.dart';
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/catalog_cache.dart';
+import 'package:callerapp_frontend/data/local/discovery_cache.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/data/local/prospects_cache.dart';
@@ -334,6 +335,191 @@ void main() {
     expect((await offline.loadLots(21)).single['desarrollo_id'], 21);
     expect((await offline.loadLots(22)).single['desarrollo_id'], 22);
   });
+
+  test('una edición con id temporal ya sincronizado usa el id real', () async {
+    final auth = await _auth(userId: 4, developmentId: 8);
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    final cache = ProspectsCache(database: database);
+    final store = PendingOperationsStore(database: database);
+    const scope = LocalScope(userId: 4, developmentId: 8);
+    final created = _prospect(-1, 'Local');
+    await cache.upsert(scope, created);
+    await store.enqueue(
+      scope,
+      kind: 'prospect.create',
+      entityId: -1,
+      operationKey: 'create',
+      payload: {'local_prospect': _row(created)},
+    );
+    final creation = (await store.read(scope)).single;
+    await store.remapProspectId(creation, temporaryId: -1, serverId: 88);
+    expect(await store.read(scope), isEmpty);
+
+    final remote = _RecordingProspectsService();
+    final repository = ProspectsRepository(
+      auth: auth,
+      cache: cache,
+      outbox: store,
+      service: remote,
+    );
+
+    final result = await repository.update(_prospect(-1, 'Local'), const {
+      'nombre': 'Local editado',
+    }, optimisticProspect: _prospect(-1, 'Local editado'));
+
+    expect(result.isPending, isFalse);
+    expect(result.prospect?.id, 88);
+    expect(remote.updatedIds, [88]);
+    expect(await store.read(scope), isEmpty);
+    expect((await cache.read(scope)).single.id, 88);
+  });
+
+  test('el discovery se lee de la caché cuando no hay conexión', () async {
+    final auth = await _auth(userId: 4, developmentId: 8);
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    const scope = LocalScope(userId: 4, developmentId: 8);
+    final discoveries = DiscoveryCache(database: database);
+    await discoveries.write(scope, 5, const {'motivo_propiedad': 'inversion'});
+    final repository = ProspectsRepository(
+      auth: auth,
+      discoveries: discoveries,
+      outbox: PendingOperationsStore(database: database),
+      service: _DiscoveryProspectsService(offline: true),
+    );
+
+    expect(await repository.loadDiscovery(5), {
+      'motivo_propiedad': 'inversion',
+    });
+  });
+
+  test(
+    'el discovery superpone las secciones pendientes sobre la red',
+    () async {
+      final auth = await _auth(userId: 4, developmentId: 8);
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      const scope = LocalScope(userId: 4, developmentId: 8);
+      final store = PendingOperationsStore(database: database);
+      await store.enqueue(
+        scope,
+        kind: 'prospect.discovery',
+        entityId: 5,
+        operationKey: 'discovery',
+        payload: const {
+          'fields': {
+            'seccion': 'necesidad_objetivo',
+            'motivo_propiedad': 'inversion',
+          },
+        },
+      );
+      final discoveries = DiscoveryCache(database: database);
+      final repository = ProspectsRepository(
+        auth: auth,
+        discoveries: discoveries,
+        outbox: store,
+        service: _DiscoveryProspectsService(
+          payload: const {'presupuesto': 1500, 'tipo_propiedad': 'casa'},
+        ),
+      );
+
+      expect(await repository.loadDiscovery(5), {
+        'presupuesto': 1500,
+        'tipo_propiedad': 'casa',
+        'motivo_propiedad': 'inversion',
+      });
+      // La caché queda con el estado optimista para el próximo arranque.
+      expect(
+        (await discoveries.read(scope, 5))?['motivo_propiedad'],
+        'inversion',
+      );
+    },
+  );
+
+  test(
+    'una sección de discovery guardada sin conexión queda visible',
+    () async {
+      final auth = await _auth(userId: 4, developmentId: 8);
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      const scope = LocalScope(userId: 4, developmentId: 8);
+      final discoveries = DiscoveryCache(database: database);
+      final store = PendingOperationsStore(database: database);
+      final repository = ProspectsRepository(
+        auth: auth,
+        cache: ProspectsCache(database: database),
+        discoveries: discoveries,
+        outbox: store,
+        service: _DiscoveryProspectsService(failSaveOffline: true),
+      );
+
+      final result = await repository.saveDiscoverySection(
+        _prospect(5, 'Ana'),
+        const {
+          'seccion': 'necesidad_objetivo',
+          'motivo_propiedad': 'inversion',
+        },
+      );
+
+      expect(result.isPending, isTrue);
+      expect(await store.read(scope), hasLength(1));
+      expect(await repository.loadDiscovery(5), {
+        'motivo_propiedad': 'inversion',
+      });
+    },
+  );
+}
+
+/// Servicio de discovery controlable: permite simular falta de conexión y
+/// respuestas del servidor sin tocar la red.
+class _DiscoveryProspectsService extends ProspectsService {
+  _DiscoveryProspectsService({
+    this.payload,
+    this.offline = false,
+    this.failSaveOffline = false,
+  });
+
+  final Map<String, dynamic>? payload;
+  final bool offline;
+  final bool failSaveOffline;
+  final List<String> saved = [];
+
+  @override
+  Future<Map<String, dynamic>?> discovery(int prospectId) async {
+    if (offline) throw const ProspectsOfflineException('No se pudo conectar.');
+    return payload;
+  }
+
+  @override
+  Future<void> saveDiscoverySection(
+    int prospectId,
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
+    saved.add('$prospectId:${fields['seccion']}');
+    if (failSaveOffline) {
+      throw const ProspectsOfflineException('No se pudo conectar.');
+    }
+  }
+
+  @override
+  Future<List<ProspectRecord>> fetch() async => const [];
+
+  @override
+  void dispose() {}
 }
 
 Future<AuthService> _auth({
@@ -403,6 +589,7 @@ class _FailingCreateService extends ProspectsService {
 
 class _RecordingProspectsService extends ProspectsService {
   final List<String> calls = [];
+  final List<int> updatedIds = [];
 
   @override
   Future<int> create(
@@ -411,6 +598,16 @@ class _RecordingProspectsService extends ProspectsService {
   }) async {
     calls.add('create:$operationKey');
     return 120;
+  }
+
+  @override
+  Future<void> update(
+    int prospectId,
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
+    calls.add('update:$prospectId:$operationKey');
+    updatedIds.add(prospectId);
   }
 
   @override

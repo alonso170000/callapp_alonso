@@ -69,6 +69,9 @@ class CatalogCache {
   ) async {
     try {
       await _database.writeMetadata(_key(scope, name), jsonEncode(rows));
+      // Marca el ámbito como reciente para que la limpieza de 30 días lo
+      // considere junto al resto de sus recursos.
+      await _database.touchMetadata(scope, AppDatabase.catalogsResource);
     } on Object {
       // La ausencia de SQLite no debe impedir el uso remoto de catálogos.
     }

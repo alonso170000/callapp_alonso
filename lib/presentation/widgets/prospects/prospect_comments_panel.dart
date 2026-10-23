@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 import 'prospect_detail_widgets.dart';
 import 'prospect_history.dart';
@@ -57,7 +58,7 @@ class ProspectCommentsPanelState extends State<ProspectCommentsPanel> {
       width: double.infinity,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3B3FF),
+        color: AppPalette.of(context).historySurfaceFill,
         borderRadius: BorderRadius.circular(10),
       ),
       child: FutureBuilder<List<ProspectHistoryComment>>(
@@ -87,9 +88,12 @@ class ProspectCommentsPanelState extends State<ProspectCommentsPanel> {
           }
           final comments = snapshot.data ?? [];
           if (comments.isEmpty) {
-            return const Text(
+            return Text(
               'Sin comentarios registrados.',
-              style: TextStyle(color: Colors.black, fontFamily: 'SulphurPoint'),
+              style: TextStyle(
+                color: AppPalette.of(context).historySurfaceInk,
+                fontFamily: 'SulphurPoint',
+              ),
             );
           }
           return Column(

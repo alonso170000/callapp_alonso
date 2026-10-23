@@ -25,6 +25,12 @@ class ProspectsIndeterminateException extends ProspectsRecoverableException {
   const ProspectsIndeterminateException(super.message);
 }
 
+/// No hubo conexión con el servidor. A diferencia de un fallo de servidor, no
+/// consume el presupuesto de reintentos automáticos del outbox.
+class ProspectsOfflineException extends ProspectsRecoverableException {
+  const ProspectsOfflineException(super.message);
+}
+
 class ProspectsSessionException extends ProspectsException {
   const ProspectsSessionException(super.message);
 }
@@ -108,8 +114,10 @@ class ProspectsService {
         );
       }
       if (response.statusCode >= 500) {
-        throw const ProspectsRecoverableException(
-          'El servidor no pudo completar la solicitud. Se reintentará.',
+        throw ProspectsRecoverableException(
+          decoded is Map && decoded['message'] is String
+              ? decoded['message'] as String
+              : 'El servidor no pudo completar la solicitud. Se reintentará.',
         );
       }
       final data = decoded;
@@ -138,7 +146,7 @@ class ProspectsService {
             : 'El servidor tardó demasiado. Intenta nuevamente.',
       );
     } on http.ClientException {
-      throw ProspectsRecoverableException(
+      throw ProspectsOfflineException(
         mutation
             ? 'No se pudo conectar. El cambio queda pendiente de sincronizar.'
             : 'No se pudo conectar. Revisa tu conexión.',

@@ -349,12 +349,18 @@ void main() {
       expect(find.byTooltip('Ver prospecto'), findsOneWidget);
       expect(find.byType(HomeCardArrow), findsOneWidget);
       expect(find.text('VER PROSPECTO'), findsNothing);
-      expect(
-        tester.getRect(find.byTooltip('Ver prospecto')).right,
-        closeTo(
-          tester.getRect(find.byTooltip('Llamar al prospecto')).right,
-          2.1,
+      // El relleno táctil mínimo de 48 px desplaza la caja visible del botón
+      // pequeño 5 px hacia dentro; por eso se comparan las cajas de diseño
+      // (IconButton), que son las que deben compartir el borde derecho.
+      Rect actionBox(String tooltip) => tester.getRect(
+        find.ancestor(
+          of: find.byTooltip(tooltip),
+          matching: find.byType(IconButton),
         ),
+      );
+      expect(
+        actionBox('Ver prospecto').right,
+        closeTo(actionBox('Llamar al prospecto').right, 2.1),
       );
       expect(find.text('DESCRIPCIÓN'), findsOneWidget);
       final complete = find.text('COMPLETAR ACTIVIDAD');
