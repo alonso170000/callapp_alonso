@@ -6,17 +6,17 @@ import 'package:callerapp_frontend/resources/styles/styles.dart';
 class ProfileSettingRow extends StatelessWidget {
   final String title;
   final String value;
-  final IconData icon;
-  final String actionLabel;
-  final VoidCallback onPressed;
+  final IconData? icon;
+  final String? actionLabel;
+  final VoidCallback? onPressed;
   final Color titleColor;
   const ProfileSettingRow({
     super.key,
     required this.title,
     required this.value,
-    required this.icon,
-    required this.actionLabel,
-    required this.onPressed,
+    this.icon,
+    this.actionLabel,
+    this.onPressed,
     this.titleColor = AppColors.homeWarmText,
   });
 
@@ -42,22 +42,23 @@ class ProfileSettingRow extends StatelessWidget {
           ],
         ),
       ),
-      IconButton(
-        tooltip: actionLabel,
-        onPressed: onPressed,
-        icon: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).iconChipFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            size: 34,
-            color: Theme.of(context).colorScheme.primary,
+      if (icon != null && actionLabel != null)
+        IconButton(
+          tooltip: actionLabel,
+          onPressed: onPressed,
+          icon: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).iconChipFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              size: 34,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
-      ),
     ],
   );
 }

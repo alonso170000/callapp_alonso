@@ -21,6 +21,7 @@ class AppDatabase {
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
   static const catalogsResource = 'catalogs';
+  static const preferencesResource = 'profile_preferences';
   static const maintenanceKey = 'last_maintenance_at_ms';
 
   final DatabaseFactory? _factory;
@@ -343,6 +344,23 @@ class AppDatabase {
       'resource': resource,
       'refreshed_at_ms': DateTime.now().millisecondsSinceEpoch,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Fecha de la actualización local más reciente del ámbito.
+  Future<DateTime?> lastRefreshedAt(LocalScope scope) async {
+    final database = await databaseOrNull;
+    if (database == null) return null;
+    final rows = await database.rawQuery(
+      '''
+        SELECT MAX(refreshed_at_ms) AS last_ms
+        FROM cache_metadata
+        WHERE user_id = ? AND development_id = ?
+      ''',
+      [scope.userId, scope.developmentId],
+    );
+    final value = rows.single['last_ms'];
+    if (value is! int) return null;
+    return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
   }
 
   /// Elimina todos los datos locales. Se conserva solo la estructura.

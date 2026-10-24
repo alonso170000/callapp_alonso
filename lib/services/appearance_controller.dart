@@ -6,6 +6,9 @@ import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
 
+import 'package:callerapp_frontend/data/local/local_scope.dart';
+import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
+
 enum AppAppearance {
   light('claro', 'Claro', ThemeMode.light),
   dark('oscuro', 'Oscuro', ThemeMode.dark),
@@ -22,20 +25,34 @@ class AppearanceException implements Exception {
 }
 
 class AppearanceController extends ChangeNotifier {
-  AppearanceController({AuthService? auth, http.Client? client})
-    : _auth = auth ?? AuthService.instance,
-      _client = client ?? http.Client() {
+  AppearanceController({
+    AuthService? auth,
+    http.Client? client,
+    ProfilePreferencesStore? preferences,
+  }) : _auth = auth ?? AuthService.instance,
+       _client = client ?? http.Client(),
+       _preferences = preferences ?? ProfilePreferencesStore() {
     _auth.addListener(_sessionChanged);
     _sessionChanged();
   }
   static final instance = AppearanceController();
   final AuthService _auth;
   final http.Client _client;
+  final ProfilePreferencesStore _preferences;
   AppAppearance appearance = AppAppearance.system;
   bool loading = false, saving = false;
   String? error;
   String? _token;
   int _revision = 0;
+
+  LocalScope? get _scope {
+    final userId = _auth.userId;
+    final developmentId = _auth.developmentId;
+    return userId == null || developmentId == null
+        ? null
+        : LocalScope(userId: userId, developmentId: developmentId);
+  }
+
   void _sessionChanged() {
     if (_token == _auth.token) return;
     _token = _auth.token;
@@ -45,7 +62,26 @@ class AppearanceController extends ChangeNotifier {
     loading = false;
     saving = false;
     notifyListeners();
-    if (_token != null) reload();
+    if (_token != null) unawaited(_restoreThenReload(_revision));
+  }
+
+  Future<void> _restoreThenReload(int revision) async {
+    final scope = _scope;
+    if (scope != null) {
+      final stored = await _preferences.read(scope);
+      final value = stored?.appearance;
+      final local = AppAppearance.values.where((item) => item.value == value);
+      if (revision == _revision && local.isNotEmpty) {
+        appearance = local.first;
+        notifyListeners();
+      }
+    }
+    if (revision == _revision) await reload();
+  }
+
+  Future<void> _saveLocal(AppAppearance value) async {
+    final scope = _scope;
+    if (scope != null) await _preferences.setAppearance(scope, value.value);
   }
 
   Future<AppAppearance> _request(
@@ -119,7 +155,10 @@ class AppearanceController extends ChangeNotifier {
     notifyListeners();
     try {
       final value = await _request(token);
-      if (revision == _revision) appearance = value;
+      if (revision == _revision) {
+        appearance = value;
+        await _saveLocal(value);
+      }
     } on AppearanceException catch (e) {
       if (revision == _revision) error = e.message;
     } finally {
@@ -147,7 +186,10 @@ class AppearanceController extends ChangeNotifier {
     notifyListeners();
     try {
       final saved = await _request(token, selected: value);
-      if (revision == _revision) appearance = saved;
+      if (revision == _revision) {
+        appearance = saved;
+        await _saveLocal(saved);
+      }
     } on AppearanceException catch (e) {
       if (revision == _revision) {
         appearance = previous;

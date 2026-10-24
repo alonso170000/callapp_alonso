@@ -7,7 +7,9 @@ import 'package:callerapp_frontend/services/notification_service.dart';
 
 void main() {
   for (final width in [320.0, 390.0]) {
-    testWidgets('Profile editing and logout at $width', (tester) async {
+    testWidgets('Profile data is read-only and logout works at $width', (
+      tester,
+    ) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = Size(width, 844);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -27,24 +29,8 @@ void main() {
       await tester.tap(find.byIcon(Iconsax.profile_circle_copy));
       await tester.pumpAndSettle();
       expect(find.text('MI PERFIL'), findsOneWidget);
-      await tester.tap(find.byTooltip('Editar nombre'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), '');
-      await tester.tap(find.text('Guardar'));
-      await tester.pumpAndSettle();
-      expect(find.text('Este campo es obligatorio'), findsOneWidget);
-      await tester.enterText(find.byType(TextFormField), 'Ana Pérez');
-      await tester.tap(find.text('Guardar'));
-      await tester.pumpAndSettle();
-      expect(find.text('ANA PÉREZ'), findsWidgets);
-      await tester.tap(find.byTooltip('Editar correo'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'invalid');
-      await tester.tap(find.text('Guardar'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ingresa un correo válido'), findsOneWidget);
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
+      expect(find.text('DATOS PERSONALES'), findsOneWidget);
+      expect(find.byTooltip('Datos personales no editables'), findsNWidgets(4));
       final scrollable = find.descendant(
         of: find.byKey(const PageStorageKey('profile-scroll')),
         matching: find.byType(Scrollable),

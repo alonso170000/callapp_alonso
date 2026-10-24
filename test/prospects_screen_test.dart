@@ -172,7 +172,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(call);
     await tester.pumpAndSettle();
-    expect(find.text('9980000006'), findsOneWidget);
+    expect(
+      find.textContaining('Este prospecto no tiene una actividad agendada'),
+      findsOneWidget,
+    );
+    expect(find.text('SÍ, LLAMAR'), findsOneWidget);
+    expect(find.text('NO LLAMAR'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

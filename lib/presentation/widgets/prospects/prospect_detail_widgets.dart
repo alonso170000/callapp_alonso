@@ -343,7 +343,6 @@ class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
               child: Row(
                 children: [
-                  
                   Expanded(
                     child: Text(
                       widget.title,

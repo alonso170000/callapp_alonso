@@ -45,7 +45,6 @@ class ProfileIdentity extends StatelessWidget {
         spacing: 5,
         runSpacing: 5,
         children: [
-          _badge(profile.name),
           _badge(profile.email),
           _badge(profile.phone, color: AppColors.secondaryColor),
           _badge(

@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/new_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
@@ -13,6 +14,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -49,6 +51,7 @@ class ProspectsScreen extends StatefulWidget {
 class _ProspectsScreenState extends State<ProspectsScreen> {
   final _records = <ProspectRecord>[];
   final _repository = ProspectsRepository();
+  final _agendaRepository = AgendaRepository();
   bool _loading = false;
   String? _error;
   int _request = 0;
@@ -226,7 +229,137 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
     _repository.dispose();
+    _agendaRepository.dispose();
     super.dispose();
+  }
+
+  Future<List<AgendaActivity>> _activitiesFor(ProspectRecord prospect) async {
+    try {
+      final cached = await _agendaRepository.readCache();
+      if (cached.isNotEmpty) return cached;
+    } on Object {
+      // Si la caché no está disponible, se intenta consultar la agenda remota.
+    }
+    try {
+      return await _agendaRepository.refresh();
+    } on Object {
+      return const [];
+    }
+  }
+
+  AgendaActivity? _scheduledContactActivity(
+    List<AgendaActivity> activities,
+    ProspectRecord prospect, {
+    required bool message,
+  }) {
+    final expectedMedium = message ? 'whatsapp' : 'llamada';
+    final matches =
+        activities
+            .where(
+              (activity) =>
+                  activity.prospectId == prospect.id &&
+                  activity.status == AgendaStatus.pending &&
+                  activity.isFollowUp &&
+                  activity.medium?.trim().toLowerCase() == expectedMedium,
+            )
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  String _activityDateLabel(BuildContext context, AgendaActivity activity) {
+    final date = activity.date;
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year} a las ${TimeOfDay.fromDateTime(date).format(context)}';
+  }
+
+  Future<void> _contactProspect(ProspectRecord prospect, bool message) async {
+    final activity = _scheduledContactActivity(
+      await _activitiesFor(prospect),
+      prospect,
+      message: message,
+    );
+    if (!mounted) return;
+    final channel = message ? 'WhatsApp' : 'llamada';
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) {
+        final hasActivity = activity != null;
+        final question = hasActivity
+            ? 'Hay una actividad de tipo $channel agendada con este prospecto el ${_activityDateLabel(sheetContext, activity)}. ¿Quieres ${message ? 'enviar el mensaje y completar la actividad' : 'hacer el seguimiento y completar la actividad'}?'
+            : message
+            ? 'Este prospecto no tiene una actividad de tipo WhatsApp agendada.'
+            : 'Este prospecto no tiene una actividad agendada. ¿Quieres hacer la llamada y registrar una actividad de seguimiento de tipo llamada como completada?';
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    prospect.name.toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 28,
+                      color: Theme.of(sheetContext).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(question),
+                  const SizedBox(height: 20),
+                  if (message && !hasActivity)
+                    FilledButton(
+                      onPressed: () => Navigator.pop(sheetContext, true),
+                      child: const Text('ENTENDIDO'),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(sheetContext, false),
+                            child: Text(message ? 'NO ENVIAR' : 'NO LLAMAR'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () => Navigator.pop(sheetContext, true),
+                            child: Text(message ? 'SÍ, ENVIAR' : 'SÍ, LLAMAR'),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || confirmed != true) return;
+    if (message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('WhatsApp estará disponible próximamente.'),
+        ),
+      );
+      return;
+    }
+    await context.push(
+      '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
+      extra: activity == null
+          ? prospect
+          : ProspectDetailArguments(
+              prospect: prospect,
+              sourceActivity: activity,
+            ),
+    );
   }
 
   String _normalize(String value) {
@@ -594,6 +727,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: ProspectCard(
                   prospect: prospects[index],
+                  onContact: (message) =>
+                      _contactProspect(prospects[index], message),
                   onTap: () => context.push(
                     '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
                     extra: prospects[index],

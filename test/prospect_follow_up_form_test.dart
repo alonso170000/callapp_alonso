@@ -219,6 +219,12 @@ void main() {
       await tester.ensureVisible(other);
       await tester.tap(other);
       expect(opened?.id, 10);
+      final detail = find.byKey(
+        const ValueKey('open-follow-up-completion-activity'),
+      );
+      await tester.ensureVisible(detail);
+      await tester.tap(detail);
+      expect(opened?.id, 9);
       final acknowledge = find.byKey(
         const ValueKey('acknowledge-follow-up-completion'),
       );

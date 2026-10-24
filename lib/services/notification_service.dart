@@ -10,10 +10,21 @@ import 'package:callerapp_frontend/presentation/models/notification_models.dart'
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/data/local/notifications_store.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
+import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
+import 'package:callerapp_frontend/services/auth_service.dart';
 
 class NotificationService extends ChangeNotifier {
-  NotificationService._({NotificationsStore? store})
-    : _store = store ?? NotificationsStore();
+  NotificationService._({
+    NotificationsStore? store,
+    ProfilePreferencesStore? preferences,
+    AuthService? auth,
+  }) : _store = store ?? NotificationsStore(),
+       _preferences = preferences ?? ProfilePreferencesStore(),
+       _auth = auth ?? AuthService.instance {
+    _auth.addListener(_sessionChanged);
+    _sessionChanged();
+  }
 
   @visibleForTesting
   NotificationService.forTesting(NotificationsStore store)
@@ -36,12 +47,15 @@ class NotificationService extends ChangeNotifier {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   final NotificationsStore _store;
+  final ProfilePreferencesStore _preferences;
+  final AuthService _auth;
   final List<ActivityNotification> _reminders = [];
   List<AgendaActivity> _lastActivities = const [];
   NotificationScope? _scope;
   bool _initialized = false;
   bool _enabled = true;
   bool? _permissionGranted;
+  LocalScope? _preferencesScope;
   Timer? _nextInboxTimer;
   Timer? _cleanupTimer;
 
@@ -54,6 +68,32 @@ class NotificationService extends ChangeNotifier {
   bool? get permissionGranted => _permissionGranted;
   int get unreadCount =>
       _reminders.where((notification) => !notification.isRead).length;
+
+  LocalScope? get _currentScope {
+    final userId = _auth.userId;
+    final developmentId = _auth.developmentId;
+    return userId == null || developmentId == null
+        ? null
+        : LocalScope(userId: userId, developmentId: developmentId);
+  }
+
+  void _sessionChanged() {
+    unawaited(_restorePreferences());
+  }
+
+  Future<void> _restorePreferences() async {
+    final scope = _currentScope;
+    _preferencesScope = scope;
+    if (scope == null) {
+      _enabled = true;
+      notifyListeners();
+      return;
+    }
+    final value = await _preferences.read(scope);
+    if (_preferencesScope != scope) return;
+    _enabled = value?.notificationsEnabled ?? true;
+    notifyListeners();
+  }
 
   static const assignmentType = 'nuevo_prospecto';
 
@@ -133,6 +173,10 @@ class NotificationService extends ChangeNotifier {
     if (_enabled == value) return;
     _enabled = value;
     notifyListeners();
+    final scope = _currentScope;
+    if (scope != null) {
+      await _preferences.setNotificationsEnabled(scope, value);
+    }
     if (value) {
       await syncActivities(_lastActivities);
     } else {

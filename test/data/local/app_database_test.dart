@@ -134,6 +134,33 @@ void main() {
     expect(await cache.cachedAt(scope), isNull);
   });
 
+  test('devuelve la actualización más reciente del ámbito', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    const scope = LocalScope(userId: 1, developmentId: 2);
+    final db = await database.database;
+    final first = DateTime.utc(2026, 10, 24, 10);
+    final latest = DateTime.utc(2026, 10, 24, 12);
+
+    await db.insert('cache_metadata', {
+      'user_id': scope.userId,
+      'development_id': scope.developmentId,
+      'resource': 'prospects',
+      'refreshed_at_ms': first.millisecondsSinceEpoch,
+    });
+    await db.insert('cache_metadata', {
+      'user_id': scope.userId,
+      'development_id': scope.developmentId,
+      'resource': 'activities',
+      'refreshed_at_ms': latest.millisecondsSinceEpoch,
+    });
+
+    expect(await database.lastRefreshedAt(scope), latest);
+  });
+
   test(
     'la limpieza de 30 días purga el ámbito completo y respeta el reciente',
     () async {

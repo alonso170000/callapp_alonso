@@ -11,7 +11,13 @@ import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 class ProspectCard extends StatelessWidget {
   final ProspectRecord prospect;
   final VoidCallback? onTap;
-  const ProspectCard({super.key, required this.prospect, this.onTap});
+  final Future<void> Function(bool message)? onContact;
+  const ProspectCard({
+    super.key,
+    required this.prospect,
+    this.onTap,
+    this.onContact,
+  });
 
   Future<void> _contact(BuildContext context, bool message) async {
     await showModalBottomSheet<void>(
@@ -214,7 +220,14 @@ class ProspectCard extends StatelessWidget {
               ? prospect.phone.isEmpty && prospect.email.isEmpty
               : prospect.phone.isEmpty)
           ? null
-          : () => _contact(context, message),
+          : () async {
+              final action = onContact;
+              if (action != null) {
+                await action(message);
+              } else {
+                await _contact(context, message);
+              }
+            },
       style: IconButton.styleFrom(
         backgroundColor: color,
         foregroundColor: AppColors.textDarkColor,

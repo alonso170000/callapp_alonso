@@ -1,5 +1,4 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
-import 'package:callerapp_frontend/presentation/widgets/profile/edit_profile_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +10,11 @@ import 'package:callerapp_frontend/services/appearance_controller.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/appearance_sheet.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/data/local/local_scope.dart';
+import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
+import 'package:callerapp_frontend/data/local/app_database.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/outbox_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.onNotificationActivity});
@@ -21,13 +25,17 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late ProfileData _profile;
+  final _preferences = ProfilePreferencesStore();
+  final _database = AppDatabase.instance;
   int _reminder = 15;
+  DateTime? _lastSync;
 
   @override
   void initState() {
     super.initState();
     AppearanceController.instance.addListener(_appearanceChanged);
     NotificationService.instance.addListener(_notificationsChanged);
+    OutboxService.instance.addListener(_syncChanged);
     final auth = AuthService.instance;
     _profile = ProfileData(
       name: auth.userName,
@@ -35,6 +43,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: auth.email ?? 'No disponible',
       rol: auth.activeDevelopment?['rol'] as String? ?? 'No disponible',
     );
+    _loadReminder();
+    _loadSyncStatus();
+  }
+
+  LocalScope? get _scope {
+    final auth = AuthService.instance;
+    final userId = auth.userId;
+    final developmentId = auth.developmentId;
+    return userId == null || developmentId == null
+        ? null
+        : LocalScope(userId: userId, developmentId: developmentId);
+  }
+
+  Future<void> _loadReminder() async {
+    final scope = _scope;
+    if (scope == null) return;
+    final value = await _preferences.read(scope);
+    if (mounted && value?.reminderMinutes != null) {
+      setState(() => _reminder = value!.reminderMinutes!);
+    }
+  }
+
+  Future<void> _loadSyncStatus() async {
+    final scope = _scope;
+    if (scope == null) return;
+    final value = await _database.lastRefreshedAt(scope);
+    if (mounted) setState(() => _lastSync = value);
   }
 
   void _appearanceChanged() {
@@ -45,10 +80,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  void _syncChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     AppearanceController.instance.removeListener(_appearanceChanged);
     NotificationService.instance.removeListener(_notificationsChanged);
+    OutboxService.instance.removeListener(_syncChanged);
     super.dispose();
   }
 
@@ -58,25 +98,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     isScrollControlled: true,
     builder: (_) => AppearanceSheet(controller: AppearanceController.instance),
   );
-
-  void _message(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-
-  Future<void> _edit(String field, String value) async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => EditProfileDialog(field: field, value: value),
-    );
-    if (!mounted || result == null) return;
-    setState(
-      () => _profile = switch (field) {
-        'Nombre' => _profile.copyWith(name: result),
-        'Teléfono' => _profile.copyWith(phone: result),
-        _ => _profile.copyWith(email: result),
-      },
-    );
-    _message('Cambio guardado solo en esta sesión.');
-  }
 
   Future<void> _chooseReminder() async {
     final result = await showModalBottomSheet<int>(
@@ -103,7 +124,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    if (mounted && result != null) setState(() => _reminder = result);
+    if (mounted && result != null) {
+      setState(() => _reminder = result);
+      final scope = _scope;
+      if (scope != null) await _preferences.setReminderMinutes(scope, result);
+    }
+  }
+
+  String get _syncValue {
+    final outbox = OutboxService.instance;
+    if (outbox.isSyncing) return 'Sincronizando';
+    if (outbox.conflictCount > 0) {
+      return '${outbox.conflictCount} conflicto(s) por resolver';
+    }
+    if (outbox.pendingCount > 0) {
+      return '${outbox.pendingCount} cambio(s) pendientes';
+    }
+    final lastSync = _lastSync;
+    if (lastSync == null) return 'Sin datos sincronizados';
+    final value = businessTimeFromInstant(lastSync);
+    final date =
+        '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+    final time =
+        '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+    return '$date · $time';
+  }
+
+  Future<void> _syncNow() async {
+    await OutboxService.instance.flush();
+    await _loadSyncStatus();
   }
 
   @override
@@ -161,33 +210,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'NOMBRE',
               value: _profile.name,
               titleColor: AppColors.profileDatos,
-              icon: Iconsax.edit_2_copy,
-              actionLabel: 'Editar nombre',
-              onPressed: () => _edit('Nombre', _profile.name),
+              icon: Icons.check,
+              actionLabel: 'Datos personales no editables',
             ),
             ProfileSettingRow(
               title: 'TELÉFONO',
               value: _profile.phone,
               titleColor: AppColors.profileDatos,
-              icon: Iconsax.edit_2_copy,
-              actionLabel: 'Editar teléfono',
-              onPressed: () => _edit('Teléfono', _profile.phone),
+              icon: Icons.check,
+              actionLabel: 'Datos personales no editables',
             ),
             ProfileSettingRow(
               title: 'CORREO',
               value: _profile.email,
               titleColor: AppColors.profileDatos,
-              icon: Iconsax.edit_2_copy,
-              actionLabel: 'Editar correo',
-              onPressed: () => _edit('Correo', _profile.email),
+              icon: Icons.check,
+              actionLabel: 'Datos personales no editables',
             ),
             ProfileSettingRow(
               title: 'ROL',
               value: _profile.rol,
               titleColor: AppColors.profileDatos,
-              icon: Iconsax.edit_2_copy,
-              actionLabel: 'Editar rol',
-              onPressed: () => _edit('Rol', _profile.rol),
+              icon: Icons.check,
+              actionLabel: 'Datos personales no editables',
             ),
           ],
         ),
@@ -252,13 +297,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ProfileSettingRow(
               title: 'ÚLTIMA SINCRONIZACIÓN',
-              value: 'Sin sincronizar',
+              value: _syncValue,
               titleColor: AppColors.profileSincronizacion,
               icon: Icons.sync,
               actionLabel: 'Sincronizar',
-              onPressed: () => _message(
-                'La sincronización estará disponible al conectar el servicio.',
-              ),
+              onPressed: _syncNow,
             ),
           ],
         ),

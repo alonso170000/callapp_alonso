@@ -666,36 +666,57 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(message, style: TextStyle(color: AppColors.whiteColor)),
+          Text(message, style: TextStyle(color: AppColors.whiteColor,)),
           const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              key: const ValueKey('acknowledge-follow-up-completion'),
-              onPressed: _completionAcknowledged
-                  ? null
-                  : () => setState(() {
-                      _completionAcknowledged = true;
-                      _error = null;
-                    }),
-              style: FilledButton.styleFrom(
-                backgroundColor: _completionAcknowledged
-                    ? const Color.fromARGB(255, 90, 125, 195)
-                    : const Color.fromARGB(255, 22, 163, 224),
+          Wrap(
+            alignment: WrapAlignment.start,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (activity != null && widget.onOpenActivity != null)
+                FilledButton.icon(
+                  key: const ValueKey('open-follow-up-completion-activity'),
+                  onPressed: () => widget.onOpenActivity!(activity),
+                  style: FilledButton.styleFrom(
+                    backgroundColor:const Color.fromARGB(255, 21, 93, 226),
+                    foregroundColor: AppColors.whiteColor,
+                  ),
+                  icon: const Icon(Iconsax.document_text_copy),
+                  label: const Text('VER ACTIVIDAD'),
+                ),
+              FilledButton.icon(
+                key: const ValueKey('acknowledge-follow-up-completion'),
+                onPressed: _completionAcknowledged
+                    ? null
+                    : () => setState(() {
+                        _completionAcknowledged = true;
+                        _error = null;
+                      }),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _completionAcknowledged
+                      ? const Color.fromARGB(255, 90, 125, 195)
+                      : const Color.fromARGB(255, 22, 163, 224),
+                ),
+                icon: Icon(
+                  _completionAcknowledged
+                      ? Iconsax.tick_circle
+                      : Icons.info_outline,
+                  color: _completionAcknowledged
+                      ? Color.fromARGB(255, 170, 237, 255)
+                      : Colors.white,
+                ),
+                label: Text(
+                  _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
+                  style: TextStyle(
+                    color: _completionAcknowledged
+                        ? Color.fromARGB(255, 170, 237, 255)
+                        : Colors.white,
+                  ),
+                ),
               ),
-              icon: Icon(
-                _completionAcknowledged
-                    ? Iconsax.tick_circle
-                    : Icons.info_outline,
-                color: _completionAcknowledged ? Color.fromARGB(255, 170, 237, 255) : Colors.white,
-              ),
-              label: Text(
-                _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
-                style: TextStyle(color: _completionAcknowledged ? Color.fromARGB(255, 170, 237, 255) : Colors.white),
-              ),
-            ),
+            ],
           ),
         ],
       ),
