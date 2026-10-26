@@ -12,6 +12,11 @@ import 'package:callerapp_frontend/presentation/models/prospect_history_models.d
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_options_sheet.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_history_panel.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
+import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -40,6 +45,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   final _selected = {'Seguimiento', 'Discovery'};
   final _panelRevisions = <String, int>{};
   final _history = <String>[];
+  final _emailService = ProspectsService();
+  List<ProspectEmailHistoryEntry> _emails = const [];
+  String? _emailError;
+  bool _sendingEmail = false;
   bool _telephoneCallCompleted = false;
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) {
     final palette = AppPalette.of(context);
@@ -63,7 +72,121 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadEmails();
+  }
+
+  Future<void> _loadEmails() async {
+    final id = widget.prospect.id;
+    if (id == null || id < 1) return;
+    try {
+      final emails = await _emailService.emailHistory(id);
+      if (mounted) {
+        setState(() {
+          _emails = emails;
+          _emailError = null;
+        });
+      }
+    } on ProspectsException catch (error) {
+      if (mounted) {
+        setState(() => _emailError = error.message);
+      }
+    }
+  }
+
+  Future<void> _openEmailOptions() async {
+    final prospect = widget.prospect;
+    if (prospect.id == null || prospect.id! < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'El prospecto aún se está sincronizando. Intenta cuando recuperes la conexión.',
+          ),
+        ),
+      );
+      return;
+    }
+    final template = await showModalBottomSheet<ProspectEmailTemplate>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => ProspectEmailOptionsSheet(email: prospect.email),
+    );
+    if (template == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar envío'),
+        content: Text(
+          '¿Deseas enviar ${template.label.toLowerCase()} a ${prospect.email}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) await _sendEmail(template);
+  }
+
+  Future<void> _sendEmail(ProspectEmailTemplate template) async {
+    if (_sendingEmail || widget.prospect.id == null) return;
+    setState(() => _sendingEmail = true);
+    try {
+      final sent = await _emailService.sendEmail(
+        widget.prospect.id!,
+        template,
+        operationKey: PendingOperationsStore.newOperationKey(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _emails = [sent, ..._emails];
+        _emailError = null;
+      });
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Correo enviado'),
+          content: Text(
+            '${template.label} enviado a ${widget.prospect.email}.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+    } on ProspectsException catch (error) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('No se pudo enviar el correo'),
+          content: Text(error.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _sendingEmail = false);
+    }
+  }
+
+  @override
   void dispose() {
+    _emailService.dispose();
     super.dispose();
   }
 
@@ -181,9 +304,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
             child: Row(
               children: [
                 _actionButton(
-                  'Datos para mensaje',
+                  'Enviar correo',
                   Iconsax.send_2_copy,
-                  () => _contact(),
+                  _sendingEmail ? () {} : _openEmailOptions,
                 ),
                 const SizedBox(width: 7),
                 _actionButton(
@@ -253,9 +376,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                       p.id != null &&
                       _commentsKey.currentState != null &&
                       notification.depth == 0,
-                  onRefresh: () =>
-                      _commentsKey.currentState?.refresh() ??
-                      Future<void>.value(),
+                  onRefresh: () async {
+                    await _commentsKey.currentState?.refresh();
+                    await _loadEmails();
+                  },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
@@ -325,9 +449,19 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                           _section(
                             ProspectSection.history,
                             p.id != null
-                                ? ProspectCommentsPanel(
-                                    key: _commentsKey,
-                                    prospectId: p.id!,
+                                ? Column(
+                                    children: [
+                                      ProspectCommentsPanel(
+                                        key: _commentsKey,
+                                        prospectId: p.id!,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      ProspectEmailHistoryPanel(
+                                        emails: _emails,
+                                        error: _emailError,
+                                        onRetry: _loadEmails,
+                                      ),
+                                    ],
                                   )
                                 : ProspectHistory(
                                     comments: demoProspectHistoryComments,

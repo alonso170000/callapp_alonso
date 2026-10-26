@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 /// Secciones plegables del detalle del prospecto: etiqueta del chip, título
 /// del panel y colores con los que se pintan (se adaptan al modo claro/oscuro).
@@ -329,8 +328,6 @@ class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final isData = widget.title == 'Datos del prospecto';
-    final syncs = widget.title.contains('seguimiento') || isData;
     return Material(
       color: widget.color,
       borderRadius: BorderRadius.circular(13),

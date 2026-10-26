@@ -225,9 +225,9 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: AppColors.primaryColor,
+                color: AppColors.textDarkColor,
                 fontFamily: 'SulphurPoint',
-                fontSize: 11,
+                fontSize: 12,
                 height: 1.2,
               ),
             ),
@@ -511,7 +511,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                       children: [
                         const SizedBox(height: 18),
                         _sectionTitle(
-                          _showLocation ? 'CUÁNDO Y DÓNDE' : 'CUÁNDO',
+                          'DETALLES DE LA ACTIVIDADA',
                         ),
                         IntrinsicHeight(
                           child: Row(
@@ -577,7 +577,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        _sectionTitle('DESCRIPCIÓN'),
+                        _sectionTitle('DESCRIPCIÓN DE LA ACTIVIDAD'),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(15),

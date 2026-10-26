@@ -10,6 +10,7 @@ import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectsException implements Exception {
@@ -184,6 +185,57 @@ class ProspectsService {
       }).toList();
     } catch (_) {
       throw const ProspectsException('El historial recibido no es válido.');
+    }
+  }
+
+  Future<List<ProspectEmailHistoryEntry>> emailHistory(int id) async {
+    final data = await _request('leads/$id/emails');
+    try {
+      return (data['data'] as List).map((raw) {
+        final row = raw as Map;
+        return ProspectEmailHistoryEntry(
+          id: row['id'] as int?,
+          templateName: row['code'] as String? ?? 'CORREO',
+          description: row['description'] as String? ?? 'Correo enviado',
+          sentAt: businessTimeFromInstant(
+            DateTime.parse(row['enviado_at'] as String),
+          ),
+        );
+      }).toList();
+    } catch (_) {
+      throw const ProspectsException(
+        'El historial de correos recibido no es válido.',
+      );
+    }
+  }
+
+  Future<ProspectEmailHistoryEntry> sendEmail(
+    int id,
+    ProspectEmailTemplate template, {
+    required String operationKey,
+  }) async {
+    final data = await _request(
+      'leads/$id/emails',
+      body: {'plantilla': template.code},
+      method: 'POST',
+      operationKey: operationKey,
+      mutation: true,
+    );
+    try {
+      final row = data['data'] as Map;
+      return ProspectEmailHistoryEntry(
+        id: row['id'] as int?,
+        templateName: row['code'] as String? ?? template.label,
+        description:
+            row['description'] as String? ?? '${template.label} enviado',
+        sentAt: businessTimeFromInstant(
+          DateTime.parse(row['enviado_at'] as String),
+        ),
+      );
+    } catch (_) {
+      throw const ProspectsException(
+        'No se pudo confirmar el envío del correo.',
+      );
     }
   }
 

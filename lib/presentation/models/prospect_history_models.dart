@@ -31,11 +31,13 @@ class ProspectDiscoverySummary {
 }
 
 class ProspectEmailHistoryEntry {
+  final int? id;
   final String templateName;
   final String description;
   final DateTime sentAt;
 
   const ProspectEmailHistoryEntry({
+    this.id,
     required this.templateName,
     required this.description,
     required this.sentAt,

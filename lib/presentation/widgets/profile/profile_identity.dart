@@ -45,7 +45,7 @@ class ProfileIdentity extends StatelessWidget {
         spacing: 5,
         runSpacing: 5,
         children: [
-          _badge(profile.email),
+          _badge(profile.email, color: AppColors.profileDatos),
           _badge(profile.phone, color: AppColors.secondaryColor),
           _badge(
             role?.trim().isNotEmpty == true ? role!.trim() : 'No disponible',
