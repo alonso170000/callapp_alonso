@@ -362,7 +362,7 @@ void main() {
         actionBox('Ver prospecto').right,
         closeTo(actionBox('Llamar al prospecto').right, 2.1),
       );
-      expect(find.text('DESCRIPCIÓN'), findsOneWidget);
+      expect(find.text('DESCRIPCIÓN DE LA ACTIVIDAD'), findsOneWidget);
       final complete = find.text('COMPLETAR ACTIVIDAD');
       await tester.ensureVisible(complete);
       await tester.tap(complete);

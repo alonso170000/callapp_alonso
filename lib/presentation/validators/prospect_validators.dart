@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/services/phone_number.dart';
+
 class ProspectValidators {
   static String? requiredText(String? value) =>
       value == null || value.trim().isEmpty
@@ -12,12 +14,11 @@ class ProspectValidators {
 
   static String? phone(String? value) {
     if (requiredText(value) != null) return requiredText(value);
-    final digits = value!.replaceAll(RegExp(r'\D'), '');
-    return RegExp(r'^\+?[\d\s()-]+$').hasMatch(value.trim()) &&
-            digits.length >= 10 &&
-            digits.length <= 15
+    final raw = value!;
+    return RegExp(r'^\+?[\d\s()-]+$').hasMatch(raw.trim()) &&
+            PhoneNumber.isDialable(raw)
         ? null
-        : 'Ingresa un teléfono válido';
+        : 'Ingresa un teléfono de 7 a 15 dígitos';
   }
 
   static String? number(String? value) {

@@ -65,7 +65,7 @@ class ProspectCallInformation extends StatelessWidget {
           color: AppPalette.of(context).nestedSurfaceFill,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: duration == null || callAt == null
+        child: callAt == null
             ? Padding(
                 padding: EdgeInsets.only(bottom: 10),
                 child: Text(
@@ -82,7 +82,10 @@ class ProspectCallInformation extends StatelessWidget {
                   _field(
                     context,
                     'Duración de llamada',
-                    _value(context, _duration(duration)),
+                    _value(
+                      context,
+                      duration == null ? 'No registrada' : _duration(duration),
+                    ),
                   ),
                   _field(
                     context,

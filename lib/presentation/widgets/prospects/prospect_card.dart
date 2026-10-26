@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -218,7 +219,7 @@ class ProspectCard extends StatelessWidget {
       onPressed:
           (message
               ? prospect.phone.isEmpty && prospect.email.isEmpty
-              : prospect.phone.isEmpty)
+              : !PhoneNumber.isDialable(prospect.phone))
           ? null
           : () async {
               final action = onContact;

@@ -173,7 +173,7 @@ void main() {
     await tester.tap(call);
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('Este prospecto no tiene una actividad agendada'),
+      find.textContaining('No se pudo verificar la agenda'),
       findsOneWidget,
     );
     expect(find.text('SÍ, LLAMAR'), findsOneWidget);

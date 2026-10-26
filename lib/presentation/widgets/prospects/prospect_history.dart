@@ -448,8 +448,8 @@ class ProspectHistoryCommentCard extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              '${_date(comment.createdAt)}    ${_time(comment.createdAt)}',
-              style: const TextStyle(fontSize: 9),
+              '${_date(comment.createdAt)}   ${_time(comment.createdAt)}',
+              style: const TextStyle(fontSize: 13),
             ),
           ],
         ),

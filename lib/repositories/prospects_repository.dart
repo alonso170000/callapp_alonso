@@ -11,6 +11,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.d
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 
 enum ProspectMutationState { saved, pending }
@@ -254,26 +255,34 @@ class ProspectsRepository {
 
   Future<ProspectMutationResult> createFollowUp(
     ProspectRecord prospect,
-    Map<String, dynamic> fields,
-  ) {
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) {
     final priority = switch (fields['prioridad']) {
       'caliente' => 'Caliente',
       'tibio' => 'Tibio',
       'frio' => 'Frío',
       _ => prospect.temperature,
     };
+    final isTelephone = fields['medio'] == 'telefono';
     final optimistic = prospect.copyWith(
       status: fields['estatus'] as String? ?? prospect.status,
       temperature: priority,
       lastContactResult: fields['hubo_exito'] == true
           ? 'Contacto exitoso'
           : 'Sin respuesta',
+      lastCallAt: isTelephone ? businessNow() : null,
+      lastCallStatus: isTelephone
+          ? (fields['hubo_exito'] == true ? 'Contestada' : 'No contestada')
+          : null,
+      daysSinceContact: isTelephone ? 0 : null,
     );
     return _mutate(
       prospect,
       kind: 'prospect.follow_up',
       fields: fields,
       optimistic: optimistic,
+      operationKey: operationKey,
       remote: (id, key) =>
           _service.createFollowUp(id, fields, operationKey: key),
     );
@@ -339,6 +348,7 @@ class ProspectsRepository {
     required Map<String, dynamic> fields,
     required ProspectRecord optimistic,
     required Future<void> Function(int id, String key) remote,
+    String? operationKey,
   }) async {
     final currentScope = scope;
     var id = prospect.id;
@@ -361,7 +371,7 @@ class ProspectsRepository {
         projected = optimistic.copyWith(id: resolved);
       }
     }
-    final key = PendingOperationsStore.newOperationKey();
+    final key = operationKey ?? PendingOperationsStore.newOperationKey();
     if (id < 0) {
       await _cache.upsert(currentScope, projected);
       await _outbox.enqueue(

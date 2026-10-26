@@ -510,9 +510,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                     child: Column(
                       children: [
                         const SizedBox(height: 18),
-                        _sectionTitle(
-                          'DETALLES DE LA ACTIVIDADA',
-                        ),
+                        _sectionTitle('DETALLES DE LA ACTIVIDADA'),
                         IntrinsicHeight(
                           child: Row(
                             children: [

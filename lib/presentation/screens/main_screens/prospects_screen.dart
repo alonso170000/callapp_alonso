@@ -15,6 +15,9 @@ import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widg
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
+import 'package:callerapp_frontend/services/phone_call_service.dart';
+import 'package:callerapp_frontend/services/phone_number.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -37,11 +40,13 @@ class ProspectsScreen extends StatefulWidget {
   final ProspectsController? controller;
   final Future<List<ProspectRecord>> Function()? loadProspects;
   final ValueChanged<AgendaActivity>? onNotificationActivity;
+  final PhoneCallService? phoneCallService;
   const ProspectsScreen({
     super.key,
     this.controller,
     this.loadProspects,
     this.onNotificationActivity,
+    this.phoneCallService,
   });
 
   @override
@@ -55,6 +60,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   bool _loading = false;
   String? _error;
   int _request = 0;
+  bool _calling = false;
 
   Future<void> _load() async {
     final request = ++_request;
@@ -233,17 +239,20 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     super.dispose();
   }
 
-  Future<List<AgendaActivity>> _activitiesFor(ProspectRecord prospect) async {
+  Future<_ActivitiesResult> _activitiesFor(ProspectRecord prospect) async {
+    List<AgendaActivity> cached = const [];
     try {
-      final cached = await _agendaRepository.readCache();
-      if (cached.isNotEmpty) return cached;
+      cached = await _agendaRepository.readCache();
     } on Object {
       // Si la caché no está disponible, se intenta consultar la agenda remota.
     }
     try {
-      return await _agendaRepository.refresh();
+      return _ActivitiesResult(
+        await _agendaRepository.refresh(),
+        verified: true,
+      );
     } on Object {
-      return const [];
+      return _ActivitiesResult(cached, verified: cached.isNotEmpty);
     }
   }
 
@@ -258,7 +267,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
             .where(
               (activity) =>
                   activity.prospectId == prospect.id &&
-                  activity.status == AgendaStatus.pending &&
+                  (activity.status == AgendaStatus.pending ||
+                      activity.status == AgendaStatus.overdue) &&
                   activity.isFollowUp &&
                   activity.medium?.trim().toLowerCase() == expectedMedium,
             )
@@ -275,8 +285,9 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   }
 
   Future<void> _contactProspect(ProspectRecord prospect, bool message) async {
+    final result = await _activitiesFor(prospect);
     final activity = _scheduledContactActivity(
-      await _activitiesFor(prospect),
+      result.activities,
       prospect,
       message: message,
     );
@@ -288,11 +299,24 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) {
         final hasActivity = activity != null;
+        final other =
+            result.activities
+                .where(
+                  (value) =>
+                      value.prospectId == prospect.id &&
+                      (value.status == AgendaStatus.pending ||
+                          value.status == AgendaStatus.overdue),
+                )
+                .toList()
+              ..sort((a, b) => a.date.compareTo(b.date));
+        final otherActivity = other.isEmpty ? null : other.first;
         final question = hasActivity
-            ? 'Hay una actividad de tipo $channel agendada con este prospecto el ${_activityDateLabel(sheetContext, activity)}. ¿Quieres ${message ? 'enviar el mensaje y completar la actividad' : 'hacer el seguimiento y completar la actividad'}?'
-            : message
-            ? 'Este prospecto no tiene una actividad de tipo WhatsApp agendada.'
-            : 'Este prospecto no tiene una actividad agendada. ¿Quieres hacer la llamada y registrar una actividad de seguimiento de tipo llamada como completada?';
+            ? 'Hay una actividad de tipo $channel ${activity.status == AgendaStatus.overdue ? 'atrasada' : 'agendada'} con este prospecto el ${_activityDateLabel(sheetContext, activity)}. ¿Quieres ${message ? 'enviar el mensaje y completar la actividad' : 'hacer el seguimiento y completar la actividad'}?'
+            : otherActivity != null
+            ? 'Este prospecto no tiene una actividad de tipo $channel, pero tiene ${otherActivity.title.toLowerCase()} ${otherActivity.status == AgendaStatus.overdue ? 'atrasada' : 'agendada'} el ${_activityDateLabel(sheetContext, otherActivity)}.'
+            : result.verified
+            ? 'Este prospecto no tiene actividades pendientes. ¿Quieres ${message ? 'enviar el mensaje' : 'hacer la llamada y registrar un seguimiento'}?'
+            : 'No se pudo verificar la agenda de este prospecto. ¿Quieres ${message ? 'enviar el mensaje' : 'hacer la llamada y registrar un seguimiento'}?';
         return SafeArea(
           child: SingleChildScrollView(
             child: Padding(
@@ -312,7 +336,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   const SizedBox(height: 8),
                   Text(question),
                   const SizedBox(height: 20),
-                  if (message && !hasActivity)
+                  if (message)
                     FilledButton(
                       onPressed: () => Navigator.pop(sheetContext, true),
                       child: const Text('ENTENDIDO'),
@@ -351,14 +375,61 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       );
       return;
     }
+    final successful = await _runCall(prospect);
+    if (!mounted || successful == null) return;
     await context.push(
       '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
-      extra: activity == null
-          ? prospect
-          : ProspectDetailArguments(
-              prospect: prospect,
-              sourceActivity: activity,
-            ),
+      extra: ProspectDetailArguments(
+        prospect: prospect,
+        sourceActivity: activity,
+        callStarted: true,
+        callSuccessful: successful,
+      ),
+    );
+  }
+
+  Future<bool?> _runCall(ProspectRecord prospect) async {
+    if (_calling) return null;
+    if (!PhoneNumber.isDialable(prospect.phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'El prospecto no tiene un teléfono válido para llamar.',
+          ),
+        ),
+      );
+      return null;
+    }
+    _calling = true;
+    String? error;
+    final service = widget.phoneCallService ?? PhoneCallService();
+    try {
+      await service.call(prospect.phone);
+    } on PhoneCallException catch (value) {
+      error = value.message;
+    } finally {
+      _calling = false;
+    }
+    if (!mounted) return null;
+    return showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => ProspectCallSheet(
+        name: prospect.name,
+        phone: prospect.phone,
+        email: prospect.email,
+        errorMessage: error,
+        onCopyPhone: () {},
+        onCallAgain: () async {
+          try {
+            await service.call(prospect.phone);
+            return null;
+          } on PhoneCallException catch (value) {
+            return value.message;
+          }
+        },
+        onFinish: (value) => Navigator.pop(sheetContext, value),
+      ),
     );
   }
 
@@ -741,4 +812,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       ),
     );
   }
+}
+
+class _ActivitiesResult {
+  const _ActivitiesResult(this.activities, {required this.verified});
+
+  final List<AgendaActivity> activities;
+  final bool verified;
 }

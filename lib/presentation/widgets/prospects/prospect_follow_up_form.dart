@@ -8,6 +8,7 @@ import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -34,6 +35,8 @@ class ProspectFollowUpForm extends StatefulWidget {
   final AgendaActivity? sourceActivity;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final ValueChanged<AgendaActivity>? onOpenActivity;
+  final ValueChanged<ProspectRecord>? onProspectUpdated;
+  final bool initialContactSuccess;
   const ProspectFollowUpForm({
     super.key,
     required this.prospect,
@@ -44,6 +47,8 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.sourceActivity,
     this.loadActivities,
     this.onOpenActivity,
+    this.onProspectUpdated,
+    this.initialContactSuccess = false,
   });
   @override
   State<ProspectFollowUpForm> createState() => _ProspectFollowUpFormState();
@@ -73,6 +78,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   String? _contextError;
   List<AgendaActivity> _activeActivities = [];
   Map<String, dynamic>? _saved;
+  String? _followUpOperationKey;
 
   bool get _requiresCompletedCall =>
       widget.sourceActivity?.isFollowUp == true &&
@@ -89,6 +95,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _repository = widget.repository ?? ProspectsRepository(service: _service);
     _agendaService = AgendaService();
     _method = widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp';
+    _success = widget.initialContactSuccess;
     if (widget.sourceActivity?.medium != null) {
       _method = _methodForActivity(widget.sourceActivity!.medium!);
     }
@@ -98,6 +105,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _activityDate = DateUtils.dateOnly(initial);
     _activityTime = TimeOfDay.fromDateTime(initial);
     _schedule = false;
+    if (widget.telephoneCallCompleted) {
+      final now = businessNow();
+      final hour = now.hour.toString().padLeft(2, '0');
+      final minute = now.minute.toString().padLeft(2, '0');
+      _notes.text = 'Llamada realizada a las $hour:$minute.';
+    }
     _completionAcknowledged = widget.prospect.id == null;
     _loadActivityContext();
   }
@@ -394,7 +407,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   }
 
   Future<void> _saveFollowUp() async {
-    if (_saving) return;
+    if (_saving || _saved != null) return;
     if (_loadingContext || _contextError != null) {
       setState(
         () => _error = 'No se pudo validar la actividad que será completada.',
@@ -473,9 +486,19 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       final result =
           widget.repository == null && widget.prospectsService != null
           ? null
-          : await _repository.createFollowUp(widget.prospect, fields);
+          : await _repository.createFollowUp(
+              widget.prospect,
+              fields,
+              operationKey: _followUpOperationKey ??=
+                  PendingOperationsStore.newOperationKey(),
+            );
       if (result == null) {
-        await _service.createFollowUp(widget.prospect.id!, fields);
+        await _service.createFollowUp(
+          widget.prospect.id!,
+          fields,
+          operationKey: _followUpOperationKey ??=
+              PendingOperationsStore.newOperationKey(),
+        );
       }
       _saved = {
         'status': _status,
@@ -486,6 +509,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         'schedule': _schedule,
         'activity': _activityDraft,
       };
+      if (result?.prospect case final updated?) {
+        widget.onProspectUpdated?.call(updated);
+      }
       widget.onSaved(
         '$_status · $_method${_notes.text.trim().isEmpty ? '' : ' · ${_notes.text.trim()}'}',
       );
@@ -668,7 +694,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(message, style: TextStyle(color: AppColors.whiteColor,)),
+          Text(message, style: TextStyle(color: AppColors.whiteColor)),
           const SizedBox(height: 6),
           Wrap(
             alignment: WrapAlignment.start,
@@ -680,7 +706,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   key: const ValueKey('open-follow-up-completion-activity'),
                   onPressed: () => widget.onOpenActivity!(activity),
                   style: FilledButton.styleFrom(
-                    backgroundColor:const Color.fromARGB(255, 21, 93, 226),
+                    backgroundColor: const Color.fromARGB(255, 21, 93, 226),
                     foregroundColor: AppColors.whiteColor,
                   ),
                   icon: const Icon(Iconsax.document_text_copy),

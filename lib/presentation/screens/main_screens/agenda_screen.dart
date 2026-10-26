@@ -16,6 +16,9 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
+import 'package:callerapp_frontend/services/phone_call_service.dart';
+import 'package:callerapp_frontend/services/phone_number.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -43,6 +46,7 @@ class AgendaScreen extends StatefulWidget {
   final Future<List<ProspectRecord>> Function()? loadProspects;
   final ValueChanged<AgendaActivity>? onNotificationActivity;
   final Widget? syncStatus;
+  final PhoneCallService? phoneCallService;
 
   const AgendaScreen({
     super.key,
@@ -51,6 +55,7 @@ class AgendaScreen extends StatefulWidget {
     this.loadProspects,
     this.onNotificationActivity,
     this.syncStatus,
+    this.phoneCallService,
   });
 
   @override
@@ -87,6 +92,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   late final AgendaRepository _repository = AgendaRepository(service: _service);
   final _prospects = ProspectsRepository();
   bool _loading = false;
+  bool _calling = false;
   String? _error;
   int _request = 0;
 
@@ -325,10 +331,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 'Mensaje para ${activity.prospect}',
                 detailContext,
               ),
-              onCall: () => _showActionMessage(
-                'Llamada para ${activity.prospect}',
-                detailContext,
-              ),
+              onCall: () => _callActivity(activity, detailContext),
               onOpenProspect: () => _openProspect(activity, detailContext),
               onDelete: () => _deleteActivity(activity, detailContext),
               onEdit: () => _editActivity(activity, detailContext),
@@ -431,6 +434,93 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
     } finally {
       _openingProspect = false;
+    }
+  }
+
+  Future<void> _callActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    if (_calling) return;
+    if (activity.prospectId == null) {
+      _showActionMessage(
+        'Esta actividad no tiene un prospecto asociado.',
+        detailContext,
+      );
+      return;
+    }
+    try {
+      var prospects = await _cachedProspects();
+      var matches = prospects.where((value) => value.id == activity.prospectId);
+      if (matches.isEmpty) {
+        prospects = await _prospects.refresh();
+        matches = prospects.where((value) => value.id == activity.prospectId);
+      }
+      if (!detailContext.mounted) return;
+      if (matches.isEmpty) {
+        _showActionMessage(
+          'El prospecto ya no está disponible en tu sesión.',
+          detailContext,
+        );
+        return;
+      }
+      final prospect = matches.first;
+      if (!PhoneNumber.isDialable(prospect.phone)) {
+        _showActionMessage(
+          'El prospecto no tiene un teléfono válido para llamar.',
+          detailContext,
+        );
+        return;
+      }
+      _calling = true;
+      final phone = widget.phoneCallService ?? PhoneCallService();
+      String? error;
+      try {
+        await phone.call(prospect.phone);
+      } on PhoneCallException catch (value) {
+        error = value.message;
+      }
+      _calling = false;
+      if (!detailContext.mounted) return;
+      final successful = await showModalBottomSheet<bool>(
+        context: detailContext,
+        showDragHandle: true,
+        builder: (sheetContext) => ProspectCallSheet(
+          name: prospect.name,
+          phone: prospect.phone,
+          email: prospect.email,
+          errorMessage: error,
+          onCopyPhone: () {},
+          onCallAgain: () async {
+            try {
+              await phone.call(prospect.phone);
+              return null;
+            } on PhoneCallException catch (value) {
+              return value.message;
+            }
+          },
+          onFinish: (value) => Navigator.pop(sheetContext, value),
+        ),
+      );
+      if (successful == null || !detailContext.mounted) return;
+      Navigator.pop(detailContext);
+      if (!mounted) return;
+      await context.push(
+        '/prospectos/${Uri.encodeComponent(prospect.phone)}',
+        extra: ProspectDetailArguments(
+          prospect: prospect,
+          sourceActivity: activity,
+          callStarted: true,
+          callSuccessful: successful,
+        ),
+      );
+      if (mounted) await _load();
+    } on ProspectsException catch (error) {
+      if (detailContext.mounted) {
+        _showActionMessage(error.message, detailContext);
+      }
+    } finally {
+      _calling = false;
     }
   }
 

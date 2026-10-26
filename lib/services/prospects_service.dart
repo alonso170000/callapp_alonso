@@ -437,6 +437,9 @@ class ProspectsService {
     final rawAvatar = row['avatar_url'];
     final lastCall = DateTime.tryParse('${row['ultima_llamada_at']}')
         ?.toLocal();
+    final lastCallSuccessful =
+        row['ultima_llamada_exitosa'] == true ||
+        row['ultima_llamada_exitosa'] == 1;
     final priority = row['prioridad']?.toString().toLowerCase();
     final status = row['estatus'] as String? ?? 'Sin estatus';
     final avatar = rawAvatar is String && rawAvatar.isNotEmpty
@@ -481,9 +484,12 @@ class ProspectsService {
         null => null,
       },
       lastCallAt: lastCall,
-      lastContactResult:
-          row['ultimo_contacto_resultado'] as String? ??
-          (lastCall == null ? 'Sin contacto' : 'Sin información'),
+      lastCallStatus: lastCall == null
+          ? null
+          : (lastCallSuccessful ? 'Contestada' : 'No contestada'),
+      lastContactResult: lastCall == null
+          ? 'Sin contacto'
+          : (lastCallSuccessful ? 'Contacto exitoso' : 'Sin respuesta'),
       nextContact: switch (DateTime.tryParse('${row['proximo_contacto_at']}')) {
         final value? => businessTimeFromInstant(value),
         null => null,

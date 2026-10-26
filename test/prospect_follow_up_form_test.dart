@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
+import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +26,7 @@ void main() {
   const prospect = ProspectRecord(
     id: 17,
     name: 'Ana real',
-    phone: '',
+    phone: '9981234567',
     email: '',
     status: 'Nuevo',
     temperature: 'Caliente',
@@ -141,17 +142,28 @@ void main() {
   testWidgets('Phone call completion enables and preselects telephone method', (
     tester,
   ) async {
+    Uri? dialedUri;
     await tester.pumpWidget(
       MaterialApp(
         home: ProspectDetailScreen(
           prospect: prospect,
           loadActivities: () async => [],
+          phoneCallService: PhoneCallService(
+            canLaunch: (_) async => true,
+            launch: (uri) async {
+              dialedUri = uri;
+              return true;
+            },
+          ),
         ),
       ),
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Llamar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('finish-prospect-call')));
+    expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
+    final finishCall = find.byKey(const ValueKey('finish-prospect-call'));
+    await tester.ensureVisible(finishCall);
+    await tester.tap(finishCall);
     await tester.pumpAndSettle();
     expect(find.text('Llamada telefónica'), findsOneWidget);
     final method = tester.widget<DropdownButtonFormField<String>>(

@@ -30,6 +30,8 @@ final appRouter = GoRouter(
           return ProspectDetailScreen(
             prospect: arguments.prospect,
             sourceActivity: arguments.sourceActivity,
+            callStarted: arguments.callStarted,
+            callSuccessful: arguments.callSuccessful,
           );
         }
         if (state.extra is ProspectRecord) {

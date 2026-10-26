@@ -140,7 +140,7 @@ void main() {
         expect(find.text('Medio'), findsOneWidget);
         expect(find.text('WhatsApp'), findsOneWidget);
         expect(find.text('Canal de contacto'), findsOneWidget);
-        expect(find.text('DESCRIPCIÓN'), findsOneWidget);
+        expect(find.text('DESCRIPCIÓN DE LA ACTIVIDAD'), findsOneWidget);
         expect(find.text('Descripción real'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
