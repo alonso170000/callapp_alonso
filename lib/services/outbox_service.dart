@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:callerapp_frontend/data/local/activities_cache.dart';
@@ -340,6 +341,18 @@ class OutboxService extends ChangeNotifier {
           Map<String, dynamic>.from(operation.payload['fields'] as Map),
           operationKey: operation.operationKey,
         );
+      case 'prospect.call':
+        final callId = await _prospects.createCall(
+          id!,
+          Map<String, dynamic>.from(operation.payload['fields'] as Map),
+          operationKey: operation.operationKey,
+        );
+        final audioPath = operation.payload['audio_path'];
+        if (audioPath is String && audioPath.isNotEmpty) {
+          await _prospects.uploadCallAudio(callId, audioPath);
+          final file = File(audioPath);
+          if (await file.exists()) await file.delete();
+        }
       case 'prospect.discovery':
         await _prospects.saveDiscoverySection(
           id!,

@@ -618,13 +618,15 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             children: [
-              if (_isOpen || activity.status == AgendaStatus.completed)
+              if (_isOpen ||
+                  (activity.status == AgendaStatus.completed &&
+                      activity.isFollowUp))
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: FilledButton.icon(
                     onPressed: activity.status == AgendaStatus.completed
-                        ? () {}
+                        ? onOpenProspect
                         : onComplete,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,

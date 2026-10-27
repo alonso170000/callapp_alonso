@@ -1,12 +1,18 @@
 enum ProspectContactResult { answered, unanswered, appointment }
 
 class ProspectHistoryComment {
+  final int? id;
+  final int? activityId;
+  final int? nextActivityId;
   final String medium;
   final String comment;
   final DateTime createdAt;
   final List<ProspectContactResult> results;
 
   const ProspectHistoryComment({
+    this.id,
+    this.activityId,
+    this.nextActivityId,
     this.medium = 'telefono',
     required this.comment,
     required this.createdAt,

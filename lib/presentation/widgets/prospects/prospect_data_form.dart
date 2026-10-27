@@ -11,6 +11,7 @@ class ProspectDataForm extends StatefulWidget {
   final ValueChanged<String> onSaved;
   final ProspectsService? prospectsService;
   final ProspectsRepository? repository;
+  final bool readOnly;
 
   const ProspectDataForm({
     super.key,
@@ -18,6 +19,7 @@ class ProspectDataForm extends StatefulWidget {
     required this.onSaved,
     this.prospectsService,
     this.repository,
+    this.readOnly = false,
   });
 
   @override
@@ -136,7 +138,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
-          readOnly: readOnly,
+          readOnly: readOnly || widget.readOnly,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: _decoration(),
         ),
@@ -185,7 +187,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 ),
               )
               .toList(),
-          onChanged: changed,
+          onChanged: widget.readOnly ? null : changed,
         ),
       ],
     ),
@@ -382,32 +384,34 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFAC4549),
-                    foregroundColor: Colors.white,
+          if (!widget.readOnly) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFAC4549),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _saving ? null : _cancel,
+                    child: const Text('CANCELAR'),
                   ),
-                  onPressed: _saving ? null : _cancel,
-                  child: const Text('CANCELAR'),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CA382),
-                    foregroundColor: Colors.white,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CA382),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _saving ? null : _save,
+                    child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                   ),
-                  onPressed: _saving ? null : _save,
-                  child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     ),

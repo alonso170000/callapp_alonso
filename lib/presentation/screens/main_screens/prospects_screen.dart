@@ -18,6 +18,9 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_de
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
+import 'package:callerapp_frontend/services/call_log_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -61,6 +64,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   String? _error;
   int _request = 0;
   bool _calling = false;
+  final _callLog = CallLogService();
 
   Future<void> _load() async {
     final request = ++_request;
@@ -401,6 +405,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       return null;
     }
     _calling = true;
+    final startedAt = businessNow();
     String? error;
     final service = widget.phoneCallService ?? PhoneCallService();
     try {
@@ -411,7 +416,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       _calling = false;
     }
     if (!mounted) return null;
-    return showModalBottomSheet<bool>(
+    ProspectCallSession? session;
+    final successful = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
       builder: (sheetContext) => ProspectCallSheet(
@@ -428,9 +434,41 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
             return value.message;
           }
         },
+        startedAt: startedAt,
+        origin: 'tarjeta',
+        onFinishSession: (value) => session = value,
         onFinish: (value) => Navigator.pop(sheetContext, value),
       ),
     );
+    final captured = session;
+    if (successful != null && captured != null) {
+      await _registerCall(prospect, captured);
+    }
+    return successful;
+  }
+
+  Future<void> _registerCall(
+    ProspectRecord prospect,
+    ProspectCallSession session,
+  ) async {
+    final logged = await _callLog.latestFor(session.phone, session.startedAt);
+    final reconciled = ProspectCallSession(
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      outcome: session.outcome,
+      phone: session.phone,
+      origin: session.origin,
+      sourceActivityId: session.sourceActivityId,
+      realDurationSeconds: logged?.durationSeconds,
+      callLogId: logged?.id,
+      audioPath: session.audioPath,
+      audioName: session.audioName,
+    );
+    try {
+      await _repository.registerCall(prospect, reconciled);
+    } on ProspectsException {
+      // El usuario continuará al detalle; el error de red queda en el outbox.
+    }
   }
 
   String _normalize(String value) {

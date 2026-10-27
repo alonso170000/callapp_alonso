@@ -1,6 +1,8 @@
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
@@ -20,6 +22,9 @@ class _RecordingProspectsService extends ProspectsService {
     this.prospectId = prospectId;
     this.fields = fields;
   }
+
+  @override
+  Future<List<ProspectHistoryComment>> contactHistory(int id) async => const [];
 }
 
 void main() {
@@ -161,6 +166,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Llamar'));
     await tester.pumpAndSettle();
     expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
     final finishCall = find.byKey(const ValueKey('finish-prospect-call'));
     await tester.ensureVisible(finishCall);
     await tester.tap(finishCall);
@@ -293,4 +300,55 @@ void main() {
       expect(find.text('Primero debes realizar una llamada.'), findsOneWidget);
     },
   );
+
+  testWidgets('Completed follow-up keeps the original form style read-only', (
+    tester,
+  ) async {
+    final completed = AgendaActivity(
+      id: 24,
+      prospectId: 17,
+      type: 'seguimiento',
+      medium: 'whatsapp',
+      title: 'SEGUIMIENTO',
+      prospect: prospect.name,
+      description: 'Confirmar propuesta',
+      date: DateTime(2026, 10, 20, 10),
+      status: AgendaStatus.completed,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: prospect,
+              prospectsService: _RecordingProspectsService(),
+              sourceActivity: completed,
+              readOnly: true,
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acerca del seguimiento'), findsOneWidget);
+    expect(find.text('GUARDAR'), findsNothing);
+    expect(find.text('CANCELAR'), findsNothing);
+    final status = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>).first,
+    );
+    expect(status.onChanged, isNull);
+    expect(
+      tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(DropdownButtonFormField<String>).first,
+              matching: find.text('Nuevo'),
+            ),
+          )
+          .any((text) => text.style?.color == AppColors.prospectFormFieldText),
+      isTrue,
+    );
+  });
 }

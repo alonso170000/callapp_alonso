@@ -3,6 +3,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_information.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -37,6 +38,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final ValueChanged<AgendaActivity>? onOpenActivity;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
   final bool initialContactSuccess;
+  final bool readOnly;
   const ProspectFollowUpForm({
     super.key,
     required this.prospect,
@@ -49,6 +51,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.onOpenActivity,
     this.onProspectUpdated,
     this.initialContactSuccess = false,
+    this.readOnly = false,
   });
   @override
   State<ProspectFollowUpForm> createState() => _ProspectFollowUpFormState();
@@ -113,6 +116,32 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     }
     _completionAcknowledged = widget.prospect.id == null;
     _loadActivityContext();
+    if (widget.readOnly) _loadSavedFollowUp();
+  }
+
+  Future<void> _loadSavedFollowUp() async {
+    final activityId = widget.sourceActivity?.id;
+    final prospectId = widget.prospect.id;
+    if (activityId == null || prospectId == null) return;
+    try {
+      final history = await _service.contactHistory(prospectId);
+      ProspectHistoryComment? saved;
+      for (final item in history) {
+        if (item.activityId == activityId) {
+          saved = item;
+          break;
+        }
+      }
+      if (!mounted || saved == null) return;
+      setState(() {
+        _method = _methodForActivity(saved!.medium);
+        _success = saved.results.contains(ProspectContactResult.answered);
+        _notes.text = saved.comment;
+        _schedule = saved.nextActivityId != null;
+      });
+    } on ProspectsException {
+      // La actividad mantiene sus datos disponibles si el historial falla.
+    }
   }
 
   @override
@@ -184,7 +213,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       .toList();
 
   String _methodForActivity(String medium) => switch (medium) {
-    'llamada' => 'Llamada telefónica',
+    'llamada' || 'telefono' => 'Llamada telefónica',
     'whatsapp' => 'WhatsApp',
     'facebook' => 'Facebook',
     'correo' => 'Correo',
@@ -281,16 +310,33 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       isExpanded: true,
       style: const TextStyle(
         fontFamily: 'SulphurPoint',
-        color: Colors.white,
+        color: AppColors.prospectFormFieldText,
         fontSize: 16,
       ),
-      dropdownColor: const Color(0xFF398FA3),
-      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+      selectedItemBuilder: (context) => values
+          .map(
+            (value) => Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'SulphurPoint',
+                color: AppColors.prospectFormFieldText,
+                fontSize: 16,
+              ),
+            ),
+          )
+          .toList(),
+      dropdownColor: AppColors.prospectFormField,
+      icon: const Icon(
+        Icons.keyboard_arrow_down,
+        color: AppColors.prospectFormFieldText,
+      ),
       decoration: _decoration(),
       items: values
           .map((v) => DropdownMenuItem(value: v, child: Text(v)))
           .toList(),
-      onChanged: enabled ? (v) => setState(() => change(v!)) : null,
+      onChanged: enabled && !widget.readOnly
+          ? (v) => setState(() => change(v!))
+          : null,
     ),
   );
   Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) =>
@@ -311,7 +357,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               toggled: value,
               label: label,
               child: InkWell(
-                onTap: () => onChanged(!value),
+                onTap: widget.readOnly ? null : () => onChanged(!value),
                 child: Container(
                   width: 62,
                   height: 27,
@@ -356,7 +402,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       textStyle: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 17),
     ),
-    onPressed: onPressed,
+    onPressed: widget.readOnly ? null : onPressed,
     child: Text(label),
   );
 
@@ -840,6 +886,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 'Notas de la interacción',
                 TextField(
                   controller: _notes,
+                  readOnly: widget.readOnly,
                   minLines: 2,
                   maxLines: 5,
                   style: const TextStyle(color: Colors.white),
@@ -855,12 +902,15 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   _error = null;
                 }),
               ),
-              if (_schedule && _activityDraft == null) _activityEditor(),
+              if (_schedule && _activityDraft == null && !widget.readOnly)
+                _activityEditor(),
               if (_schedule && _activityDraft != null)
                 _activitySummary(_activityDraft!),
-              _activityContextNotice(),
-              for (final activity in _otherActiveActivities)
-                _otherActivityNotice(activity),
+              if (!widget.readOnly) ...[
+                _activityContextNotice(),
+                for (final activity in _otherActiveActivities)
+                  _otherActivityNotice(activity),
+              ],
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -872,45 +922,47 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFA34D4D),
-                        foregroundColor: Colors.white,
+              if (!widget.readOnly) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFA34D4D),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _saving ? null : _cancel,
+                        child: const Text('CANCELAR'),
                       ),
-                      onPressed: _saving ? null : _cancel,
-                      child: const Text('CANCELAR'),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Semantics(
-                      button: true,
-                      enabled: !_requiresCompletedCall && !_saving,
-                      child: GestureDetector(
-                        key: const ValueKey('follow-up-save-area'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _requiresCompletedCall
-                            ? _showCallRequiredNotice
-                            : null,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF4CA382),
-                            foregroundColor: Colors.white,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        enabled: !_requiresCompletedCall && !_saving,
+                        child: GestureDetector(
+                          key: const ValueKey('follow-up-save-area'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _requiresCompletedCall
+                              ? _showCallRequiredNotice
+                              : null,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CA382),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: _saving || _requiresCompletedCall
+                                ? null
+                                : _saveFollowUp,
+                            child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                           ),
-                          onPressed: _saving || _requiresCompletedCall
-                              ? null
-                              : _saveFollowUp,
-                          child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

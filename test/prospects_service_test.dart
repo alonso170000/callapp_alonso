@@ -150,6 +150,39 @@ void main() {
     },
   );
 
+  test('Maps activity identifiers from the contact history', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/leads/17/contact-history');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [
+              {
+                'id': 8,
+                'actividad_id': 9,
+                'siguiente_actividad_id': 10,
+                'medio': 'whatsapp',
+                'hubo_exito': true,
+                'nota': 'Confirmó la información',
+                'fecha_hora': '2026-10-20T15:00:00.000Z',
+              },
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+
+    final entry = (await service.contactHistory(17)).single;
+    expect(entry.id, 8);
+    expect(entry.activityId, 9);
+    expect(entry.nextActivityId, 10);
+  });
+
   test('Loads closers from the role-filtered endpoint', () async {
     final service = ProspectsService(
       auth: await login(),

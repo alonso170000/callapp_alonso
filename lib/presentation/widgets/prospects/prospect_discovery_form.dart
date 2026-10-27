@@ -15,6 +15,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
   final ProspectRecord? prospect;
   final ProspectsService? prospectsService;
   final ProspectsRepository? repository;
+  final bool readOnly;
 
   const ProspectDiscoveryForm({
     super.key,
@@ -23,6 +24,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
     this.prospect,
     this.prospectsService,
     this.repository,
+    this.readOnly = false,
   });
 
   @override
@@ -408,36 +410,38 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       );
 
   Widget _buttons(String section, VoidCallback cancel, VoidCallback save) =>
-      Row(
-        children: [
-          Expanded(
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.discoveryCancel,
-                foregroundColor: Colors.white,
+      widget.readOnly
+      ? const SizedBox.shrink()
+      : Row(
+          children: [
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.discoveryCancel,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: _savingSection == null ? cancel : null,
+                child: const Text('CANCELAR'),
               ),
-              onPressed: _savingSection == null ? cancel : null,
-              child: const Text('CANCELAR'),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.discoverySave,
-                foregroundColor: Colors.white,
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.discoverySave,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: _savingSection == null ? save : null,
+                child: _savingSection == section
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('GUARDAR'),
               ),
-              onPressed: _savingSection == null ? save : null,
-              child: _savingSection == section
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('GUARDAR'),
             ),
-          ),
-        ],
-      );
+          ],
+        );
 
   void _notify(String section) {
     widget.onSaved('Discovery · $section');
@@ -876,356 +880,268 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      if (_loading) const LinearProgressIndicator(),
-      if (_serviceError != null)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            _serviceError!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+  Widget build(BuildContext context) => AbsorbPointer(
+    absorbing: widget.readOnly,
+    child: Column(
+      children: [
+        if (_loading) const LinearProgressIndicator(),
+        if (_serviceError != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              _serviceError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
-        ),
-      ProspectDetailPanel(
-        title: 'Necesidad y objetivo',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _select(
-                '¿Qué tipo de propiedad busca? *',
-                _property,
-                [
-                  'Departamento',
-                  'Casa',
-                  'Terreno',
-                  'Local comercial',
-                  'Solo inversión',
-                ],
-                (value) => _property = value,
-                errorText: _showNeedErrors && _property == null
-                    ? 'Seleccione un tipo de propiedad.'
-                    : null,
-              ),
-              _multiSelectChips(
-                '¿Ubicación preferida? *',
-                _locationOptions,
-                _locations,
-                errorText: _showNeedErrors && _locations.isEmpty
-                    ? 'Seleccione al menos una ubicación.'
-                    : null,
-              ),
-              _select(
-                '¿Para qué fin? *',
-                _purpose,
-                [
-                  'Vivienda',
-                  'Inversión',
-                  'Segunda residencia',
-                  'Retiro',
-                  'Negocio',
-                  'Renta vacacional',
-                  'Solo para madurar su dinero y revender',
-                ],
-                (value) => _purpose = value,
-                errorText: _showNeedErrors && _purpose == null
-                    ? 'Seleccione el objetivo de compra.'
-                    : null,
-              ),
-              _toggle(
-                '¿Usted conoce la zona?',
-                _knowsArea,
-                (value) => setState(() => _knowsArea = value),
-              ),
-              if (_knowsArea) _text('¿Qué conoce de la zona?', _areaNotes),
-              _buttons('necesidad_objetivo', _restoreNeed, _saveNeed),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: 14),
-      ProspectDetailPanel(
-        title: 'Capacidad y forma de pago',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _text(
-                '¿Cuál es su presupuesto? *',
-                _budget,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                ],
-                prefixText: r'$ ',
-                errorText:
-                    _showPaymentErrors &&
-                        (_budgetValue == null || _budgetValue! <= 0)
-                    ? 'Ingrese un presupuesto mayor a cero.'
-                    : null,
-              ),
-              _select(
-                '¿Forma de pago preferida? *',
-                _payment,
-                ['Contado', 'Crédito con la empresa', 'Crédito bancario'],
-                (value) => _payment = value,
-                errorText: _showPaymentErrors && _payment == null
-                    ? 'Seleccione una forma de pago.'
-                    : null,
-              ),
-              _select(
-                '¿Tiempo estimado para utilizar su inversión?',
-                _investmentTime,
-                ['Inmediato', '6 meses', '2 años', '2 años en adelante'],
-                (value) => _investmentTime = value,
-              ),
-              _buttons(
-                'capacidad_pago',
-                () => setState(() {
-                  _budget.text = (_saved?['budget'] as String?) ?? '';
-                  _payment = _saved?['payment'] as String?;
-                  _investmentTime = _saved?['investmentTime'] as String?;
-                  _showPaymentErrors = false;
-                }),
-                _savePayment,
-              ),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: 14),
-      ProspectDetailPanel(
-        title: 'Motivadores de compra',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _multiSelectChips(
-                'Selección múltiple *',
-                _keyFactorOptions,
-                _keyFactors,
-                errorText: _showMotivatorErrors && _keyFactors.isEmpty
-                    ? 'Seleccione al menos un factor.'
-                    : null,
-              ),
-              if (_keyFactors.contains('Otro'))
-                _text(
-                  'Otro factor *',
-                  _otherFactor,
-                  errorText:
-                      _showMotivatorErrors && _otherFactor.text.trim().isEmpty
-                      ? 'Especifique el otro factor.'
-                      : null,
-                ),
-              _buttons(
-                'motivadores_compra',
-                () => setState(() {
-                  _keyFactors
-                    ..clear()
-                    ..addAll(
-                      (_saved?['keyFactors'] as List<String>?) ?? const [],
-                    );
-                  _otherFactor.text = (_saved?['otherFactor'] as String?) ?? '';
-                  _showMotivatorErrors = false;
-                }),
-                _saveMotivators,
-              ),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: 14),
-      ProspectDetailPanel(
-        title: 'Experiencia previa',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _toggle(
-                '¿Ha comprado inmuebles antes?',
-                _boughtBefore,
-                (value) => setState(() => _boughtBefore = value),
-              ),
-              if (_boughtBefore) ...[
-                _text('¿Dónde?', _whereBought),
+        ProspectDetailPanel(
+          title: 'Necesidad y objetivo',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
                 _select(
-                  '¿Qué experiencia tuvo? *',
-                  _previousExperience,
-                  _experienceOptions,
-                  (value) => _previousExperience = value,
-                  errorText:
-                      _showExperienceErrors && _previousExperience == null
-                      ? 'Seleccione la experiencia que tuvo.'
+                  '¿Qué tipo de propiedad busca? *',
+                  _property,
+                  [
+                    'Departamento',
+                    'Casa',
+                    'Terreno',
+                    'Local comercial',
+                    'Solo inversión',
+                  ],
+                  (value) => _property = value,
+                  errorText: _showNeedErrors && _property == null
+                      ? 'Seleccione un tipo de propiedad.'
                       : null,
                 ),
-                if (_previousExperience != null)
-                  _text('¿Por qué?', _experienceReason),
+                _multiSelectChips(
+                  '¿Ubicación preferida? *',
+                  _locationOptions,
+                  _locations,
+                  errorText: _showNeedErrors && _locations.isEmpty
+                      ? 'Seleccione al menos una ubicación.'
+                      : null,
+                ),
+                _select(
+                  '¿Para qué fin? *',
+                  _purpose,
+                  [
+                    'Vivienda',
+                    'Inversión',
+                    'Segunda residencia',
+                    'Retiro',
+                    'Negocio',
+                    'Renta vacacional',
+                    'Solo para madurar su dinero y revender',
+                  ],
+                  (value) => _purpose = value,
+                  errorText: _showNeedErrors && _purpose == null
+                      ? 'Seleccione el objetivo de compra.'
+                      : null,
+                ),
+                _toggle(
+                  '¿Usted conoce la zona?',
+                  _knowsArea,
+                  (value) => setState(() => _knowsArea = value),
+                ),
+                if (_knowsArea) _text('¿Qué conoce de la zona?', _areaNotes),
+                _buttons('necesidad_objetivo', _restoreNeed, _saveNeed),
               ],
-              _buttons(
-                'experiencia_previa',
-                _restoreExperience,
-                _saveExperience,
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 14),
-      ProspectDetailPanel(
-        title: 'Proceso y seguimiento',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _toggle(
-                '¿Acepta promociones?',
-                _acceptsPromotions,
-                (value) => setState(() => _acceptsPromotions = value),
-              ),
-              _label(
-                'Desarrollo de interés *',
-                DropdownButtonFormField<int>(
-                  key: ValueKey(
-                    'desarrollo-$_selectedDevelopmentId-${_developments.length}',
+        const SizedBox(height: 14),
+        ProspectDetailPanel(
+          title: 'Capacidad y forma de pago',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _text(
+                  '¿Cuál es su presupuesto? *',
+                  _budget,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
-                  initialValue:
-                      _developments.any(
-                        (development) =>
-                            development['id'] == _selectedDevelopmentId,
-                      )
-                      ? _selectedDevelopmentId
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
+                  ],
+                  prefixText: r'$ ',
+                  errorText:
+                      _showPaymentErrors &&
+                          (_budgetValue == null || _budgetValue! <= 0)
+                      ? 'Ingrese un presupuesto mayor a cero.'
                       : null,
-                  isExpanded: true,
-                  dropdownColor: AppColors.discoveryField,
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: AppColors.discoveryFieldText,
-                  ),
-                  style: const TextStyle(
-                    color: AppColors.discoveryFieldText,
-                    fontFamily: 'SulphurPoint',
-                    fontSize: 16,
-                  ),
-                  decoration: _decoration().copyWith(
-                    errorText:
-                        _showProcessErrors && _selectedDevelopmentId == null
-                        ? 'Seleccione un desarrollo.'
-                        : null,
-                    suffixIcon: _developments.length == 1
-                        ? const Icon(
-                            Icons.lock_outline,
-                            color: AppColors.discoveryFieldText,
-                            size: 18,
-                          )
-                        : null,
-                  ),
-                  hint: Text(
-                    _developmentsLoading
-                        ? 'Cargando desarrollos...'
-                        : 'Seleccionar desarrollo',
-                    style: const TextStyle(color: AppColors.discoveryFieldHint),
-                  ),
-                  items: _developments
-                      .map(
-                        (development) => DropdownMenuItem<int>(
-                          value: development['id'] as int,
-                          child: Text(development['nombre'] as String),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _developmentsLoading || _developments.length <= 1
-                      ? null
-                      : (value) {
-                          setState(() {
-                            _selectedDevelopmentId = value;
-                            _selectedLotId = null;
-                            _lots = const [];
-                          });
-                          _loadLots();
-                        },
                 ),
-              ),
-              _toggle(
-                '¿Tiene interés en un lote específico?',
-                _hasSpecificLot,
-                (value) => setState(() {
-                  _hasSpecificLot = value;
-                  if (!value) _selectedLotId = null;
-                }),
-              ),
-              if (_hasSpecificLot && _selectedDevelopmentId != null) ...[
-                if (_lotsLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: LinearProgressIndicator(),
+                _select(
+                  '¿Forma de pago preferida? *',
+                  _payment,
+                  ['Contado', 'Crédito con la empresa', 'Crédito bancario'],
+                  (value) => _payment = value,
+                  errorText: _showPaymentErrors && _payment == null
+                      ? 'Seleccione una forma de pago.'
+                      : null,
+                ),
+                _select(
+                  '¿Tiempo estimado para utilizar su inversión?',
+                  _investmentTime,
+                  ['Inmediato', '6 meses', '2 años', '2 años en adelante'],
+                  (value) => _investmentTime = value,
+                ),
+                _buttons(
+                  'capacidad_pago',
+                  () => setState(() {
+                    _budget.text = (_saved?['budget'] as String?) ?? '';
+                    _payment = _saved?['payment'] as String?;
+                    _investmentTime = _saved?['investmentTime'] as String?;
+                    _showPaymentErrors = false;
+                  }),
+                  _savePayment,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ProspectDetailPanel(
+          title: 'Motivadores de compra',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _multiSelectChips(
+                  'Selección múltiple *',
+                  _keyFactorOptions,
+                  _keyFactors,
+                  errorText: _showMotivatorErrors && _keyFactors.isEmpty
+                      ? 'Seleccione al menos un factor.'
+                      : null,
+                ),
+                if (_keyFactors.contains('Otro'))
+                  _text(
+                    'Otro factor *',
+                    _otherFactor,
+                    errorText:
+                        _showMotivatorErrors && _otherFactor.text.trim().isEmpty
+                        ? 'Especifique el otro factor.'
+                        : null,
                   ),
-                if (_lotsError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      _lotsError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12,
-                      ),
-                    ),
+                _buttons(
+                  'motivadores_compra',
+                  () => setState(() {
+                    _keyFactors
+                      ..clear()
+                      ..addAll(
+                        (_saved?['keyFactors'] as List<String>?) ?? const [],
+                      );
+                    _otherFactor.text =
+                        (_saved?['otherFactor'] as String?) ?? '';
+                    _showMotivatorErrors = false;
+                  }),
+                  _saveMotivators,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ProspectDetailPanel(
+          title: 'Experiencia previa',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _toggle(
+                  '¿Ha comprado inmuebles antes?',
+                  _boughtBefore,
+                  (value) => setState(() => _boughtBefore = value),
+                ),
+                if (_boughtBefore) ...[
+                  _text('¿Dónde?', _whereBought),
+                  _select(
+                    '¿Qué experiencia tuvo? *',
+                    _previousExperience,
+                    _experienceOptions,
+                    (value) => _previousExperience = value,
+                    errorText:
+                        _showExperienceErrors && _previousExperience == null
+                        ? 'Seleccione la experiencia que tuvo.'
+                        : null,
                   ),
-                if (!_lotsLoading &&
-                    _selectedLotId != null &&
-                    _selectedLot == null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'El lote guardado ya no está disponible. Selecciona otro.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                  if (_previousExperience != null)
+                    _text('¿Por qué?', _experienceReason),
+                ],
+                _buttons(
+                  'experiencia_previa',
+                  _restoreExperience,
+                  _saveExperience,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ProspectDetailPanel(
+          title: 'Proceso y seguimiento',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _toggle(
+                  '¿Acepta promociones?',
+                  _acceptsPromotions,
+                  (value) => setState(() => _acceptsPromotions = value),
+                ),
                 _label(
-                  'Seleccionar lote *',
+                  'Desarrollo de interés *',
                   DropdownButtonFormField<int>(
-                    key: ValueKey('lote-$_selectedLotId-${_lots.length}'),
-                    initialValue: _selectedLot?['id'] as int?,
+                    key: ValueKey(
+                      'desarrollo-$_selectedDevelopmentId-${_developments.length}',
+                    ),
+                    initialValue:
+                        _developments.any(
+                          (development) =>
+                              development['id'] == _selectedDevelopmentId,
+                        )
+                        ? _selectedDevelopmentId
+                        : null,
                     isExpanded: true,
                     dropdownColor: AppColors.discoveryField,
                     icon: const Icon(
@@ -1239,168 +1155,268 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                     ),
                     decoration: _decoration().copyWith(
                       errorText:
-                          _showProcessErrors &&
-                              _hasSpecificLot &&
-                              _selectedLot == null
-                          ? 'Seleccione el lote de interés.'
+                          _showProcessErrors && _selectedDevelopmentId == null
+                          ? 'Seleccione un desarrollo.'
+                          : null,
+                      suffixIcon: _developments.length == 1
+                          ? const Icon(
+                              Icons.lock_outline,
+                              color: AppColors.discoveryFieldText,
+                              size: 18,
+                            )
                           : null,
                     ),
                     hint: Text(
-                      _lots.isEmpty
-                          ? 'No hay lotes disponibles'
-                          : 'Seleccione un lote',
+                      _developmentsLoading
+                          ? 'Cargando desarrollos...'
+                          : 'Seleccionar desarrollo',
                       style: const TextStyle(
                         color: AppColors.discoveryFieldHint,
                       ),
                     ),
-                    items: _lots
+                    items: _developments
                         .map(
-                          (lot) => DropdownMenuItem<int>(
-                            value: lot['id'] as int,
-                            child: Text(_lotLabel(lot)),
+                          (development) => DropdownMenuItem<int>(
+                            value: development['id'] as int,
+                            child: Text(development['nombre'] as String),
                           ),
                         )
                         .toList(),
-                    onChanged: _lots.isEmpty
+                    onChanged: _developmentsLoading || _developments.length <= 1
                         ? null
-                        : (value) => setState(() => _selectedLotId = value),
+                        : (value) {
+                            setState(() {
+                              _selectedDevelopmentId = value;
+                              _selectedLotId = null;
+                              _lots = const [];
+                            });
+                            _loadLots();
+                          },
                   ),
                 ),
-                if (_selectedLot case final lot?)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.discoveryField,
-                      borderRadius: BorderRadius.circular(10),
+                _toggle(
+                  '¿Tiene interés en un lote específico?',
+                  _hasSpecificLot,
+                  (value) => setState(() {
+                    _hasSpecificLot = value;
+                    if (!value) _selectedLotId = null;
+                  }),
+                ),
+                if (_hasSpecificLot && _selectedDevelopmentId != null) ...[
+                  if (_lotsLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: LinearProgressIndicator(),
                     ),
-                    child: Column(
-                      children: [
-                        _readOnlyRow(
-                          'Desarrollo',
-                          '${lot['desarrollo_nombre'] ?? _service.activeDevelopment?['nombre'] ?? 'No disponible'}',
+                  if (_lotsError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        _lotsError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
                         ),
-                        _readOnlyRow('Número de lote', '${lot['numero_lote']}'),
-                        _readOnlyRow(
-                          'Dimensiones',
-                          _dimensions(lot['dimensiones_m2']),
+                      ),
+                    ),
+                  if (!_lotsLoading &&
+                      _selectedLotId != null &&
+                      _selectedLot == null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'El lote guardado ya no está disponible. Selecciona otro.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
                         ),
-                        _readOnlyRow('Precio actual', _money(lot['precio'])),
-                      ],
+                      ),
+                    ),
+                  _label(
+                    'Seleccionar lote *',
+                    DropdownButtonFormField<int>(
+                      key: ValueKey('lote-$_selectedLotId-${_lots.length}'),
+                      initialValue: _selectedLot?['id'] as int?,
+                      isExpanded: true,
+                      dropdownColor: AppColors.discoveryField,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.discoveryFieldText,
+                      ),
+                      style: const TextStyle(
+                        color: AppColors.discoveryFieldText,
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 16,
+                      ),
+                      decoration: _decoration().copyWith(
+                        errorText:
+                            _showProcessErrors &&
+                                _hasSpecificLot &&
+                                _selectedLot == null
+                            ? 'Seleccione el lote de interés.'
+                            : null,
+                      ),
+                      hint: Text(
+                        _lots.isEmpty
+                            ? 'No hay lotes disponibles'
+                            : 'Seleccione un lote',
+                        style: const TextStyle(
+                          color: AppColors.discoveryFieldHint,
+                        ),
+                      ),
+                      items: _lots
+                          .map(
+                            (lot) => DropdownMenuItem<int>(
+                              value: lot['id'] as int,
+                              child: Text(_lotLabel(lot)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _lots.isEmpty
+                          ? null
+                          : (value) => setState(() => _selectedLotId = value),
                     ),
                   ),
-              ],
-              _multiSelectChips(
-                '¿Quién más interviene en la decisión? *',
-                _participantOptions,
-                _decisionMakers,
-                errorText: _showProcessErrors && _decisionMakers.isEmpty
-                    ? 'Seleccione al menos un participante.'
-                    : null,
-              ),
-              if (_decisionMakers.contains('Otro'))
-                _text(
-                  'Especificar *',
-                  _participantsOther,
-                  errorText:
-                      _showProcessErrors &&
-                          _participantsOther.text.trim().isEmpty
-                      ? 'Especifique quién más interviene.'
+                  if (_selectedLot case final lot?)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.discoveryField,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          _readOnlyRow(
+                            'Desarrollo',
+                            '${lot['desarrollo_nombre'] ?? _service.activeDevelopment?['nombre'] ?? 'No disponible'}',
+                          ),
+                          _readOnlyRow(
+                            'Número de lote',
+                            '${lot['numero_lote']}',
+                          ),
+                          _readOnlyRow(
+                            'Dimensiones',
+                            _dimensions(lot['dimensiones_m2']),
+                          ),
+                          _readOnlyRow('Precio actual', _money(lot['precio'])),
+                        ],
+                      ),
+                    ),
+                ],
+                _multiSelectChips(
+                  '¿Quién más interviene en la decisión? *',
+                  _participantOptions,
+                  _decisionMakers,
+                  errorText: _showProcessErrors && _decisionMakers.isEmpty
+                      ? 'Seleccione al menos un participante.'
                       : null,
                 ),
-              _text('Notas adicionales', _additionalNotes),
-              _buttons('proceso_seguimiento', _restoreProcess, _saveProcess),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: 14),
-      ProspectDetailPanel(
-        title: 'Asignación a cerrador',
-        color: AppColors.discoveryHeader,
-        nested: true,
-        initiallyExpanded: true,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppPalette.of(context).discoverySurfaceFill,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              _toggle(
-                '¿Enviar a cerrador?',
-                _sendToCloser,
-                (value) => setState(() {
-                  _sendToCloser = value;
-                  if (!value) {
-                    _selectedCloserId = null;
-                    _showCloserError = false;
-                  }
-                }),
-              ),
-              if (_sendToCloser)
-                _label(
-                  'Nombre del cerrador',
-                  DropdownButtonFormField<int>(
-                    key: ValueKey(
-                      'cerrador-$_selectedCloserId-${_closers.length}',
-                    ),
-                    initialValue:
-                        _closers.any(
-                          (closer) => closer['id'] == _selectedCloserId,
-                        )
-                        ? _selectedCloserId
+                if (_decisionMakers.contains('Otro'))
+                  _text(
+                    'Especificar *',
+                    _participantsOther,
+                    errorText:
+                        _showProcessErrors &&
+                            _participantsOther.text.trim().isEmpty
+                        ? 'Especifique quién más interviene.'
                         : null,
-                    isExpanded: true,
-                    dropdownColor: AppColors.discoveryField,
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: AppColors.discoveryFieldText,
-                    ),
-                    style: const TextStyle(
-                      color: AppColors.discoveryFieldText,
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 16,
-                    ),
-                    decoration: _decoration().copyWith(
-                      errorText: _showCloserError && _selectedCloserId == null
-                          ? 'Seleccione un cerrador.'
-                          : null,
-                    ),
-                    hint: Text(
-                      _closersLoading
-                          ? 'Cargando cerradores...'
-                          : _closers.isEmpty
-                          ? 'No hay cerradores disponibles'
-                          : 'Seleccionar cerrador',
-                      style: const TextStyle(
-                        color: AppColors.discoveryFieldHint,
-                      ),
-                    ),
-                    items: _closers
-                        .map(
-                          (closer) => DropdownMenuItem<int>(
-                            value: closer['id'] as int,
-                            child: Text(closer['nombre_completo'] as String),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _closersLoading || _closers.isEmpty
-                        ? null
-                        : (value) => setState(() => _selectedCloserId = value),
                   ),
-                ),
-              _buttons(
-                'asignacion_cerrador',
-                _restoreCloserAssignment,
-                _saveCloserAssignment,
-              ),
-            ],
+                _text('Notas adicionales', _additionalNotes),
+                _buttons('proceso_seguimiento', _restoreProcess, _saveProcess),
+              ],
+            ),
           ),
         ),
-      ),
-    ],
+        const SizedBox(height: 14),
+        ProspectDetailPanel(
+          title: 'Asignación a cerrador',
+          color: AppColors.discoveryHeader,
+          nested: true,
+          initiallyExpanded: true,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.of(context).discoverySurfaceFill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _toggle(
+                  '¿Enviar a cerrador?',
+                  _sendToCloser,
+                  (value) => setState(() {
+                    _sendToCloser = value;
+                    if (!value) {
+                      _selectedCloserId = null;
+                      _showCloserError = false;
+                    }
+                  }),
+                ),
+                if (_sendToCloser)
+                  _label(
+                    'Nombre del cerrador',
+                    DropdownButtonFormField<int>(
+                      key: ValueKey(
+                        'cerrador-$_selectedCloserId-${_closers.length}',
+                      ),
+                      initialValue:
+                          _closers.any(
+                            (closer) => closer['id'] == _selectedCloserId,
+                          )
+                          ? _selectedCloserId
+                          : null,
+                      isExpanded: true,
+                      dropdownColor: AppColors.discoveryField,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.discoveryFieldText,
+                      ),
+                      style: const TextStyle(
+                        color: AppColors.discoveryFieldText,
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 16,
+                      ),
+                      decoration: _decoration().copyWith(
+                        errorText: _showCloserError && _selectedCloserId == null
+                            ? 'Seleccione un cerrador.'
+                            : null,
+                      ),
+                      hint: Text(
+                        _closersLoading
+                            ? 'Cargando cerradores...'
+                            : _closers.isEmpty
+                            ? 'No hay cerradores disponibles'
+                            : 'Seleccionar cerrador',
+                        style: const TextStyle(
+                          color: AppColors.discoveryFieldHint,
+                        ),
+                      ),
+                      items: _closers
+                          .map(
+                            (closer) => DropdownMenuItem<int>(
+                              value: closer['id'] as int,
+                              child: Text(closer['nombre_completo'] as String),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _closersLoading || _closers.isEmpty
+                          ? null
+                          : (value) =>
+                                setState(() => _selectedCloserId = value),
+                    ),
+                  ),
+                _buttons(
+                  'asignacion_cerrador',
+                  _restoreCloserAssignment,
+                  _saveCloserAssignment,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectCallInformation extends StatelessWidget {
@@ -42,8 +43,8 @@ class ProspectCallInformation extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: TextStyle(
-            color: AppPalette.of(context).textColor,
+          style: const TextStyle(
+            color: AppColors.prospectFormFieldText,
             fontSize: 21,
           ),
         ),

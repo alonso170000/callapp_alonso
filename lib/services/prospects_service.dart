@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class ProspectsException implements Exception {
@@ -170,6 +172,9 @@ class ProspectsService {
       return (data['data'] as List).map((raw) {
         final row = raw as Map;
         return ProspectHistoryComment(
+          id: row['id'] as int?,
+          activityId: row['actividad_id'] as int?,
+          nextActivityId: row['siguiente_actividad_id'] as int?,
           comment: row['nota'] as String? ?? 'Sin comentario',
           createdAt: DateTime.parse(row['fecha_hora'] as String).toLocal(),
           medium: row['medio'] as String,
@@ -255,6 +260,118 @@ class ProspectsService {
       throw const ProspectsException(
         'No se pudo confirmar el seguimiento. Actualiza el historial antes de volver a guardar.',
       );
+    }
+  }
+
+  Future<int> createCall(
+    int prospectId,
+    Map<String, dynamic> fields, {
+    required String operationKey,
+  }) async {
+    final data = await _request(
+      'leads/$prospectId/calls',
+      body: fields,
+      method: 'POST',
+      operationKey: operationKey,
+      mutation: true,
+    );
+    final row = data['data'];
+    if (row is! Map || row['id'] is! int) {
+      throw const ProspectsException(
+        'No se pudo confirmar el registro de la llamada.',
+      );
+    }
+    return row['id'] as int;
+  }
+
+  Future<void> uploadCallAudio(int callId, String filePath) async {
+    final token = _auth.token;
+    if (token == null) {
+      throw const ProspectsSessionException('Inicia sesión nuevamente.');
+    }
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw const ProspectsBusinessException(
+        'La grabación seleccionada ya no está disponible en el dispositivo.',
+      );
+    }
+    try {
+      final request =
+          http.MultipartRequest(
+              'POST',
+              Uri.parse('${_auth.baseUrl}/api/v1/leads/calls/$callId/audio'),
+            )
+            ..headers.addAll({
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            })
+            ..files.add(await http.MultipartFile.fromPath('audio', file.path));
+      final response = await request.send().timeout(_mutationTimeout);
+      final text = await response.stream.bytesToString();
+      Map<String, dynamic>? data;
+      try {
+        final decoded = jsonDecode(text);
+        if (decoded is Map<String, dynamic>) data = decoded;
+      } on FormatException {
+        // Se clasifica debajo para conservar el manejo de respuestas inválidas.
+      }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await _auth.expireSession();
+        throw const ProspectsSessionException(
+          'Tu sesión expiró. Vuelve a iniciar sesión.',
+        );
+      }
+      if (response.statusCode >= 500) {
+        throw const ProspectsRecoverableException(
+          'No se pudo subir la grabación. Se reintentará.',
+        );
+      }
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          data?['success'] != true) {
+        throw ProspectsBusinessException(
+          data?['message'] is String
+              ? data!['message'] as String
+              : 'No se pudo subir la grabación de la llamada.',
+        );
+      }
+    } on TimeoutException {
+      throw const ProspectsRecoverableException(
+        'La subida de la grabación tardó demasiado. Se reintentará.',
+      );
+    } on http.ClientException {
+      throw const ProspectsOfflineException(
+        'No se pudo subir la grabación. Se intentará cuando haya conexión.',
+      );
+    }
+  }
+
+  Future<List<ProspectCallRecord>> listCalls(int prospectId) async {
+    final data = await _request('leads/$prospectId/calls');
+    final rows = data['data'];
+    if (rows is! List) {
+      throw const ProspectsException('Las llamadas recibidas no son válidas.');
+    }
+    try {
+      return rows.map((value) {
+        final row = value as Map;
+        return ProspectCallRecord(
+          id: row['id'] as int,
+          startedAt: businessTimeFromInstant(
+            DateTime.parse(row['iniciada_at'] as String),
+          ),
+          durationSeconds: row['duracion_segundos'] as int?,
+          durationEstimated:
+              row['duracion_estimada'] == 1 || row['duracion_estimada'] == true,
+          outcome: row['resultado'] as String,
+          phone: row['telefono_marcado'] as String? ?? '',
+          audioState: row['audio_estado'] as String? ?? 'pendiente',
+          summary: row['resumen'] as String?,
+          audioUrl: row['audio_url'] as String?,
+        );
+      }).toList();
+    } catch (_) {
+      throw const ProspectsException('Las llamadas recibidas no son válidas.');
     }
   }
 

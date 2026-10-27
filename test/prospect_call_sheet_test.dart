@@ -26,6 +26,10 @@ void main() {
     expect(find.text('María Pérez'), findsOneWidget);
     expect(find.text('9981234567'), findsOneWidget);
     await tester.tap(find.text('COPIAR TELÉFONO'));
+    await tester.tap(
+      find.byType(Checkbox),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('finish-prospect-call')));
 
     expect(copied, isTrue);

@@ -19,6 +19,8 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_de
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
+import 'package:callerapp_frontend/services/call_log_service.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -93,6 +95,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   final _prospects = ProspectsRepository();
   bool _loading = false;
   bool _calling = false;
+  final _callLog = CallLogService();
   String? _error;
   int _request = 0;
 
@@ -473,6 +476,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
         return;
       }
       _calling = true;
+      final startedAt = businessNow();
       final phone = widget.phoneCallService ?? PhoneCallService();
       String? error;
       try {
@@ -482,6 +486,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
       _calling = false;
       if (!detailContext.mounted) return;
+      ProspectCallSession? session;
       final successful = await showModalBottomSheet<bool>(
         context: detailContext,
         showDragHandle: true,
@@ -499,10 +504,37 @@ class _AgendaScreenState extends State<AgendaScreen> {
               return value.message;
             }
           },
+          startedAt: startedAt,
+          origin: 'agenda',
+          sourceActivityId: activity.id,
+          onFinishSession: (value) => session = value,
           onFinish: (value) => Navigator.pop(sheetContext, value),
         ),
       );
       if (successful == null || !detailContext.mounted) return;
+      final captured = session;
+      if (captured != null) {
+        final logged = await _callLog.latestFor(
+          captured.phone,
+          captured.startedAt,
+        );
+        await _prospects.registerCall(
+          prospect,
+          ProspectCallSession(
+            startedAt: captured.startedAt,
+            endedAt: captured.endedAt,
+            outcome: captured.outcome,
+            phone: captured.phone,
+            origin: captured.origin,
+            sourceActivityId: captured.sourceActivityId,
+            realDurationSeconds: logged?.durationSeconds,
+            callLogId: logged?.id,
+            audioPath: captured.audioPath,
+            audioName: captured.audioName,
+          ),
+        );
+      }
+      if (!detailContext.mounted) return;
       Navigator.pop(detailContext);
       if (!mounted) return;
       await context.push(

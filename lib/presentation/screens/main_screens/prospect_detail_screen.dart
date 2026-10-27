@@ -19,6 +19,10 @@ import 'package:callerapp_frontend/presentation/models/prospect_email_models.dar
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
+import 'package:callerapp_frontend/services/call_log_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -71,6 +75,11 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
   bool _calling = false;
+  final _callLog = CallLogService();
+  final _repository = ProspectsRepository();
+  bool get _viewingCompletedFollowUp =>
+      widget.sourceActivity?.isFollowUp == true &&
+      widget.sourceActivity?.status == AgendaStatus.completed;
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) {
     final palette = AppPalette.of(context);
     return Expanded(
@@ -99,6 +108,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
     _prospect = widget.prospect;
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
+    _callRegistered = widget.callStarted;
+    if (_viewingCompletedFollowUp) {
+      _selected.addAll(ProspectSection.values.map((section) => section.label));
+    }
     _loadEmails();
   }
 
@@ -253,10 +266,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
       );
       return;
     }
+    final startedAt = businessNow();
     setState(() => _calling = true);
     final errorMessage = await _openDialer();
     if (!mounted) return;
     setState(() => _calling = false);
+    ProspectCallSession? session;
     final completed = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -267,6 +282,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         errorMessage: errorMessage,
         onCopyPhone: () => _copyPhone(sheetContext),
         onCallAgain: _openDialer,
+        startedAt: startedAt,
+        origin: 'detalle',
+        sourceActivityId: widget.sourceActivity?.id,
+        onFinishSession: (value) => session = value,
         onFinish: (successful) => Navigator.pop(sheetContext, successful),
         onClose: () => Navigator.pop(sheetContext),
       ),
@@ -276,10 +295,48 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         _telephoneCallCompleted = true;
         _telephoneCallSuccessful = successful;
       });
+      final captured = session;
+      if (captured != null) await _registerCall(captured);
     }
   }
 
-  Widget _section(ProspectSection section, Widget child) {
+  Future<void> _registerCall(ProspectCallSession session) async {
+    final callLog = await _callLog.latestFor(session.phone, session.startedAt);
+    final reconciled = ProspectCallSession(
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      outcome: session.outcome,
+      phone: session.phone,
+      origin: session.origin,
+      sourceActivityId: session.sourceActivityId,
+      realDurationSeconds: callLog?.durationSeconds,
+      callLogId: callLog?.id,
+      audioPath: session.audioPath,
+      audioName: session.audioName,
+    );
+    try {
+      final result = await _repository.registerCall(_prospect, reconciled);
+      if (!mounted) return;
+      if (result.prospect != null) setState(() => _prospect = result.prospect!);
+      if (mounted) setState(() => _callRegistered = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isPending
+                ? 'Llamada registrada. Se sincronizará cuando haya conexión.'
+                : 'Llamada registrada${reconciled.durationEstimated ? ' con duración estimada.' : ' con duración real.'}',
+          ),
+        ),
+      );
+    } on ProspectsException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  Widget _section(ProspectSection section, Widget child, {String? title}) {
     final palette = AppPalette.of(context);
     final revision = _panelRevisions[section.label] ?? 0;
     return Visibility(
@@ -289,7 +346,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: ProspectDetailPanel(
           key: ValueKey('${section.label}-$revision'),
-          title: section.title,
+          title: title ?? section.title,
           color: section.fill(palette),
           foreground: section.ink(palette),
           initiallyExpanded:
@@ -374,83 +431,88 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         onPopInvokedWithResult: _handlePendingCallExit,
         child: Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(30, 10, 30, 16),
-              child: Row(
-                children: [
-                  _actionButton(
-                    'Enviar correo',
-                    Iconsax.send_2_copy,
-                    _sendingEmail ? () {} : _openEmailOptions,
-                  ),
-                  const SizedBox(width: 7),
-                  _actionButton(
-                    'Datos de contacto',
-                    Iconsax.profile_tick_copy,
-                    _contact,
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 58,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: palette.brandFill,
-                          foregroundColor: palette.onBrand,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+          bottomNavigationBar: _viewingCompletedFollowUp
+              ? null
+              : SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(30, 10, 30, 16),
+                    child: Row(
+                      children: [
+                        _actionButton(
+                          'Enviar correo',
+                          Iconsax.send_2_copy,
+                          _sendingEmail ? () {} : _openEmailOptions,
                         ),
-                        onPressed: _calling ? null : _startCall,
-                        child: Semantics(
-                          label: 'Llamar a ${p.name}',
-                          button: true,
-                          enabled: !_calling,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _calling
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Iconsax.call_calling, size: 25),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Llamar',
-                                style: TextStyle(
-                                  fontFamily: 'SulphurPoint',
-                                  fontSize: 12,
+                        const SizedBox(width: 7),
+                        _actionButton(
+                          'Datos de contacto',
+                          Iconsax.profile_tick_copy,
+                          _contact,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 58,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: palette.brandFill,
+                                foregroundColor: palette.onBrand,
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                            ],
+                              onPressed: _calling ? null : _startCall,
+                              child: Semantics(
+                                label: 'Llamar a ${p.name}',
+                                button: true,
+                                enabled: !_calling,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _calling
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Iconsax.call_calling,
+                                            size: 25,
+                                          ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Llamar',
+                                      style: TextStyle(
+                                        fontFamily: 'SulphurPoint',
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 7),
-                  _actionButton(
-                    'Descartar prospecto',
-                    Iconsax.profile_delete_copy,
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'El descarte estará disponible al conectar el servicio.',
+                        const SizedBox(width: 7),
+                        _actionButton(
+                          'Descartar prospecto',
+                          Iconsax.profile_delete_copy,
+                          () => ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'El descarte estará disponible al conectar el servicio.',
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                ),
           body: SafeArea(
             child: Column(
               children: [
@@ -499,13 +561,18 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                                 },
                                 onProspectUpdated: (updated) =>
                                     setState(() => _prospect = updated),
+                                readOnly: _viewingCompletedFollowUp,
                               ),
+                              title: _viewingCompletedFollowUp
+                                  ? 'Seguimiento registrado'
+                                  : null,
                             ),
                             _section(
                               ProspectSection.discovery,
                               ProspectDiscoveryForm(
                                 prospectId: p.id,
                                 prospect: p,
+                                readOnly: _viewingCompletedFollowUp,
                                 onSaved: (summary) =>
                                     setState(() => _history.insert(0, summary)),
                               ),
@@ -535,6 +602,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                               ProspectSection.data,
                               ProspectDataForm(
                                 prospect: p,
+                                readOnly: _viewingCompletedFollowUp,
                                 onSaved: (summary) =>
                                     setState(() => _history.insert(0, summary)),
                               ),

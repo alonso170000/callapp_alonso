@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/catalog_cache.dart';
@@ -8,6 +9,7 @@ import 'package:callerapp_frontend/data/local/prospects_cache.dart';
 import 'package:callerapp_frontend/data/mappers/prospect_cache_mapper.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
@@ -257,7 +259,7 @@ class ProspectsRepository {
     ProspectRecord prospect,
     Map<String, dynamic> fields, {
     String? operationKey,
-  }) {
+  }) async {
     final priority = switch (fields['prioridad']) {
       'caliente' => 'Caliente',
       'tibio' => 'Tibio',
@@ -286,6 +288,90 @@ class ProspectsRepository {
       remote: (id, key) =>
           _service.createFollowUp(id, fields, operationKey: key),
     );
+  }
+
+  Future<ProspectMutationResult> registerCall(
+    ProspectRecord prospect,
+    ProspectCallSession call, {
+    String? summary,
+    List<String> topics = const [],
+    String? operationKey,
+  }) async {
+    final duration = Duration(seconds: call.durationSeconds);
+    final optimistic = prospect.copyWith(
+      lastCallAt: call.endedAt,
+      lastCallDuration: duration,
+      lastCallStatus: call.outcome.label,
+      lastContactResult: call.outcome.successful
+          ? 'Contacto exitoso'
+          : 'Sin respuesta',
+      daysSinceContact: 0,
+    );
+    final currentScope = scope;
+    var id = prospect.id;
+    if (id == null) {
+      throw const ProspectsBusinessException(
+        'El prospecto no tiene un identificador válido.',
+      );
+    }
+    if (id < 0) {
+      final resolved = await _outbox.resolveLocalId(
+        currentScope,
+        'prospect',
+        id,
+      );
+      if (resolved != null) id = resolved;
+    }
+    final key = operationKey ?? PendingOperationsStore.newOperationKey();
+    final fields = call.toPayload(summary: summary, topics: topics);
+    final payload = {
+      'fields': fields,
+      'local_prospect': _prospectJson(optimistic),
+      if (call.audioPath != null) 'audio_path': call.audioPath,
+    };
+    if (id < 0) {
+      await _cache.upsert(currentScope, optimistic);
+      await _outbox.enqueue(
+        currentScope,
+        kind: 'prospect.call',
+        entityId: id,
+        operationKey: key,
+        payload: payload,
+      );
+      unawaited(_sync.flush());
+      return ProspectMutationResult(
+        ProspectMutationState.pending,
+        prospect: optimistic,
+      );
+    }
+    try {
+      final callId = await _service.createCall(id, fields, operationKey: key);
+      if (call.audioPath != null) {
+        await _service.uploadCallAudio(callId, call.audioPath!);
+        final file = File(call.audioPath!);
+        if (await file.exists()) await file.delete();
+      }
+      await _cache.upsert(currentScope, optimistic);
+      return ProspectMutationResult(
+        ProspectMutationState.saved,
+        prospect: optimistic,
+      );
+    } on ProspectsRecoverableException {
+      if (!_outbox.isAvailable) rethrow;
+      await _cache.upsert(currentScope, optimistic);
+      await _outbox.enqueue(
+        currentScope,
+        kind: 'prospect.call',
+        entityId: id,
+        operationKey: key,
+        payload: payload,
+      );
+      unawaited(_sync.flush());
+      return ProspectMutationResult(
+        ProspectMutationState.pending,
+        prospect: optimistic,
+      );
+    }
   }
 
   Future<ProspectMutationResult> saveDiscoverySection(
@@ -426,7 +512,8 @@ class ProspectsRepository {
     )) {
       if (operation.kind != 'prospect.create' &&
           operation.kind != 'prospect.update' &&
-          operation.kind != 'prospect.follow_up') {
+          operation.kind != 'prospect.follow_up' &&
+          operation.kind != 'prospect.call') {
         continue;
       }
       final raw = operation.payload['local_prospect'];

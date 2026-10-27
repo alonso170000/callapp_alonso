@@ -1,0 +1,676 @@
+CALLERAPP HADA - CONTEXTO COMPLETO DEL PROYECTO PARA CHATGPT
+============================================================
+
+Fecha de elaboración: 27 de octubre de 2026
+Workspace: Frontend/
+Idioma de la aplicación y de los mensajes al usuario: español
+Plataforma objetivo de producción: Android
+
+
+0. CÓMO USAR ESTE DOCUMENTO
+---------------------------
+
+Este archivo sirve como contexto inicial para pedir a ChatGPT que ayude a documentar,
+analizar o modificar CallerApp. Se puede adjuntar completo a una conversación nueva.
+
+Antes de aceptar una afirmación de este documento como definitiva, ChatGPT debe revisar
+los archivos actuales implicados. El proyecto continúa cambiando y el código es la fuente
+de verdad. No se deben inventar endpoints, tablas, campos, pantallas ni funcionalidades.
+
+Prompt sugerido:
+
+"Usa el archivo CONTEXTO_COMPLETO_PROYECTO_PARA_CHATGPT.txt como contexto general de
+CallerApp HADA. Quiero documentar [indicar módulo o flujo]. Primero contrasta el documento
+con los archivos actuales del repositorio. Separa claramente: comportamiento implementado,
+dependencias externas, limitaciones, datos demo y trabajo pendiente. Escribe en español y
+no inventes información que no esté respaldada por el código."
+
+Este documento no contiene contraseñas, tokens, claves JWT ni credenciales de MySQL.
+Esos valores nunca deben incorporarse a documentación compartida.
+
+
+1. RESUMEN DEL PRODUCTO
+-----------------------
+
+CallerApp HADA es un CRM inmobiliario móvil para agentes de ventas. Permite iniciar sesión,
+consultar prospectos, registrar llamadas y seguimientos, capturar discovery, administrar la
+agenda, recibir recordatorios y manejar preferencias del perfil.
+
+El sistema está formado por dos proyectos que se comunican mediante una API REST:
+
+- CallerApp/: aplicación Flutter para Android.
+- CRM-hada/: backend Node.js/Express conectado a MySQL.
+
+La aplicación tiene enfoque offline-first. Las lecturas usan una instantánea local cuando la
+red no está disponible y las escrituras compatibles se proyectan inmediatamente en SQLite,
+se guardan en una outbox y se sincronizan al recuperar conectividad. MySQL, accedido por la
+API, continúa siendo la fuente de verdad remota.
+
+
+2. ESTRUCTURA DEL WORKSPACE
+---------------------------
+
+Frontend/
+  AGENTS.md                         Reglas generales para agentes de IA.
+  .opencode/skills/                 Estándares obligatorios del proyecto.
+  CallerApp/                        Aplicación Flutter.
+    android/                        Integración nativa Android.
+    lib/                            Código Dart de producción.
+    test/                           Pruebas unitarias y de widgets.
+    pubspec.yaml                    Dependencias, fuentes y assets.
+    CONEXION_BACKEND.md             Nota histórica de conexión; puede estar desactualizada.
+    DOCUMENTACION_APP_MOVIL.txt     Documento histórico del prototipo; está desactualizado.
+  CRM-hada/                         API REST.
+    index.js                        Arranque del servidor.
+    src/app.js                      Express, Swagger, estáticos y montaje de módulos.
+    src/config/                     MySQL y Swagger.
+    src/modules/                    Dominios de la API.
+    src/shared/                     Middleware y utilidades comunes.
+    package.json                    Dependencias y scripts de Node.
+
+Importante: DOCUMENTACION_APP_MOVIL.txt describe una etapa antigua en la que buena parte de
+la aplicación era un prototipo. Ya no es correcto afirmar que no hay API, autenticación,
+SQLite, notificaciones o sincronización.
+
+
+3. STACK TECNOLÓGICO
+--------------------
+
+Aplicación Flutter:
+
+- Dart ^3.13.2 y Flutter.
+- go_router ^18.0.1 para navegación.
+- ChangeNotifier y estado local; no se usa un gestor de estado externo.
+- http ^1.6.0 para REST.
+- sqflite ^2.4.4+2 y path para SQLite en Android.
+- flutter_secure_storage para persistir la sesión.
+- flutter_local_notifications y timezone para avisos locales.
+- url_launcher para acciones externas.
+- file_picker y path_provider para importación/manejo de archivos de audio.
+- fluentui_system_icons, iconsax_flutter y cupertino_icons para iconografía.
+- flutter_localizations con locale es-MX.
+- sqflite_common_ffi para pruebas de SQLite en memoria.
+- flutter_lints ^6.0.0.
+
+Backend:
+
+- Node.js con módulos ESM.
+- Express 5.2.1.
+- MySQL mediante mysql2.
+- JWT mediante jsonwebtoken.
+- Hash de contraseña mediante bcryptjs.
+- CORS y dotenv.
+- Swagger mediante swagger-jsdoc y swagger-ui-express.
+- multer para carga de audio.
+- nodemon para desarrollo.
+- No existe un runner de pruebas automatizadas configurado en CRM-hada.
+
+
+4. ARQUITECTURA DE LA APLICACIÓN FLUTTER
+----------------------------------------
+
+lib/main.dart
+  Inicializa Flutter, restaura la sesión, configura notificaciones, inicia la outbox y el
+  mantenimiento local, y construye MaterialApp.router. Usa tema claro, oscuro o del sistema.
+
+lib/config/router/
+  Contiene el GoRouter central y sus redirecciones de sesión.
+
+lib/presentation/models/
+  Modelos inmutables, filtros, enums, argumentos de vistas y algunos datos demo. No debe
+  contener HTTP ni BuildContext.
+
+lib/presentation/validators/
+  Validaciones puras y reutilizables para autenticación, perfil y prospectos.
+
+lib/presentation/widgets/
+  Componentes presentacionales. Reciben datos y callbacks; no llaman directamente a la API.
+  Se organizan por dominio: auth, home, agenda, prospects, profile y notifications.
+
+lib/presentation/screens/
+  Pantallas y coordinación de estado visual. Las pantallas principales son login, shell de
+  inicio, prospectos, detalle de prospecto, agenda y perfil.
+
+lib/repositories/
+  Orquestación cache-first y de escrituras offline. Actualmente contiene repositorios de
+  prospectos y agenda. La UI debe consumir repositorios, no servicios HTTP directamente.
+
+lib/services/
+  Integraciones y estado compartido: autenticación, agenda, prospectos, outbox, sesión,
+  notificaciones, apariencia, asignaciones, llamadas, audio, mantenimiento y reloj de negocio.
+
+lib/data/local/
+  Base SQLite, ámbitos locales, cachés, catálogos, discovery, preferencias, notificaciones y
+  operaciones pendientes.
+
+lib/data/mappers/
+  Conversión entre modelos de presentación y filas de caché.
+
+lib/resources/
+  Fuente única de colores, paletas semánticas, temas, estilos, fuentes e imágenes.
+
+Dirección esperada de dependencias:
+
+  UI/pantallas -> repositorios -> servicios remotos y almacenamiento local -> API/MySQL
+
+Los widgets no deben saltarse el repositorio para hacer peticiones HTTP ni contener lógica
+de negocio.
+
+
+5. ARRANQUE, SESIÓN Y NAVEGACIÓN
+--------------------------------
+
+Al arrancar:
+
+1. AuthService intenta restaurar la sesión desde flutter_secure_storage.
+2. Si el JWT guardado ya expiró, se elimina la sesión local.
+3. NotificationService inicializa las notificaciones locales.
+4. OutboxService inicia su procesamiento sin bloquear el primer render.
+5. LocalMaintenanceService ejecuta el mantenimiento si corresponde.
+6. MaterialApp.router usa es-MX y escucha AppearanceController.
+
+Rutas actuales:
+
+- /login: inicio de sesión.
+- /home: shell autenticado principal.
+- /prospectos/:phone: detalle de prospecto.
+
+El router inicia en /login. Si no hay sesión redirige cualquier ruta protegida hacia /login;
+si ya hay sesión y se abre /login, redirige a /home.
+
+/home contiene un IndexedStack con cuatro pestañas que conservan su estado:
+
+1. Inicio.
+2. Prospectos.
+3. Agenda.
+4. Perfil.
+
+Las cuatro pestañas no son rutas independientes. La navegación principal usa go_router; no
+se debe introducir Navigator para rutas de aplicación.
+
+La ruta de detalle recibe preferentemente un ProspectRecord o ProspectDetailArguments por
+state.extra. El fallback por teléfono todavía consulta demoProspects, por lo que un deep link
+sin extra puede no representar todos los datos remotos actuales.
+
+
+6. AUTENTICACIÓN Y MULTIÁMBITO
+------------------------------
+
+AuthService envía POST /api/v1/auth/login con username y password. El login requiere una
+respuesta válida con status success y token JWT. La URL base se configura en compilación:
+
+  flutter run --dart-define=API_BASE_URL=https://servidor.example.com
+
+Existe una URL de Render predeterminada en el código, pero debe verificarse antes de afirmar
+que el despliegue está disponible. El valor debe ser una URL HTTPS base, sin /api/v1.
+
+La sesión conserva token, id, nombre, correo, teléfono y desarrollo activo. El almacenamiento
+seguro permite restaurarla después de reiniciar la app. La expiración local se comprueba con
+el claim exp; un 401/403 posterior debe invalidar la sesión.
+
+El backend también expone POST /api/v1/auth/switch-tenant para cambiar el desarrollo activo.
+
+Todo dato local relevante se aísla mediante LocalScope:
+
+- userId del usuario autenticado.
+- developmentId del desarrollo activo.
+
+Nunca se deben mezclar cachés, catálogos, operaciones pendientes o avisos entre usuarios o
+desarrollos. En la lógica de asignaciones, "estoy como agente" corresponde a agente_id y no
+a cerrador_id.
+
+
+7. MÓDULOS FUNCIONALES
+----------------------
+
+7.1 Inicio
+
+- Resume actividad y prospectos del agente.
+- Incluye accesos hacia Agenda y Prospectos.
+- Puede abrir actividades o prospectos desde notificaciones.
+- Muestra el estado de sincronización de la outbox.
+- Se refresca junto con Agenda y Prospectos después de sincronizar cambios reales.
+
+7.2 Prospectos
+
+- Carga la vista general de leads desde la API y usa la caché como respaldo.
+- Permite buscar, ordenar y filtrar.
+- Permite crear y editar prospectos con proyección optimista.
+- Usa catálogos de canales, estatus, desarrollos, campañas y lotes.
+- Los catálogos descargados pueden reutilizarse offline, aislados por ámbito.
+- Permite abrir el detalle y consultar información comercial y de contacto.
+- Registra llamadas y puede asociar/importar audio.
+- Consulta historial de llamadas, correos y contactos.
+- Registra seguimientos, que también pueden generar actividad de agenda.
+- Captura y consulta discovery.
+- Muestra comentarios, historial, información de llamada y guiones.
+
+7.3 Agenda
+
+- Presenta actividades por día, semana y mes.
+- Soporta filtros y rangos de fecha.
+- Permite crear, editar, completar, cancelar y eliminar actividades.
+- Las actividades se cachean y las mutaciones compatibles entran en la outbox.
+- Los recordatorios se programan como notificaciones locales.
+- Las fechas de negocio deben pasar por business_clock.dart.
+
+7.4 Perfil y apariencia
+
+- Muestra identidad de la sesión.
+- Administra preferencias locales del perfil y recordatorios.
+- AppearanceController sincroniza preferencia de tema mediante /api/v1/preferences cuando
+  corresponde.
+- La aplicación admite tema claro, oscuro y system.
+
+7.5 Notificaciones y asignaciones
+
+- NotificationService administra avisos locales de actividades y asignaciones.
+- ProspectAssignmentController consulta periódicamente nuevas asignaciones.
+- El polling normal usa un intervalo de 30 segundos.
+- Al tocar un aviso se abre el prospecto o la actividad relacionada.
+- Los avisos locales tienen retención de 7 días.
+
+7.6 Llamadas y audio
+
+- PhoneCallService abre la llamada mediante la capacidad del dispositivo.
+- CallLogService busca información real de la llamada cuando la plataforma lo permite.
+- Si no existe una duración real, el modelo puede marcarla como estimada.
+- AudioImportService y la API permiten adjuntar audio a un registro de llamada.
+- Estas funciones dependen de permisos y capacidades nativas de Android.
+
+
+8. OFFLINE-FIRST, CACHÉ Y OUTBOX
+--------------------------------
+
+SQLite solo se abre de forma productiva en Android. Las pruebas pueden inyectar una factory
+FFI. En plataformas no compatibles, databaseOrNull devuelve null y la app puede seguir
+trabajando contra la API, pero no dispone del comportamiento offline completo.
+
+Versión actual del esquema local: 4.
+Archivo de base: callerapp.db.
+
+Tablas principales:
+
+- cached_prospects: instantánea de prospectos por usuario/desarrollo.
+- cached_activities: instantánea de actividades por usuario/desarrollo.
+- cache_metadata: fecha de actualización por ámbito y recurso.
+- activity_notifications: avisos persistidos y estado leído/descartado.
+- app_metadata: catálogos, discovery, precargas, mantenimiento y mapas de ids.
+- pending_operations: outbox de escrituras pendientes.
+
+La outbox usa los estados:
+
+- pending: esperando sincronización o reintento.
+- syncing: envío en curso.
+- conflict: requiere decisión explícita del usuario.
+
+Operaciones reconocidas por la interfaz:
+
+- agenda.create, agenda.update, agenda.complete, agenda.cancel y agenda.delete.
+- prospect.create, prospect.update, prospect.follow_up y prospect.discovery.
+
+Reglas centrales:
+
+- Las creaciones offline usan ids temporales negativos.
+- Al recibir el id real del servidor se actualiza la caché y también los payloads de las
+  operaciones dependientes.
+- Cada operación conserva una Idempotency-Key estable, incluso durante reintentos.
+- La falta de conexión no consume el presupuesto de reintentos.
+- Los fallos de servidor consumen intentos; después de 5 la operación queda como conflicto.
+- Los conflictos no se reintentan automáticamente: el usuario elige reintentar o descartar.
+- La sincronización automática se intenta cada 90 segundos solo mientras hay pendientes.
+- También se intenta al volver la app a primer plano y mediante "Sincronizar ahora".
+- Después de una sincronización real se refrescan Inicio, Prospectos y Agenda.
+
+Mantenimiento:
+
+- Se evalúa aproximadamente cada 24 horas.
+- La caché de un ámbito vence a los 30 días según su recurso más reciente.
+- Al purgar un ámbito vencido se eliminan cachés, avisos, metadata y claves asociadas de
+  app_metadata.
+- Cerrar sesión o dejar expirar la sesión no borra inmediatamente la caché.
+- Las notificaciones locales tienen retención de 7 días.
+
+
+9. CATÁLOGOS OFFLINE
+--------------------
+
+CatalogCache persiste JSON dentro de app_metadata con claves aisladas por usuario y
+desarrollo. Incluye canales, estatus de prospecto, desarrollos, campañas y lotes. Los lotes
+también se identifican por desarrollo.
+
+El patrón es remoto primero y fallback por catálogo. El repositorio decide entre remoto y
+caché; la UI nunca debe leer CatalogCache directamente. La precarga tiene un intervalo de
+12 horas.
+
+Para altas/ediciones offline se necesitan catálogos descargados previamente. Si faltan datos
+imprescindibles, como canales u orígenes, Guardar debe quedar deshabilitado o mostrarse un
+error claro. No se debe inventar un id. MySQL sigue siendo la fuente de verdad.
+
+
+10. API REST DEL BACKEND
+------------------------
+
+Prefijo principal: /api/v1
+Autorización: Authorization: Bearer <JWT> en rutas protegidas.
+Mutaciones compatibles: cabecera Idempotency-Key.
+Formato habitual: envelope JSON con success/data/message o status según el módulo.
+
+Montajes:
+
+- /api/v1/auth
+- /api/v1/leads
+- /api/v1/agents
+- /api/v1/catalogs
+- /api/v1/activities
+- /api/v1/preferences
+- /api-docs y /api-docs.json para Swagger.
+- /static/avatars para avatares.
+- /static/call-audio para audio cargado.
+
+Endpoints relevantes:
+
+Autenticación:
+- POST /api/v1/auth/login
+- POST /api/v1/auth/switch-tenant
+
+Prospectos/leads:
+- GET /api/v1/leads
+- POST /api/v1/leads
+- PUT /api/v1/leads/:id
+- POST /api/v1/leads/:id/calls
+- GET /api/v1/leads/:id/calls
+- POST /api/v1/leads/calls/:id/audio
+- POST /api/v1/leads/:id/follow-ups
+- GET /api/v1/leads/:id/contact-history
+- GET /api/v1/leads/:id/discovery
+- POST /api/v1/leads/:id/discovery
+- GET /api/v1/leads/:id/emails
+- POST /api/v1/leads/:id/emails
+
+Agenda:
+- GET /api/v1/activities
+- POST /api/v1/activities
+- PUT /api/v1/activities/:id
+- PATCH /api/v1/activities/:id/status
+- DELETE /api/v1/activities/:id
+
+Agentes:
+- GET /api/v1/agents
+- GET /api/v1/agents/closers
+
+Catálogos:
+- GET /api/v1/catalogs/estatus-prospecto
+- GET /api/v1/catalogs/canales
+- GET /api/v1/catalogs/desarrollos
+- GET /api/v1/catalogs/campanias
+- GET /api/v1/catalogs/lotes?desarrollo_id=...
+
+Preferencias:
+- GET /api/v1/preferences
+- PUT /api/v1/preferences
+
+El backend usa consultas parametrizadas y un middleware central de errores. La sesión JWT
+expira por defecto en 8 horas, configurable mediante JWT_EXPIRES_IN. El middleware de
+idempotencia conserva resultados exitosos y libera la reserva frente a respuestas de error
+para permitir una corrección/reintento posterior.
+
+
+11. CONFIGURACIÓN DEL BACKEND
+-----------------------------
+
+Variables esperadas, sin documentar sus valores:
+
+- PORT
+- DB_HOST
+- DB_USER
+- DB_PASSWORD
+- DB_NAME
+- DB_PORT (Aiven suele requerir un puerto explícito; el código tiene 25000 por defecto)
+- JWT_SECRET
+- JWT_EXPIRES_IN (opcional; 8h por defecto)
+- EMAIL_API_KEY
+- EMAIL_FROM
+
+Las credenciales viven en el entorno del servidor, no en Flutter ni en archivos versionados.
+Los cambios de esquema MySQL se aplican manualmente por el usuario y no deben agregarse al
+repositorio como migraciones salvo una decisión explícita distinta.
+
+
+12. DISEÑO Y EXPERIENCIA DE USUARIO
+-----------------------------------
+
+Identidad visual:
+
+- Fuente SulphurPoint para contenido y formularios.
+- Fuente BebasNeue para títulos destacados y botones.
+- Fondos menta, superficies verde petróleo y acentos cálidos según la paleta existente.
+- Los colores salen de AppColors, ProspectTagColors o AppPalette.
+- Los temas se construyen únicamente con AppThemes.build(Brightness).
+
+Reglas obligatorias:
+
+- No hardcodear colores, tipografías ni tamaños en pantallas/widgets nuevos.
+- Usar Theme.of(context).colorScheme para superficies y texto que dependan del tema.
+- Conservar modo claro, oscuro y system.
+- Reutilizar AppStyles y widgets existentes antes de duplicar componentes.
+- Usar SafeArea y contenido desplazable cuando corresponda.
+- Los formularios largos en bottom sheet deben ser scrollables y seguros ante el teclado.
+- Verificar texto grande y anchos de 320 px y 390 px.
+- Toda acción solo-icono debe tener Semantics en español.
+- Mantener la identidad de iconos existente; un ajuste visual no debe reemplazar iconografía
+  ni cambiar interacciones no relacionadas.
+
+"Registrar seguimiento" es una referencia visual ya aprobada para el detalle de prospecto.
+Al cambiar tokens compartidos se deben auditar todos sus consumidores para no degradar ese
+formulario, especialmente en modo oscuro.
+
+
+13. CONVENCIONES DE CÓDIGO
+--------------------------
+
+- Un archivo por concepto, nombres snake_case y ubicación en la capa correcta.
+- Widgets presentacionales: datos + callbacks, sin HTTP.
+- Pantallas: composición y coordinación, no lógica de negocio extensa.
+- Repositorios: selección remoto/caché y orquestación offline.
+- Servicios: integraciones sin BuildContext.
+- Modelos: estructuras de datos sin dependencias de UI o red.
+- Validadores: funciones puras reutilizables.
+- ChangeNotifier para estado compartido existente.
+- Inyectar http.Client y dependencias para facilitar pruebas.
+- Liberar controllers, focus nodes, listeners y timers en dispose.
+- Verificar mounted después de operaciones asíncronas antes de setState/navegar.
+- Evitar dobles envíos con flags de operación.
+- Usar go_router exclusivamente para rutas principales.
+- Usar business_clock.dart; no introducir DateTime.now() en lógica nueva.
+- Errores mediante una excepción por dominio y mensajes claros en español.
+- No mostrar al usuario detalles crudos del backend.
+- Consultas MySQL parametrizadas y errores procesados por middleware central.
+- No agregar dependencias, capas o patrones nuevos sin una necesidad concreta.
+
+
+14. RELOJ Y FECHAS
+------------------
+
+El reloj de negocio se centraliza en lib/services/business_clock.dart. El offset de negocio
+actual es UTC-5, correspondiente al contexto America/Cancun. La lógica nueva no debe llamar
+directamente DateTime.now(); debe usar businessNow u otras utilidades centrales.
+
+Los rangos de fecha inclusivos deben modelarse con inicio del primer día y límite exclusivo
+del día posterior al último. Semana comienza en lunes. Se deben considerar meses, años
+bisiestos, cambios de mes/año y días sin actividades.
+
+
+15. PRUEBAS Y VALIDACIÓN
+------------------------
+
+La carpeta CallerApp/test contiene pruebas de:
+
+- autenticación y restauración de sesión;
+- apariencia y contraste oscuro;
+- reloj de negocio;
+- servicios de prospectos y agenda;
+- repositorios cache-first;
+- SQLite, cachés, catálogos y operaciones pendientes;
+- outbox, remapeo de ids y conflictos;
+- notificaciones y asignaciones;
+- filtros, formularios y pantallas de Prospectos;
+- Agenda, actividades e indicadores dinámicos;
+- navegación, Inicio, Perfil y responsive/consistencia visual;
+- llamadas y flujo de seguimiento.
+
+Baseline indicado por el estado actual del proyecto: flutter analyze limpio y 240 pruebas en
+verde. Es una referencia histórica del 27 de octubre de 2026; debe volver a ejecutarse para
+confirmar el estado después de cualquier cambio.
+
+Comandos desde CallerApp/:
+
+  flutter pub get
+  dart format lib test
+  flutter analyze
+  flutter test
+  flutter run -d emulator-5554
+  flutter build apk --dart-define=API_BASE_URL=https://servidor.example.com
+
+Validación mínima antes de cerrar cambios Dart:
+
+1. dart format en los archivos modificados.
+2. flutter analyze (o --no-pub si las dependencias ya están resueltas).
+3. pruebas focalizadas del área afectada.
+4. suite completa cuando el riesgo o alcance lo justifique.
+5. git diff --check.
+6. comprobación de layout a 320 px y 390 px para cambios visuales.
+7. prueba en Android para SQLite, telefonía, permisos y notificaciones nativas.
+
+En Windows, un error "databaseFactory not initialized" en sqflite normalmente indica que se
+intentó usar SQLite móvil fuera de Android. Las pruebas deben inyectar sqflite_common_ffi o
+un fake. Procesos flutter_tester huérfanos pueden dejar sqlite3.dll bloqueado.
+
+Backend, desde CRM-hada/:
+
+  npm install
+  npm run dev
+  npm start
+
+No debe afirmarse que el backend pasó pruebas automatizadas porque package.json no contiene
+una suite; su script test falla intencionalmente. Se puede validar arranque, lint manual,
+rutas concretas y conexión usando un entorno autorizado.
+
+
+16. ESTADO ACTUAL Y PRECAUCIONES
+--------------------------------
+
+- La aplicación ya no es solo un prototipo: existen autenticación real, API, cachés SQLite,
+  outbox, notificaciones, preferencias y flujos de escritura offline.
+- C1 y C2 del trabajo offline-first están descritas como completas.
+- Agenda y Prospectos soportan operaciones optimistas y conflictos.
+- Los catálogos y discovery tienen caché por ámbito.
+- La sincronización tiene reintentos acotados e idempotencia.
+- El despliegue de Render y el esquema efectivo de MySQL deben verificarse por separado; un
+  timeout no demuestra que el servicio simplemente esté despertando.
+- Parte del fallback de ruta de detalle y algunos modelos aún contienen datos demo. Se debe
+  identificar explícitamente cualquier dato demo antes de presentarlo como persistido.
+- Algunas capacidades (registro real de llamadas, audio, SQLite y permisos) dependen de
+  Android y no pueden validarse por completo con flutter_tester de escritorio.
+- El árbol de trabajo puede contener cambios del desarrollador. No se deben revertir,
+  sobrescribir ni mezclar con una tarea no relacionada.
+- En la fecha de creación de este documento hay cambios locales sin confirmar en pantallas,
+  widgets, servicios y archivos Android relacionados con llamadas/seguimientos. Por eso este
+  documento describe el código visible, pero no implica que esas modificaciones ya estén
+  terminadas o versionadas.
+
+
+17. GUÍA PARA DOCUMENTAR CON CHATGPT
+------------------------------------
+
+Para cada módulo, pedir una ficha con esta estructura:
+
+1. Objetivo del módulo.
+2. Actores y permisos.
+3. Pantallas y componentes.
+4. Flujo normal paso a paso.
+5. Estados de carga, vacío, error y sin conexión.
+6. Datos de entrada y validaciones.
+7. Datos mostrados y fuente de cada uno.
+8. Repositorio, servicios y almacenamiento local involucrados.
+9. Endpoints y contrato de API.
+10. Efectos secundarios: outbox, notificaciones, caché y navegación.
+11. Reglas de negocio.
+12. Pruebas existentes.
+13. Limitaciones o deuda técnica comprobada.
+
+Preguntas que ChatGPT debe responder con evidencia del código:
+
+- ¿Qué archivo es responsable de cada paso?
+- ¿El dato viene de API, SQLite, sesión o demo?
+- ¿Qué pasa sin conexión?
+- ¿Qué ocurre si el servidor rechaza la operación?
+- ¿Cómo se evita duplicar la escritura?
+- ¿Cómo se aísla por usuario y desarrollo?
+- ¿Qué prueba demuestra el comportamiento?
+- ¿Qué parte requiere validación en Android o contra Render/MySQL?
+
+Etiquetas útiles para evitar ambigüedad en documentación:
+
+- IMPLEMENTADO: respaldado por código y, preferentemente, prueba.
+- DEPENDENCIA EXTERNA: requiere Render, MySQL, correo, permisos o dispositivo.
+- DEMO/FALLBACK: datos o comportamiento de demostración.
+- PENDIENTE: necesidad real no implementada.
+- POR VERIFICAR: el código lo contempla, pero falta comprobar entorno/despliegue.
+
+
+18. ARCHIVOS CLAVE PARA PROFUNDIZAR
+-----------------------------------
+
+Aplicación y navegación:
+- lib/main.dart
+- lib/config/router/app_router.dart
+- lib/presentation/screens/main_screens/home_screen.dart
+
+Autenticación y sesión:
+- lib/services/auth_service.dart
+- lib/services/session_store.dart
+
+Offline y persistencia:
+- lib/data/local/app_database.dart
+- lib/data/local/local_scope.dart
+- lib/data/local/pending_operations_store.dart
+- lib/data/local/catalog_cache.dart
+- lib/services/outbox_service.dart
+- lib/services/local_maintenance_service.dart
+
+Prospectos:
+- lib/repositories/prospects_repository.dart
+- lib/services/prospects_service.dart
+- lib/presentation/screens/main_screens/prospects_screen.dart
+- lib/presentation/screens/main_screens/prospect_detail_screen.dart
+- lib/presentation/widgets/prospects/
+
+Agenda:
+- lib/repositories/agenda_repository.dart
+- lib/services/agenda_service.dart
+- lib/presentation/screens/main_screens/agenda_screen.dart
+- lib/presentation/widgets/agenda/
+
+Diseño:
+- lib/resources/colors/colors.dart
+- lib/resources/colors/prospect_tag_colors.dart
+- lib/resources/styles/app_palette.dart
+- lib/resources/styles/app_themes.dart
+- lib/resources/styles/styles.dart
+
+Backend:
+- CRM-hada/src/app.js
+- CRM-hada/src/config/db.js
+- CRM-hada/src/shared/middlewares/
+- CRM-hada/src/modules/auth/
+- CRM-hada/src/modules/leads/
+- CRM-hada/src/modules/activities/
+- CRM-hada/src/modules/catalogs/
+- CRM-hada/src/modules/agents/
+- CRM-hada/src/modules/preferences/
+- CRM-hada/src/modules/emails/
+
+
+FIN DEL CONTEXTO
+================
