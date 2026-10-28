@@ -106,7 +106,9 @@ void main() {
       );
       retry.complete(null);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('CERRAR'));
+      final close = find.text('CERRAR');
+      await tester.ensureVisible(close);
+      await tester.tap(close);
 
       expect(closed, isTrue);
       expect(completed, isFalse);

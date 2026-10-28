@@ -94,7 +94,7 @@ class ProspectDetailHeader extends StatelessWidget {
                     ),
                     Text(
                       '${date.day}'.padLeft(2, '0'),
-                      style: const TextStyle(fontSize: 32, height: 1),
+                      style: const TextStyle(fontSize: 15, height: 1),
                     ),
                   ],
                 ),
@@ -149,7 +149,7 @@ class ProspectDetailHeader extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Column(
           children: [
             Row(
@@ -197,7 +197,7 @@ class ProspectDetailHeader extends StatelessWidget {
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
-              spacing: 16,
+              spacing: 12,
               runSpacing: 16,
               children: [
                 _group(
@@ -219,7 +219,7 @@ class ProspectDetailHeader extends StatelessWidget {
                               Text(
                                 '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
                                 style: const TextStyle(
-                                  fontSize: 30,
+                                  fontSize: 15,
                                   height: 1.1,
                                 ),
                               ),
@@ -249,7 +249,7 @@ class ProspectDetailHeader extends StatelessWidget {
                     context,
                     Text(
                       prospect.status == 'Venta realizada' ? 'SÍ' : 'NO',
-                      style: const TextStyle(fontSize: 32),
+                      style: const TextStyle(fontSize: 24),
                     ),
                   ),
                 ),
@@ -270,20 +270,21 @@ class ProspectDetailHeader extends StatelessWidget {
                           showCheckmark: false,
                           side: BorderSide.none,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 6,
+                          labelPadding: EdgeInsets.symmetric(
+                            vertical: 5,
+                            horizontal: 7,
                           ),
                           backgroundColor: palette.headerChipFill,
                           selectedColor: section.fill(palette),
                           labelStyle: TextStyle(
                             fontFamily: 'SulphurPoint',
-                            fontSize: 11,
+                            fontSize: 12,
                             color: selected.contains(section.label)
                                 ? section.ink(palette)
                                 : palette.headerChipForeground,

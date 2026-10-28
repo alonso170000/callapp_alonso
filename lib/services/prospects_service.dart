@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -305,8 +306,14 @@ class ProspectsService {
               'Authorization': 'Bearer $token',
               'Accept': 'application/json',
             })
-            ..files.add(await http.MultipartFile.fromPath('audio', file.path));
-      final response = await request.send().timeout(_mutationTimeout);
+            ..files.add(
+              await http.MultipartFile.fromPath(
+                'audio',
+                file.path,
+                contentType: _audioContentType(file.path),
+              ),
+            );
+      final response = await _client.send(request).timeout(_mutationTimeout);
       final text = await response.stream.bytesToString();
       Map<String, dynamic>? data;
       try {
@@ -344,6 +351,20 @@ class ProspectsService {
         'No se pudo subir la grabación. Se intentará cuando haya conexión.',
       );
     }
+  }
+
+  MediaType _audioContentType(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    return switch (extension) {
+      'amr' => MediaType('audio', 'amr'),
+      'm4a' => MediaType('audio', 'mp4'),
+      'mp3' => MediaType('audio', 'mpeg'),
+      'wav' => MediaType('audio', 'wav'),
+      '3gp' => MediaType('audio', '3gpp'),
+      'aac' => MediaType('audio', 'aac'),
+      'ogg' => MediaType('audio', 'ogg'),
+      _ => MediaType('application', 'octet-stream'),
+    };
   }
 
   Future<List<ProspectCallRecord>> listCalls(int prospectId) async {

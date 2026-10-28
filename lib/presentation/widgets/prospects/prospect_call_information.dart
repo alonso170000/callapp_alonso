@@ -23,7 +23,7 @@ class ProspectCallInformation extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 17,
+            fontSize: 14,
             color: AppPalette.of(context).textColor,
           ),
         ),
@@ -45,7 +45,7 @@ class ProspectCallInformation extends StatelessWidget {
           text,
           style: const TextStyle(
             color: AppColors.prospectFormFieldText,
-            fontSize: 21,
+            fontSize: 16,
           ),
         ),
       );

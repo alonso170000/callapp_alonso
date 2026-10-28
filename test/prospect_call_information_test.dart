@@ -26,7 +26,7 @@ void main() {
 
     final values = tester
         .widgetList<Text>(find.byType(Text))
-        .where((text) => text.style?.fontSize == 21)
+        .where((text) => text.style?.color == AppColors.prospectFormFieldText)
         .toList();
     expect(values, hasLength(4));
     expect(

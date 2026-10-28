@@ -166,7 +166,9 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Llamar'));
     await tester.pumpAndSettle();
     expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
-    await tester.tap(find.byType(CheckboxListTile));
+    final consent = find.byType(CheckboxListTile);
+    await tester.ensureVisible(consent);
+    await tester.tap(consent);
     await tester.pump();
     final finishCall = find.byKey(const ValueKey('finish-prospect-call'));
     await tester.ensureVisible(finishCall);

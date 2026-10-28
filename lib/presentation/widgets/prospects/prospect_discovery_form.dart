@@ -199,7 +199,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         Text(
           text,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: AppPalette.of(context).textColor,
           ),
         ),
@@ -364,7 +364,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: AppPalette.of(context).textColor,
                 ),
               ),

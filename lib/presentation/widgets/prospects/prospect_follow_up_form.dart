@@ -287,7 +287,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: AppPalette.of(context).textColor,
           ),
         ),
@@ -348,7 +348,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: AppPalette.of(context).textColor,
                 ),
               ),

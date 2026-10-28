@@ -346,14 +346,25 @@ class ProspectsRepository {
     }
     try {
       final callId = await _service.createCall(id, fields, operationKey: key);
+      var audioPending = false;
       if (call.audioPath != null) {
-        await _service.uploadCallAudio(callId, call.audioPath!);
-        final file = File(call.audioPath!);
-        if (await file.exists()) await file.delete();
+        try {
+          await _service.uploadCallAudio(callId, call.audioPath!);
+          final file = File(call.audioPath!);
+          if (await file.exists()) await file.delete();
+        } on ProspectsException {
+          audioPending = await _enqueueCallAudio(
+            currentScope,
+            callId: callId,
+            audioPath: call.audioPath!,
+          );
+        }
       }
       await _cache.upsert(currentScope, optimistic);
       return ProspectMutationResult(
-        ProspectMutationState.saved,
+        audioPending
+            ? ProspectMutationState.pending
+            : ProspectMutationState.saved,
         prospect: optimistic,
       );
     } on ProspectsRecoverableException {
@@ -372,6 +383,22 @@ class ProspectsRepository {
         prospect: optimistic,
       );
     }
+  }
+
+  Future<bool> _enqueueCallAudio(
+    LocalScope currentScope, {
+    required int callId,
+    required String audioPath,
+  }) async {
+    if (!_outbox.isAvailable) return false;
+    await _outbox.enqueue(
+      currentScope,
+      kind: 'call.audio',
+      entityId: callId,
+      payload: {'audio_path': audioPath},
+    );
+    unawaited(_sync.flush());
+    return true;
   }
 
   Future<ProspectMutationResult> saveDiscoverySection(

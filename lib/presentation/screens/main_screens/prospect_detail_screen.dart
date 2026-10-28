@@ -88,8 +88,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
         child: IconButton.filledTonal(
           tooltip: label,
           style: IconButton.styleFrom(
-            backgroundColor: palette.secondaryActionFill,
-            foregroundColor: palette.secondaryActionForeground,
+            backgroundColor: palette.secondaryActionForeground,
+            foregroundColor: palette.secondaryActionFill,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -453,7 +453,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                         Expanded(
                           flex: 2,
                           child: SizedBox(
-                            height: 58,
+                            height: 54,
                             child: FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: palette.brandFill,

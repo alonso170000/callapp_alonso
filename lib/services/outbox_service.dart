@@ -33,6 +33,9 @@ class OutboxService extends ChangeNotifier {
   final ProspectsCache _prospectsCache;
   final AuthService _auth;
   bool _syncing = false;
+
+  bool _isProspectOperation(PendingOperation operation) =>
+      operation.kind.startsWith('prospect.') || operation.kind == 'call.audio';
   List<PendingOperation> _operations = const [];
   bool _initialized = false;
   int _revision = 0;
@@ -252,6 +255,9 @@ class OutboxService extends ChangeNotifier {
   }
 
   Future<bool> _restoreRemote(PendingOperation operation) async {
+    if (operation.kind == 'call.audio') {
+      return true;
+    }
     final id = operation.entityId;
     if (id == null) return false;
     try {
@@ -349,10 +355,23 @@ class OutboxService extends ChangeNotifier {
         );
         final audioPath = operation.payload['audio_path'];
         if (audioPath is String && audioPath.isNotEmpty) {
-          await _prospects.uploadCallAudio(callId, audioPath);
-          final file = File(audioPath);
-          if (await file.exists()) await file.delete();
+          await _store.enqueue(
+            operation.scope,
+            kind: 'call.audio',
+            entityId: callId,
+            payload: {'audio_path': audioPath},
+          );
         }
+      case 'call.audio':
+        final audioPath = operation.payload['audio_path'];
+        if (audioPath is! String || audioPath.isEmpty) {
+          throw const ProspectsBusinessException(
+            'La grabación pendiente no tiene un archivo válido.',
+          );
+        }
+        await _prospects.uploadCallAudio(id!, audioPath);
+        final file = File(audioPath);
+        if (await file.exists()) await file.delete();
       case 'prospect.discovery':
         await _prospects.saveDiscoverySection(
           id!,
@@ -375,7 +394,7 @@ class OutboxService extends ChangeNotifier {
       final message =
           unresolved.first.lastError ??
           'El servidor volvió a rechazar el cambio.';
-      throw operation.kind.startsWith('prospect.')
+      throw _isProspectOperation(operation)
           ? ProspectsBusinessException(message)
           : AgendaBusinessException(message);
     }
@@ -383,11 +402,21 @@ class OutboxService extends ChangeNotifier {
 
   Future<void> discard(PendingOperation operation) async {
     if (operation.scope != _scope) return;
+    if (operation.kind == 'call.audio') {
+      final audioPath = operation.payload['audio_path'];
+      if (audioPath is String && audioPath.isNotEmpty) {
+        final file = File(audioPath);
+        if (await file.exists()) await file.delete();
+      }
+      await _store.remove(operation);
+      await load();
+      return;
+    }
     final restored = await _restoreRemote(operation);
     if (!restored) {
       const message =
           'No se pudo recuperar la versión del servidor. Intenta nuevamente.';
-      throw operation.kind.startsWith('prospect.')
+      throw _isProspectOperation(operation)
           ? const ProspectsRecoverableException(message)
           : const AgendaRecoverableException(message);
     }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,25 @@ void main() {
     await auth.login('agente', 'password');
     return auth;
   }
+
+  test('Sends Cube ACR AMR recordings with their audio MIME type', () async {
+    final client = _RecordingClient();
+    final directory = await Directory.systemTemp.createTemp(
+      'callerapp_audio_test_',
+    );
+    final audio = File(
+      '${directory.path}/phone_20261028-113530_529982938140.amr',
+    );
+    await audio.writeAsBytes([1, 2, 3]);
+    addTearDown(() => directory.delete(recursive: true));
+    final service = ProspectsService(auth: await login(), client: client);
+    addTearDown(service.dispose);
+
+    await service.uploadCallAudio(12, audio.path);
+
+    expect(client.request.url.path, '/api/v1/leads/calls/12/audio');
+    expect(utf8.decode(client.body), contains('content-type: audio/amr'));
+  });
 
   test('Uses existing GET endpoint without added parameters and maps its exact response', () async {
     final service = ProspectsService(
@@ -362,5 +382,21 @@ void main() {
       expect(calls, 2);
       expect(tester.takeException(), isNull);
     });
+  }
+}
+
+class _RecordingClient extends http.BaseClient {
+  late http.BaseRequest request;
+  late List<int> body;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest value) async {
+    request = value;
+    body = await value.finalize().expand((bytes) => bytes).toList();
+    return http.StreamedResponse(
+      Stream.value(utf8.encode('{"success":true,"data":{}}')),
+      201,
+      headers: const {'content-type': 'application/json'},
+    );
   }
 }
