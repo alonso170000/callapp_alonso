@@ -44,7 +44,7 @@ class AgendaMonthCalendar extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'SulphurPoint',
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),

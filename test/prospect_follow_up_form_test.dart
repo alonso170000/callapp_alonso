@@ -5,6 +5,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follo
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,7 +145,7 @@ void main() {
     );
   }
 
-  testWidgets('Phone call completion enables and preselects telephone method', (
+  testWidgets('Active call is non-blocking and locks follow-up saving', (
     tester,
   ) async {
     Uri? dialedUri;
@@ -165,21 +166,17 @@ void main() {
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Llamar'));
     await tester.pumpAndSettle();
-    expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
-    final consent = find.byType(CheckboxListTile);
-    await tester.ensureVisible(consent);
-    await tester.tap(consent);
-    await tester.pump();
-    final finishCall = find.byKey(const ValueKey('finish-prospect-call'));
-    await tester.ensureVisible(finishCall);
-    await tester.tap(finishCall);
+    expect(find.text('Antes de marcar'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'MARCAR'));
     await tester.pumpAndSettle();
-    expect(find.text('Llamada telefónica'), findsOneWidget);
-    final method = tester.widget<DropdownButtonFormField<String>>(
-      find.byType(DropdownButtonFormField<String>).at(1),
+    expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
+    expect(find.textContaining('EN LLAMADA'), findsOneWidget);
+    expect(
+      find.text('Termina la llamada para registrar el seguimiento.'),
+      findsOneWidget,
     );
-    expect(method.initialValue, 'Llamada telefónica');
     expect(tester.takeException(), isNull);
+    await CallSessionController.instance.cancel();
   });
 
   testWidgets(

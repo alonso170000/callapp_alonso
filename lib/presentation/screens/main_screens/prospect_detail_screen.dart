@@ -14,15 +14,16 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_histo
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_options_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_history_panel.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_contact_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
-import 'package:callerapp_frontend/services/call_log_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
-import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -60,7 +61,8 @@ class ProspectDetailScreen extends StatefulWidget {
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
 }
 
-class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
+class _ProspectDetailScreenState extends State<ProspectDetailScreen>
+    with WidgetsBindingObserver {
   final _commentsKey = GlobalKey<ProspectCommentsPanelState>();
   final _selected = {'Seguimiento', 'Discovery'};
   final _panelRevisions = <String, int>{};
@@ -75,8 +77,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
   bool _calling = false;
-  final _callLog = CallLogService();
-  final _repository = ProspectsRepository();
+  final _callSession = CallSessionController.instance;
+  int? _lastCallId;
+  bool _openingCallResult = false;
   bool get _viewingCompletedFollowUp =>
       widget.sourceActivity?.isFollowUp == true &&
       widget.sourceActivity?.status == AgendaStatus.completed;
@@ -105,14 +108,33 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   void initState() {
     super.initState();
     _phoneCallService = widget.phoneCallService ?? PhoneCallService();
+    WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
     _callRegistered = widget.callStarted;
+    _callSession.addListener(_callSessionChanged);
     if (_viewingCompletedFollowUp) {
       _selected.addAll(ProspectSection.values.map((section) => section.label));
     }
     _loadEmails();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _detectCompletedCall();
+    }
+  }
+
+  Future<void> _detectCompletedCall() async {
+    if (_openingCallResult || _callSession.activeCall == null) return;
+    final completed = await _callSession.claimCompletedCall();
+    if (completed && mounted) await _finishCall();
+  }
+
+  void _callSessionChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadEmails() async {
@@ -222,6 +244,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _callSession.removeListener(_callSessionChanged);
     _emailService.dispose();
     super.dispose();
   }
@@ -234,12 +258,11 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
   Future<void> _contact() => showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => ProspectCallSheet(
+    builder: (sheetContext) => ProspectContactSheet(
       name: _prospect.name,
       phone: _prospect.phone,
       email: _prospect.email,
       onCopyPhone: () => _copyPhone(sheetContext),
-      onClose: () => Navigator.pop(sheetContext),
     ),
   );
 
@@ -256,6 +279,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
 
   Future<void> _startCall() async {
     if (_calling) return;
+    if (_callSession.activeCall != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Termina la llamada en curso antes de marcar otro número.',
+          ),
+        ),
+      );
+      return;
+    }
     if (!PhoneNumber.isDialable(_prospect.phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -266,74 +299,100 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
       );
       return;
     }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Antes de marcar'),
+        content: const Text(
+          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CANCELAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('MARCAR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     final startedAt = businessNow();
     setState(() => _calling = true);
     final errorMessage = await _openDialer();
-    if (!mounted) return;
-    setState(() => _calling = false);
-    ProspectCallSession? session;
-    final completed = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => ProspectCallSheet(
-        name: _prospect.name,
-        phone: _prospect.phone,
-        email: _prospect.email,
-        errorMessage: errorMessage,
-        onCopyPhone: () => _copyPhone(sheetContext),
-        onCallAgain: _openDialer,
-        startedAt: startedAt,
-        origin: 'detalle',
-        sourceActivityId: widget.sourceActivity?.id,
-        onFinishSession: (value) => session = value,
-        onFinish: (successful) => Navigator.pop(sheetContext, successful),
-        onClose: () => Navigator.pop(sheetContext),
-      ),
-    );
-    if (completed case final bool successful when mounted) {
-      setState(() {
-        _telephoneCallCompleted = true;
-        _telephoneCallSuccessful = successful;
-      });
-      final captured = session;
-      if (captured != null) await _registerCall(captured);
+    if (!mounted) {
+      _openingCallResult = false;
+      return;
     }
+    setState(() => _calling = false);
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage)));
+      return;
+    }
+    await _callSession.start(
+      prospect: _prospect,
+      origin: 'detalle',
+      sourceActivityId: widget.sourceActivity?.id,
+      startedAt: startedAt,
+    );
   }
 
-  Future<void> _registerCall(ProspectCallSession session) async {
-    final callLog = await _callLog.latestFor(session.phone, session.startedAt);
-    final reconciled = ProspectCallSession(
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      outcome: session.outcome,
-      phone: session.phone,
-      origin: session.origin,
-      sourceActivityId: session.sourceActivityId,
-      realDurationSeconds: callLog?.durationSeconds,
-      callLogId: callLog?.id,
-      audioPath: session.audioPath,
-      audioName: session.audioName,
-    );
-    try {
-      final result = await _repository.registerCall(_prospect, reconciled);
-      if (!mounted) return;
-      if (result.prospect != null) setState(() => _prospect = result.prospect!);
-      if (mounted) setState(() => _callRegistered = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.isPending
-                ? 'Llamada registrada. Se sincronizará cuando haya conexión.'
-                : 'Llamada registrada${reconciled.durationEstimated ? ' con duración estimada.' : ' con duración real.'}',
-          ),
-        ),
-      );
-    } on ProspectsException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
-      }
+  Future<void> _finishCall() async {
+    if (_openingCallResult) return;
+    final active = _callSession.activeCall;
+    if (active == null) return;
+    _openingCallResult = true;
+    final logged = await _callSession.latestLog();
+    if (!mounted) {
+      _openingCallResult = false;
+      return;
     }
+    final closure = await showModalBottomSheet<ProspectCallClosure>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => ProspectCallResultSheet(
+        name: active.prospect.name,
+        duration: logged == null
+            ? _callSession.elapsed
+            : Duration(seconds: logged.durationSeconds),
+        durationEstimated: logged == null,
+        phone: active.prospect.phone,
+        startedAt: active.startedAt,
+      ),
+    );
+    if (closure == null || !mounted) {
+      _openingCallResult = false;
+      return;
+    }
+    final result = await _callSession.finish(
+      outcome: closure.outcome,
+      consent: closure.consent,
+      audio: closure.audio,
+    );
+    if (!mounted) {
+      _openingCallResult = false;
+      return;
+    }
+    if (result.success) {
+      setState(() {
+        if (result.prospect != null) _prospect = result.prospect!;
+        _telephoneCallCompleted = true;
+        _telephoneCallSuccessful = closure.outcome.successful;
+        _callRegistered = true;
+        _lastCallId = result.callId;
+        _selected.add(ProspectSection.followUp.label);
+        _panelRevisions[ProspectSection.followUp.label] =
+            (_panelRevisions[ProspectSection.followUp.label] ?? 0) + 1;
+      });
+    }
+    _openingCallResult = false;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   Widget _section(ProspectSection section, Widget child, {String? title}) {
@@ -516,6 +575,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
           body: SafeArea(
             child: Column(
               children: [
+                if (_callSession.activeCall != null)
+                  CallInProgressBar(
+                    name: _callSession.activeCall!.prospect.name,
+                    elapsed: _callSession.elapsed,
+                    onFinish: _finishCall,
+                  ),
                 ProspectDetailHeader(
                   prospect: p,
                   selected: _selected,
@@ -547,6 +612,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen> {
                                 ),
                                 prospect: p,
                                 telephoneCallCompleted: _telephoneCallCompleted,
+                                callInProgress: _callSession.activeCall != null,
+                                llamadaId: _lastCallId,
                                 initialContactSuccess: _telephoneCallSuccessful,
                                 sourceActivity: widget.sourceActivity,
                                 loadActivities: widget.loadActivities,

@@ -19,9 +19,10 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 enum ProspectMutationState { saved, pending }
 
 class ProspectMutationResult {
-  const ProspectMutationResult(this.state, {this.prospect});
+  const ProspectMutationResult(this.state, {this.prospect, this.callId});
   final ProspectMutationState state;
   final ProspectRecord? prospect;
+  final int? callId;
   bool get isPending => state == ProspectMutationState.pending;
 }
 
@@ -366,6 +367,7 @@ class ProspectsRepository {
             ? ProspectMutationState.pending
             : ProspectMutationState.saved,
         prospect: optimistic,
+        callId: callId,
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;

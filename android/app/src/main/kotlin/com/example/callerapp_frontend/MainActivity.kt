@@ -45,7 +45,11 @@ class MainActivity : FlutterActivity() {
                     while (it.moveToNext()) {
                         val number = it.getString(1)?.filter(Char::isDigit)?.takeLast(10) ?: continue
                         if (number == digits) {
-                            result.success(mapOf("id" to it.getLong(0).toString(), "durationSeconds" to it.getLong(3).toInt()))
+                            result.success(mapOf(
+                                "id" to it.getLong(0).toString(),
+                                "startedAtMs" to it.getLong(2),
+                                "durationSeconds" to it.getLong(3).toInt(),
+                            ))
                             return@setMethodCallHandler
                         }
                     }

@@ -17,10 +17,8 @@ import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
-import 'package:callerapp_frontend/presentation/models/call_models.dart';
-import 'package:callerapp_frontend/services/call_log_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -64,7 +62,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   String? _error;
   int _request = 0;
   bool _calling = false;
-  final _callLog = CallLogService();
+  final _callSession = CallSessionController.instance;
 
   Future<void> _load() async {
     final request = ++_request;
@@ -386,14 +384,24 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       extra: ProspectDetailArguments(
         prospect: prospect,
         sourceActivity: activity,
-        callStarted: true,
-        callSuccessful: successful,
+        callStarted: false,
+        callSuccessful: false,
       ),
     );
   }
 
   Future<bool?> _runCall(ProspectRecord prospect) async {
     if (_calling) return null;
+    if (_callSession.activeCall != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Termina la llamada en curso antes de marcar otro número.',
+          ),
+        ),
+      );
+      return null;
+    }
     if (!PhoneNumber.isDialable(prospect.phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -404,71 +412,47 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       );
       return null;
     }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Antes de marcar'),
+        content: const Text(
+          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CANCELAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('MARCAR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return null;
     _calling = true;
     final startedAt = businessNow();
-    String? error;
     final service = widget.phoneCallService ?? PhoneCallService();
     try {
       await service.call(prospect.phone);
     } on PhoneCallException catch (value) {
-      error = value.message;
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(value.message)));
+      }
+      return null;
     } finally {
       _calling = false;
     }
     if (!mounted) return null;
-    ProspectCallSession? session;
-    final successful = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => ProspectCallSheet(
-        name: prospect.name,
-        phone: prospect.phone,
-        email: prospect.email,
-        errorMessage: error,
-        onCopyPhone: () {},
-        onCallAgain: () async {
-          try {
-            await service.call(prospect.phone);
-            return null;
-          } on PhoneCallException catch (value) {
-            return value.message;
-          }
-        },
-        startedAt: startedAt,
-        origin: 'tarjeta',
-        onFinishSession: (value) => session = value,
-        onFinish: (value) => Navigator.pop(sheetContext, value),
-      ),
+    await _callSession.start(
+      prospect: prospect,
+      origin: 'tarjeta',
+      startedAt: startedAt,
     );
-    final captured = session;
-    if (successful != null && captured != null) {
-      await _registerCall(prospect, captured);
-    }
-    return successful;
-  }
-
-  Future<void> _registerCall(
-    ProspectRecord prospect,
-    ProspectCallSession session,
-  ) async {
-    final logged = await _callLog.latestFor(session.phone, session.startedAt);
-    final reconciled = ProspectCallSession(
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      outcome: session.outcome,
-      phone: session.phone,
-      origin: session.origin,
-      sourceActivityId: session.sourceActivityId,
-      realDurationSeconds: logged?.durationSeconds,
-      callLogId: logged?.id,
-      audioPath: session.audioPath,
-      audioName: session.audioName,
-    );
-    try {
-      await _repository.registerCall(prospect, reconciled);
-    } on ProspectsException {
-      // El usuario continuará al detalle; el error de red queda en el outbox.
-    }
+    return false;
   }
 
   String _normalize(String value) {

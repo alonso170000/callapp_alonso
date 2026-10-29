@@ -1,11 +1,24 @@
+import 'dart:io';
+
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
-import 'package:callerapp_frontend/services/audio_import_service.dart';
-import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
+
+class ImportedCallAudio {
+  const ImportedCallAudio({required this.path, required this.name});
+
+  final String path;
+  final String name;
+}
+
+class AudioImportException implements Exception {
+  const AudioImportException(this.message);
+  final String message;
+}
 
 class CubeAcrAudioCandidate {
   const CubeAcrAudioCandidate({
@@ -122,6 +135,12 @@ class CubeAcrAudioService {
       );
     }
     return ImportedCallAudio(path: filePath, name: candidate.name);
+  }
+
+  Future<void> remove(String? filePath) async {
+    if (filePath == null || filePath.isEmpty) return;
+    final file = File(filePath);
+    if (await file.exists()) await file.delete();
   }
 
   DateTime? _parseDate(String date, String time) {

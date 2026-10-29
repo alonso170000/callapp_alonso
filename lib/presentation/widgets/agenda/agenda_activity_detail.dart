@@ -192,7 +192,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
 
   Widget _infoCard(String value, String label, String detail, Color color) =>
       Container(
-        constraints: const BoxConstraints(minHeight: 142),
+        constraints: const BoxConstraints(minHeight: 42),
         padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
         decoration: BoxDecoration(
           color: color,

@@ -1,9 +1,14 @@
 import 'package:flutter/services.dart';
 
 class CallLogMatch {
-  const CallLogMatch({required this.durationSeconds, required this.id});
+  const CallLogMatch({
+    required this.durationSeconds,
+    required this.id,
+    this.startedAt,
+  });
   final int durationSeconds;
   final String id;
+  final DateTime? startedAt;
 }
 
 /// Puente Android para reconciliar una llamada saliente con el registro del SO.
@@ -24,6 +29,9 @@ class CallLogService {
       return CallLogMatch(
         durationSeconds: raw['durationSeconds'] as int,
         id: '${raw['id']}',
+        startedAt: raw['startedAtMs'] is int
+            ? DateTime.fromMillisecondsSinceEpoch(raw['startedAtMs'] as int)
+            : null,
       );
     } on PlatformException {
       return null;

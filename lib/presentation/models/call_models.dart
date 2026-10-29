@@ -41,6 +41,7 @@ class ProspectCallSession {
     this.deviceId,
     this.audioPath,
     this.audioName,
+    this.consent = true,
   });
 
   final DateTime startedAt;
@@ -54,6 +55,7 @@ class ProspectCallSession {
   final String? deviceId;
   final String? audioPath;
   final String? audioName;
+  final bool consent;
 
   int get durationSeconds =>
       realDurationSeconds ??
@@ -76,7 +78,7 @@ class ProspectCallSession {
     if (deviceId != null) 'dispositivo_id': deviceId,
     if (summary != null && summary.trim().isNotEmpty) 'resumen': summary.trim(),
     if (topics.isNotEmpty) 'resumen_temas': topics,
-    'consentimiento_grabacion': true,
+    'consentimiento_grabacion': consent,
   };
 }
 

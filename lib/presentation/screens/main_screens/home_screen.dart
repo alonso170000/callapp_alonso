@@ -15,6 +15,11 @@ import 'package:callerapp_frontend/presentation/models/sync_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_conflicts_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_pending_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_status_indicator.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
 
@@ -39,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ProspectsController _prospectsController = ProspectsController();
   final ProspectAssignmentController _assignmentController =
       ProspectAssignmentController();
+  final CallSessionController _callSession = CallSessionController.instance;
+  bool _openingCallResult = false;
 
   @override
   void initState() {
@@ -47,11 +54,95 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _wasSyncing = OutboxService.instance.isSyncing;
     _seenRevision = OutboxService.instance.revision;
     OutboxService.instance.addListener(_outboxChanged);
+    _callSession.addListener(_callSessionChanged);
     if (widget.loadProspects == null) _assignmentController.start();
     NotificationService.instance.pendingProspectId.addListener(
       _pendingProspectChanged,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingProspect());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _callSession.restore();
+      if (mounted && _callSession.hasStaleSession) _offerStaleCallDiscard();
+    });
+  }
+
+  void _callSessionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _offerStaleCallDiscard() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Llamada anterior'),
+        content: const Text(
+          'La llamada guardada tiene más de 4 horas. ¿Deseas descartarla?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CONSERVAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('DESCARTAR'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true) await _callSession.discardStale();
+  }
+
+  Future<void> _finishCall() async {
+    if (_openingCallResult) return;
+    final active = _callSession.activeCall;
+    if (active == null) return;
+    _openingCallResult = true;
+    final logged = await _callSession.latestLog();
+    if (!mounted) {
+      _openingCallResult = false;
+      return;
+    }
+    final closure = await showModalBottomSheet<ProspectCallClosure>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => ProspectCallResultSheet(
+        name: active.prospect.name,
+        duration: logged == null
+            ? _callSession.elapsed
+            : Duration(seconds: logged.durationSeconds),
+        durationEstimated: logged == null,
+        phone: active.prospect.phone,
+        startedAt: active.startedAt,
+      ),
+    );
+    if (closure == null || !mounted) {
+      _openingCallResult = false;
+      return;
+    }
+    final result = await _callSession.finish(
+      outcome: closure.outcome,
+      consent: closure.consent,
+      audio: closure.audio,
+    );
+    if (!mounted) {
+      _openingCallResult = false;
+      return;
+    }
+    _openingCallResult = false;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
+  void _returnToCall() {
+    final active = _callSession.activeCall;
+    if (active == null) return;
+    context.push(
+      '/prospectos/${Uri.encodeComponent(active.prospect.phone)}',
+      extra: ProspectDetailArguments(prospect: active.prospect),
+    );
   }
 
   @override
@@ -60,6 +151,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       unawaited(_assignmentController.check());
       unawaited(OutboxService.instance.flush());
     }
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_detectCompletedCall());
+    }
+  }
+
+  Future<void> _detectCompletedCall() async {
+    if (_openingCallResult || _callSession.activeCall == null) return;
+    final completed = await _callSession.claimCompletedCall();
+    if (completed && mounted) await _finishCall();
   }
 
   String _operationTitle(PendingOperation operation) =>
@@ -212,6 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     OutboxService.instance.removeListener(_outboxChanged);
+    _callSession.removeListener(_callSessionChanged);
     NotificationService.instance.pendingProspectId.removeListener(
       _pendingProspectChanged,
     );
@@ -232,43 +333,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             SafeArea(
               bottom: false,
-              child: IndexedStack(
-                index: _selectedDestination,
+              child: Column(
                 children: [
-                  HomeDashboard(
-                    controller: _homeDashboardController,
-                    active: _selectedDestination == 0,
-                    loadActivities: widget.loadActivities,
-                    loadProspects: widget.loadProspects,
-                    onAgenda: (date, ids, label) {
-                      _agendaController.showFromHome(date, ids, label);
-                      setState(() => _selectedDestination = 2);
-                    },
-                    onProspects: (ids, label) {
-                      _prospectsController.showFromHome(ids, label);
-                      setState(() => _selectedDestination = 1);
-                    },
-                    onActivity: _openNotificationActivity,
-                    onAddProspect: () {
-                      setState(() => _selectedDestination = 1);
-                      _prospectsController.openNewProspect();
-                    },
-                    syncStatus: _syncStatus(),
-                  ),
-                  ProspectsScreen(
-                    controller: _prospectsController,
-                    loadProspects: widget.loadProspects,
-                    onNotificationActivity: _openNotificationActivity,
-                  ),
-                  AgendaScreen(
-                    controller: _agendaController,
-                    loadActivities: widget.loadActivities,
-                    loadProspects: widget.loadProspects,
-                    onNotificationActivity: _openNotificationActivity,
-                    syncStatus: _syncStatus(),
-                  ),
-                  ProfileScreen(
-                    onNotificationActivity: _openNotificationActivity,
+                  if (_callSession.activeCall != null)
+                    CallInProgressBar(
+                      name: _callSession.activeCall!.prospect.name,
+                      elapsed: _callSession.elapsed,
+                      onFinish: _finishCall,
+                      onReturn: _returnToCall,
+                    ),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedDestination,
+                      children: [
+                        HomeDashboard(
+                          controller: _homeDashboardController,
+                          active: _selectedDestination == 0,
+                          loadActivities: widget.loadActivities,
+                          loadProspects: widget.loadProspects,
+                          onAgenda: (date, ids, label) {
+                            _agendaController.showFromHome(date, ids, label);
+                            setState(() => _selectedDestination = 2);
+                          },
+                          onProspects: (ids, label) {
+                            _prospectsController.showFromHome(ids, label);
+                            setState(() => _selectedDestination = 1);
+                          },
+                          onActivity: _openNotificationActivity,
+                          onAddProspect: () {
+                            setState(() => _selectedDestination = 1);
+                            _prospectsController.openNewProspect();
+                          },
+                          syncStatus: _syncStatus(),
+                        ),
+                        ProspectsScreen(
+                          controller: _prospectsController,
+                          loadProspects: widget.loadProspects,
+                          onNotificationActivity: _openNotificationActivity,
+                        ),
+                        AgendaScreen(
+                          controller: _agendaController,
+                          loadActivities: widget.loadActivities,
+                          loadProspects: widget.loadProspects,
+                          onNotificationActivity: _openNotificationActivity,
+                          syncStatus: _syncStatus(),
+                        ),
+                        ProfileScreen(
+                          onNotificationActivity: _openNotificationActivity,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

@@ -39,6 +39,8 @@ class ProspectFollowUpForm extends StatefulWidget {
   final ValueChanged<ProspectRecord>? onProspectUpdated;
   final bool initialContactSuccess;
   final bool readOnly;
+  final bool callInProgress;
+  final int? llamadaId;
   const ProspectFollowUpForm({
     super.key,
     required this.prospect,
@@ -52,6 +54,8 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.onProspectUpdated,
     this.initialContactSuccess = false,
     this.readOnly = false,
+    this.callInProgress = false,
+    this.llamadaId,
   });
   @override
   State<ProspectFollowUpForm> createState() => _ProspectFollowUpFormState();
@@ -513,6 +517,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         'medio': contactMedium,
         'nota': _notes.text.trim(),
         'hubo_exito': _success,
+        if (widget.llamadaId != null) 'llamada_id': widget.llamadaId,
         if (widget.sourceActivity?.id != null)
           'actividad_origen_id': widget.sourceActivity!.id,
         if (activity != null)
@@ -923,6 +928,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   ),
                 ),
               if (!widget.readOnly) ...[
+                if (widget.callInProgress)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Termina la llamada para registrar el seguimiento.',
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -940,7 +952,10 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                     Expanded(
                       child: Semantics(
                         button: true,
-                        enabled: !_requiresCompletedCall && !_saving,
+                        enabled:
+                            !_requiresCompletedCall &&
+                            !widget.callInProgress &&
+                            !_saving,
                         child: GestureDetector(
                           key: const ValueKey('follow-up-save-area'),
                           behavior: HitTestBehavior.opaque,
@@ -952,7 +967,10 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                               backgroundColor: const Color(0xFF4CA382),
                               foregroundColor: Colors.white,
                             ),
-                            onPressed: _saving || _requiresCompletedCall
+                            onPressed:
+                                _saving ||
+                                    _requiresCompletedCall ||
+                                    widget.callInProgress
                                 ? null
                                 : _saveFollowUp,
                             child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),

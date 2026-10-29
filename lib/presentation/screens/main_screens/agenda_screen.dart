@@ -18,9 +18,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_sheet.dart';
-import 'package:callerapp_frontend/presentation/models/call_models.dart';
-import 'package:callerapp_frontend/services/call_log_service.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -95,7 +93,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   final _prospects = ProspectsRepository();
   bool _loading = false;
   bool _calling = false;
-  final _callLog = CallLogService();
+  final _callSession = CallSessionController.instance;
   String? _error;
   int _request = 0;
 
@@ -424,6 +422,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
         return;
       }
       final prospect = matches.first;
+      if (_callSession.activeCall != null) {
+        _showActionMessage(
+          'Termina la llamada en curso antes de marcar otro número.',
+          detailContext,
+        );
+        return;
+      }
       await detailContext.push(
         '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
         extra: ProspectDetailArguments(
@@ -475,65 +480,44 @@ class _AgendaScreenState extends State<AgendaScreen> {
         );
         return;
       }
+      final confirmed = await showDialog<bool>(
+        context: detailContext,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Antes de marcar'),
+          content: const Text(
+            'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('MARCAR'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !detailContext.mounted) return;
       _calling = true;
       final startedAt = businessNow();
       final phone = widget.phoneCallService ?? PhoneCallService();
-      String? error;
       try {
         await phone.call(prospect.phone);
       } on PhoneCallException catch (value) {
-        error = value.message;
+        if (!detailContext.mounted) return;
+        _showActionMessage(value.message, detailContext);
+        return;
       }
       _calling = false;
       if (!detailContext.mounted) return;
-      ProspectCallSession? session;
-      final successful = await showModalBottomSheet<bool>(
-        context: detailContext,
-        showDragHandle: true,
-        builder: (sheetContext) => ProspectCallSheet(
-          name: prospect.name,
-          phone: prospect.phone,
-          email: prospect.email,
-          errorMessage: error,
-          onCopyPhone: () {},
-          onCallAgain: () async {
-            try {
-              await phone.call(prospect.phone);
-              return null;
-            } on PhoneCallException catch (value) {
-              return value.message;
-            }
-          },
-          startedAt: startedAt,
-          origin: 'agenda',
-          sourceActivityId: activity.id,
-          onFinishSession: (value) => session = value,
-          onFinish: (value) => Navigator.pop(sheetContext, value),
-        ),
+      await _callSession.start(
+        prospect: prospect,
+        origin: 'agenda',
+        sourceActivityId: activity.id,
+        startedAt: startedAt,
       );
-      if (successful == null || !detailContext.mounted) return;
-      final captured = session;
-      if (captured != null) {
-        final logged = await _callLog.latestFor(
-          captured.phone,
-          captured.startedAt,
-        );
-        await _prospects.registerCall(
-          prospect,
-          ProspectCallSession(
-            startedAt: captured.startedAt,
-            endedAt: captured.endedAt,
-            outcome: captured.outcome,
-            phone: captured.phone,
-            origin: captured.origin,
-            sourceActivityId: captured.sourceActivityId,
-            realDurationSeconds: logged?.durationSeconds,
-            callLogId: logged?.id,
-            audioPath: captured.audioPath,
-            audioName: captured.audioName,
-          ),
-        );
-      }
       if (!detailContext.mounted) return;
       Navigator.pop(detailContext);
       if (!mounted) return;
@@ -542,8 +526,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
         extra: ProspectDetailArguments(
           prospect: prospect,
           sourceActivity: activity,
-          callStarted: true,
-          callSuccessful: successful,
+          callStarted: false,
+          callSuccessful: false,
         ),
       );
       if (mounted) await _load();
