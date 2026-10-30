@@ -23,7 +23,14 @@ class ProspectFollowUpCallScript extends StatelessWidget {
   Widget _benefitList(CallScriptBenefitGroup group, Color color) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(group.title, style: const TextStyle(fontSize: 14)),
+      Text(
+        group.title,
+        style: const TextStyle(
+          fontSize: 16,
+          color: Color.fromARGB(255, 252, 252, 252),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       const SizedBox(height: 12),
       CallScriptBenefits(items: group.items, color: color),
     ],

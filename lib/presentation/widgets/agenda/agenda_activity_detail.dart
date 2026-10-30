@@ -391,8 +391,8 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 52),
-          backgroundColor: palette.secondaryActionFill,
-          foregroundColor: palette.secondaryActionForeground,
+          backgroundColor: palette.secondaryActionForeground,
+          foregroundColor: palette.secondaryActionFill,
           side: BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(13),

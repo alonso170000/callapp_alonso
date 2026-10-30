@@ -704,10 +704,10 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     }
     if (_contextError != null) {
       return Container(
-        margin: const EdgeInsets.only(top: 6, bottom: 8),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.only(top: 8, bottom: 8),
+        padding: const EdgeInsets.only(top: 14, right: 14, left: 14),
         decoration: BoxDecoration(
-          color: AppPalette.of(context).errorSurfaceFill,
+          color: Color(0xFFA34D4D),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -721,7 +721,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 });
                 _loadActivityContext();
               },
-              child: const Text('REINTENTAR'),
+              child: Text(
+                'REINTENTAR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.accentColor,
+                ),
+              ),
             ),
           ],
         ),

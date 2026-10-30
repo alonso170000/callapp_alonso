@@ -70,7 +70,7 @@ class CallScriptSpeech extends StatelessWidget {
     child: Text(
       text,
       style: const TextStyle(
-        color: Colors.white,
+        color: Colors.black,
         fontFamily: 'SulphurPoint',
         fontSize: 15,
         height: 1.45,
@@ -158,7 +158,7 @@ class CallScriptServiceCard extends StatelessWidget {
                 Text(
                   '${items[i]}${i < items.length - 1 ? separator : ''}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontFamily: 'SulphurPoint',
                     fontSize: 14,
                   ),

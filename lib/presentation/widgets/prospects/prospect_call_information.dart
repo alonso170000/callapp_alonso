@@ -56,7 +56,7 @@ class ProspectCallInformation extends StatelessWidget {
     final callAt = prospect.lastCallAt;
     return ProspectDetailPanel(
       title: 'Información de la llamada',
-      color: const Color(0xFF195768),
+      color: const Color.fromARGB(255, 33, 117, 140),
       nested: true,
       initiallyExpanded: true,
       child: Container(

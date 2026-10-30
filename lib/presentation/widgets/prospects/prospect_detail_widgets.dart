@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
@@ -33,11 +34,11 @@ enum ProspectSection {
   };
 
   Color ink(AppPalette palette) => switch (this) {
-    ProspectSection.followUp => palette.insertFollowUpInk,
-    ProspectSection.discovery => palette.insertDiscoveryInk,
-    ProspectSection.scripts => palette.insertScriptsInk,
-    ProspectSection.data => palette.insertDataInk,
-    ProspectSection.history => palette.insertHistoryInk,
+    ProspectSection.followUp => palette.chipFollowUp,
+    ProspectSection.discovery => palette.chipDiscovery,
+    ProspectSection.scripts => palette.chipScripts,
+    ProspectSection.data => palette.chipData,
+    ProspectSection.history => palette.chipHistory,
   };
 }
 
@@ -281,12 +282,12 @@ class ProspectDetailHeader extends StatelessWidget {
                             horizontal: 7,
                           ),
                           backgroundColor: palette.headerChipFill,
-                          selectedColor: section.fill(palette),
+                          selectedColor: section.ink(palette),
                           labelStyle: TextStyle(
                             fontFamily: 'SulphurPoint',
                             fontSize: 12,
                             color: selected.contains(section.label)
-                                ? section.ink(palette)
+                                ? section.fill(palette)
                                 : palette.headerChipForeground,
                           ),
                         ),

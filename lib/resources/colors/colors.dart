@@ -4,8 +4,8 @@ class AppColors {
   // Paleta compartida de los guiones de llamada.
   static const Color scriptPanel = Color(0xFF786B20);
   static const Color scriptBackground = Color(0xFFFFFBC6);
-  static const Color scriptSpeech = Color(0xFF8B8329);
-  static const Color scriptNote = Color(0xFFF3E6A0);
+  static const Color scriptSpeech = Color.fromARGB(255, 255, 247, 158);
+  static const Color scriptNote = Color.fromARGB(255, 150, 134, 43);
   static const Color scriptServiceHeader = Color(0xFF62352D);
   static const Color scriptHeading = Color(0xFF665000);
   static const Color scriptPositive = Color(0xFF006B4F);
@@ -17,7 +17,7 @@ class AppColors {
   static const Color scriptIncludes = Color(0xFF9BF5EB);
   static const Color scriptCheck = Color(0xFF006B61);
   static const Color scriptBenefitText = Color(0xFF243C32);
-  static const Color scriptNoteText = Color(0xFF413402);
+  static const Color scriptNoteText = Color(0xFFFFFBC6);
 
   static const Color loginBackground = Color(0xFFE0FFF9);
   static const Color loginField = Color(0xFF439D98);
