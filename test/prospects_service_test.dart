@@ -61,6 +61,8 @@ void main() {
                 'canal': 'Facebook',
                 'avatar_url': '/static/avatars/ana.png',
                 'fecha_asignacion': '2026-10-09T12:00:00Z',
+                'ultima_llamada_at': '2026-10-09T13:00:00Z',
+                'ultima_llamada_exitosa': 1,
               },
             ],
           }),
@@ -79,6 +81,7 @@ void main() {
     expect(record.temperature, 'Sin calificar');
     expect(record.nextContact, isNull);
     expect(record.assignedAt, DateTime(2026, 10, 9, 7));
+    expect(record.lastContactResult, 'Contestó');
   });
 
   test(
@@ -378,7 +381,7 @@ void main() {
       expect(find.text('BETSUA'), findsNothing);
       await tester.tap(find.text('Reintentar'));
       await tester.pumpAndSettle();
-      expect(find.text('No se encontraron prospectos'), findsOneWidget);
+      expect(find.text('Aún no tienes prospectos asignados'), findsOneWidget);
       expect(calls, 2);
       expect(tester.takeException(), isNull);
     });

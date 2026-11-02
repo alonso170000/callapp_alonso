@@ -330,7 +330,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     chipScripts: Color(0xFFFFF18A),
     insertScriptsInk: Color(0xFF403A12),
     insertDataFill: Color.fromARGB(255, 130, 31, 39),
-    chipData:Color(0xFFFF929C),
+    chipData: Color(0xFFFF929C),
     insertDataInk: Color(0xFF4A171C),
     insertHistoryFill: Color.fromARGB(255, 77, 36, 97),
     chipHistory: Color.fromARGB(255, 204, 135, 238),

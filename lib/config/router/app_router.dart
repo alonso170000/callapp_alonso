@@ -6,6 +6,7 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_de
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/screens/auth/login_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/search_screen.dart';
 
 // usar go_router nos ayuda a nosotros no tengamos que hacer configuraciones especiales si queremos usarlo en la web
 // creamos la configuracion global del router y esto define como navegamos entre pantallas
@@ -75,6 +76,11 @@ final appRouter = GoRouter(
       path: '/home',
       name: HomeScreen.name,
       builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/buscar',
+      name: SearchScreen.name,
+      builder: (context, state) => const SearchScreen(),
     ),
   ],
 );

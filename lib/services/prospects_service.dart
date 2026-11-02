@@ -627,7 +627,7 @@ class ProspectsService {
           : (lastCallSuccessful ? 'Contestada' : 'No contestada'),
       lastContactResult: lastCall == null
           ? 'Sin contacto'
-          : (lastCallSuccessful ? 'Contacto exitoso' : 'Sin respuesta'),
+          : (lastCallSuccessful ? 'Contestó' : 'No contestó'),
       nextContact: switch (DateTime.tryParse('${row['proximo_contacto_at']}')) {
         final value? => businessTimeFromInstant(value),
         null => null,

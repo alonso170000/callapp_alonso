@@ -2,6 +2,7 @@ export '/presentation/screens/auth/login_screen.dart';
 export '/presentation/screens/main_screens/home_screen.dart';
 export '/presentation/screens/main_screens/agenda_screen.dart';
 export '/presentation/screens/main_screens/prospects_screen.dart';
+export '/presentation/screens/main_screens/search_screen.dart';
 
 //Carpeta config/router/
 export '/config/router/app_router.dart';

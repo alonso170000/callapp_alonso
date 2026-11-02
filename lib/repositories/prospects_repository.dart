@@ -66,6 +66,9 @@ class ProspectsRepository {
 
   Future<List<ProspectRecord>> readCache() => _cache.read(scope);
 
+  /// Momento de la última actualización confirmada de la caché del ámbito.
+  Future<DateTime?> cachedAt() => _cache.cachedAt(scope);
+
   Future<List<ProspectRecord>> refresh() async {
     final currentScope = scope;
     final previous = await _cachedOrEmpty(currentScope);

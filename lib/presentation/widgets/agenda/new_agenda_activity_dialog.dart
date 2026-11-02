@@ -48,7 +48,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     _prospectsService = widget.prospectsService ?? ProspectsService();
     final activity = widget.activity;
     if (activity != null) {
-      _type = activity.type?.replaceAll(' ', '_') ?? 'tarea';
+      _type = _editableActivityType(activity.type);
       _medium = activity.medium ?? 'llamada';
       _location = activity.location;
       _prospect = activity.prospectId ?? 0;
@@ -295,6 +295,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _AgendaDropdown<String>(
+                        key: const ValueKey('activity-type-field'),
                         label: 'Tipo*',
                         value: _type,
                         items: const [
@@ -307,8 +308,17 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                           'visita_presencial' => 'Visita presencial',
                           _ => 'Tarea',
                         },
+                        enabled: widget.activity == null,
                         onChanged: (v) => setState(() => _type = v),
                       ),
+                      if (widget.activity != null)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 6),
+                          child: Text(
+                            'El tipo de actividad no puede cambiarse después de crearla.',
+                            style: TextStyle(fontFamily: 'SulphurPoint'),
+                          ),
+                        ),
                       _AgendaDropdown<int>(
                         label: _type == 'tarea'
                             ? 'Prospecto (opcional)'
@@ -464,14 +474,17 @@ class _AgendaDropdown<T> extends StatelessWidget {
   final String Function(T) itemLabel;
   final ValueChanged<T> onChanged;
   final FormFieldValidator<T>? validator;
+  final bool enabled;
 
   const _AgendaDropdown({
+    super.key,
     required this.label,
     required this.value,
     required this.items,
     required this.itemLabel,
     required this.onChanged,
     this.validator,
+    this.enabled = true,
   });
 
   @override
@@ -504,12 +517,41 @@ class _AgendaDropdown<T> extends StatelessWidget {
               ),
             )
             .toList(),
-        onChanged: (item) {
-          if (item != null) onChanged(item);
-        },
+        selectedItemBuilder: (context) => items
+            .map(
+              (item) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  itemLabel(item),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.homeBackground,
+                    fontFamily: 'SulphurPoint',
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: enabled
+            ? (item) {
+                if (item != null) onChanged(item);
+              }
+            : null,
       ),
     ],
   );
+}
+
+String _editableActivityType(String? value) {
+  final normalized = value?.trim().toLowerCase().replaceAll(' ', '_');
+  return switch (normalized) {
+    'seguimiento' => 'seguimiento',
+    'visita_presencial' => 'visita_presencial',
+    'tarea' => 'tarea',
+    _ => 'tarea',
+  };
 }
 
 class _PickerButton extends StatelessWidget {

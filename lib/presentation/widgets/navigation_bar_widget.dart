@@ -3,20 +3,18 @@ import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class NavigationBarWidget extends StatefulWidget {
-  final ValueChanged<String>? onSearchChanged;
-  final ValueChanged<bool>? onSearchVisibilityChanged;
   final ValueChanged<int>? onDestinationSelected;
   final VoidCallback? onAddAgenda;
   final VoidCallback? onAddProspect;
+  final VoidCallback? onSearchTap;
   final int? destinationIndex;
 
   const NavigationBarWidget({
     super.key,
-    this.onSearchChanged,
-    this.onSearchVisibilityChanged,
     this.onDestinationSelected,
     this.onAddAgenda,
     this.onAddProspect,
+    this.onSearchTap,
     this.destinationIndex,
   });
 
@@ -25,14 +23,7 @@ class NavigationBarWidget extends StatefulWidget {
 }
 
 class _NavigationBarWidgetState extends State<NavigationBarWidget> {
-  static const Duration _animationDuration = Duration(milliseconds: 600);
-  static const Curve _animationCurve = Curves.easeOutCubic;
-
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-
   int selectedIndex = 0;
-  bool _isSearchOpen = false;
 
   final List<_NavigationItem> itemsNoSelected = const [
     _NavigationItem(icon: Iconsax.home_2_copy, label: 'Inicio'),
@@ -52,7 +43,6 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
   void initState() {
     super.initState();
     selectedIndex = widget.destinationIndex ?? 0;
-    _searchController.addListener(_onSearchTextChanged);
   }
 
   @override
@@ -64,66 +54,11 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
     }
   }
 
-  void _onSearchTextChanged() {
-    if (mounted) {
-      setState(() {});
-      widget.onSearchChanged?.call(_searchController.text);
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchController.removeListener(_onSearchTextChanged);
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _openSearch() {
-    setState(() {
-      _isSearchOpen = true;
-      selectedIndex = 0;
-    });
-    widget.onDestinationSelected?.call(0);
-    widget.onSearchVisibilityChanged?.call(true);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_isSearchOpen) return;
-      _searchFocusNode.requestFocus();
-    });
-  }
-
-  void _closeSearch() {
-    _searchController.clear();
-    setState(() {
-      _isSearchOpen = false;
-      selectedIndex = 0;
-    });
-    _searchFocusNode.unfocus();
-    widget.onSearchVisibilityChanged?.call(false);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: AnimatedSwitcher(
-        duration: _animationDuration,
-        switchInCurve: _animationCurve,
-        switchOutCurve: Curves.easeInOut,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SizeTransition(
-              sizeFactor: animation,
-              axis: Axis.horizontal,
-              alignment: Alignment.centerRight,
-              child: child,
-            ),
-          );
-        },
-        child: _isSearchOpen ? _buildSearchBar() : _buildNormalBar(),
-      ),
+      child: _buildNormalBar(),
     );
   }
 
@@ -187,78 +122,7 @@ class _NavigationBarWidgetState extends State<NavigationBarWidget> {
           ),
         ),
         SizedBox(width: compact ? 6 : 8),
-        _SearchCircleButton(onTap: _openSearch, size: height),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    final palette = AppPalette.of(context);
-    return Row(
-      key: const ValueKey('search-navigation-bar'),
-      children: [
-        _NavigationSurface(
-          width: 64,
-          height: 64,
-          onTap: _closeSearch,
-          semanticLabel: 'Cerrar búsqueda',
-          child: Center(
-            child: Icon(
-              Iconsax.home_2_copy,
-              color: palette.navForeground,
-              size: 28,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _NavigationSurface(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                autocorrect: false,
-                textInputAction: TextInputAction.search,
-                cursorColor: palette.navForeground,
-                style: TextStyle(color: palette.navForeground, fontSize: 16),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  hintText: 'Buscar prospecto...',
-                  hintStyle: TextStyle(
-                    color: palette.navForeground,
-                    fontSize: 15,
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.search_normal_1_copy,
-                    color: palette.navForeground,
-                    size: 24,
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 34,
-                    minHeight: 24,
-                  ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? GestureDetector(
-                          onTap: _searchController.clear,
-                          child: Icon(
-                            Icons.close_rounded,
-                            color: palette.navForeground,
-                            size: 22,
-                          ),
-                        )
-                      : null,
-                  suffixIconConstraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        _SearchCircleButton(onTap: widget.onSearchTap, size: height),
       ],
     );
   }
@@ -328,7 +192,7 @@ class _NavigationOption extends StatelessWidget {
 }
 
 class _SearchCircleButton extends StatelessWidget {
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final double size;
 
   const _SearchCircleButton({required this.onTap, this.size = 64});

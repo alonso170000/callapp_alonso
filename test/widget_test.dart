@@ -22,4 +22,17 @@ void main() {
     expect(find.text('El usuario es obligatorio.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('El buscador global también exige una sesión activa', (
+    tester,
+  ) async {
+    AuthService.instance.logout();
+    appRouter.go('/buscar');
+    await tester.pumpWidget(const MainApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('INICIA'), findsOneWidget);
+    expect(find.text('Aún no hay sugerencias'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

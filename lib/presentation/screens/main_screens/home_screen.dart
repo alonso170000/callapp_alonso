@@ -399,6 +399,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       setState(() => _selectedDestination = index),
                   onAddAgenda: _agendaController.openNewActivity,
                   onAddProspect: _prospectsController.openNewProspect,
+                  onSearchTap: () => context.push('/buscar'),
                 ),
               ),
             ),

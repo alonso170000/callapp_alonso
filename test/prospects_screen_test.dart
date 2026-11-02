@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 
 void main() {
+  final now = DateTime(2026, 11, 2, 12);
+
   Future<void> openProspects(
     WidgetTester tester, {
     bool clearDefault = true,
@@ -18,7 +18,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProspectsScreen(loadProspects: () async => demoProspects),
+          body: ProspectsScreen(
+            loadProspects: () async => demoProspects,
+            now: () => now,
+          ),
         ),
       ),
     );
@@ -27,12 +30,8 @@ void main() {
     if (clearDefault) {
       await tester.tap(find.byTooltip('Filtrar prospectos'));
       await tester.pumpAndSettle();
-      for (final priority in ['Frío', 'Sin calificar']) {
-        final field = find.widgetWithText(CheckboxListTile, priority);
-        await tester.ensureVisible(field);
-        await tester.tap(field);
-        await tester.pumpAndSettle();
-      }
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Todos').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('VER 6 RESULTADOS'));
       await tester.pumpAndSettle();
     }
@@ -43,37 +42,17 @@ void main() {
     (tester) async {
       await openProspects(tester, clearDefault: false);
       final filters = ProspectFilters.forSeller();
-      final count = demoProspects
-          .where((p) => filters.matches(p, DateTime.now()))
-          .length;
+      final count = demoProspects.where((p) => filters.matches(p, now)).length;
       expect(find.text('MOSTRANDO $count PROSPECTOS'), findsOneWidget);
-      await tester.tap(find.byTooltip('Filtrar prospectos'));
+      expect(find.widgetWithText(InputChip, 'Por atender'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(InputChip, 'Por atender'),
+          matching: find.byIcon(Icons.close_rounded),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Por atender'), findsNothing);
-      expect(
-        tester
-            .widget<CheckboxListTile>(
-              find.widgetWithText(CheckboxListTile, 'Caliente'),
-            )
-            .value,
-        isTrue,
-      );
-      expect(
-        tester
-            .widget<CheckboxListTile>(
-              find.widgetWithText(CheckboxListTile, 'Tibio'),
-            )
-            .value,
-        isTrue,
-      );
-      expect(
-        tester
-            .widget<CheckboxListTile>(
-              find.widgetWithText(CheckboxListTile, 'Frío'),
-            )
-            .value,
-        isFalse,
-      );
+      expect(find.text('MOSTRANDO 6 PROSPECTOS'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -86,7 +65,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'maria');
     await tester.pumpAndSettle();
     expect(find.text('MARÍA JOSÉ SÁNCHEZ'), findsOneWidget);
-    expect(find.text('MOSTRANDO 1 PROSPECTOS'), findsOneWidget);
+    expect(find.text('MOSTRANDO 1 PROSPECTO'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '9980000001');
     await tester.pumpAndSettle();
     expect(find.text('BETSUA'), findsOneWidget);
@@ -95,13 +74,14 @@ void main() {
 
   testWidgets('Status filters and empty state can be reset', (tester) async {
     await openProspects(tester);
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Venta realizada'));
+    await tester.enterText(find.byType(TextField), 'sin coincidencias');
     await tester.pumpAndSettle();
-    expect(find.text('No se encontraron prospectos'), findsOneWidget);
-    await tester.tap(find.text('Limpiar filtros'));
+    expect(find.text('No hay prospectos con estos filtros'), findsOneWidget);
+    expect(find.text('Limpiar búsqueda'), findsOneWidget);
+    await tester.tap(find.text('Ver todos'));
     await tester.pumpAndSettle();
     final defaultCount = demoProspects
-        .where((p) => ProspectFilters.forSeller().matches(p, DateTime.now()))
+        .where((p) => ProspectFilters.all().matches(p, now))
         .length;
     expect(find.text('MOSTRANDO $defaultCount PROSPECTOS'), findsOneWidget);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
@@ -111,32 +91,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Navbar opens prospects and preserves its filters', (
+  testWidgets('Empty assignment state offers refresh', (tester) async {
+    var loads = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProspectsScreen(
+            loadProspects: () async {
+              loads++;
+              return const [];
+            },
+            now: () => now,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Aún no tienes prospectos asignados'), findsOneWidget);
+    await tester.tap(find.text('Actualizar'));
+    await tester.pumpAndSettle();
+    expect(loads, 2);
+  });
+
+  testWidgets('Deleting one group chip preserves the other group', (
     tester,
   ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 844);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Iconsax.profile_2user_copy));
-    await tester.pumpAndSettle();
-    expect(find.text('MIS PROSPECTOS'), findsOneWidget);
+    await openProspects(tester);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Iconsax.home_2_copy));
+    await tester.tap(find.byTooltip('Filtrar prospectos'));
     await tester.pumpAndSettle();
-    expect(find.text('BIENVENIDO'), findsOneWidget);
-    await tester.tap(find.byIcon(Iconsax.profile_2user_copy));
+    await tester.ensureVisible(find.text('Últimos 7 días'));
+    await tester.tap(find.text('Últimos 7 días'));
+    await tester.pump();
+    await tester.tap(find.textContaining('VER ').last);
     await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Nuevo'))
-          .selected,
-      isTrue,
+    expect(find.text('Estatus: Nuevo'), findsOneWidget);
+    expect(find.text('Asignación: Últimos 7 días'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(InputChip, 'Asignación: Últimos 7 días'),
+        matching: find.byIcon(Icons.close_rounded),
+      ),
     );
-    expect(tester.takeException(), isNull);
+    await tester.pump();
+    expect(find.text('Asignación: Últimos 7 días'), findsNothing);
+    expect(find.text('Estatus: Nuevo'), findsOneWidget);
   });
 
   testWidgets('Small screen supports temperature filters and contact actions', (
@@ -156,7 +156,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('VER 1 RESULTADOS'));
     await tester.pumpAndSettle();
-    expect(find.text('MOSTRANDO 1 PROSPECTOS'), findsOneWidget);
+    expect(find.text('MOSTRANDO 1 PROSPECTO'), findsOneWidget);
     final call = find.byTooltip('Llamar a María José Sánchez');
     await tester.scrollUntilVisible(
       call,

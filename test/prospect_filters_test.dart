@@ -1,190 +1,119 @@
+import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
-import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_filters_sheet.dart';
 
 void main() {
-  test(
-    'Seller default includes actionable leads and orders urgent contacts first',
-    () {
-      final now = DateTime(2026, 10, 16, 12);
-      ProspectRecord lead(
-        String name, {
-        String status = 'Seguimiento',
-        String priority = 'Caliente',
-        DateTime? next,
-      }) => ProspectRecord(
-        name: name,
-        phone: '',
-        email: '',
-        status: status,
-        temperature: priority,
-        nextContact: next,
-        avatarColor: Colors.teal,
-        statusColor: Colors.orange,
-      );
-      final overdue = lead('Vencido', next: DateTime(2026, 10, 15));
-      final today = lead('Hoy', next: DateTime(2026, 10, 16, 17));
-      final fresh = lead('Nuevo', status: 'Nuevo');
-      final hot = lead('Caliente', priority: 'Caliente');
-      final cold = lead('Frío', priority: 'Frío');
-      final sale = lead('Venta', status: 'Venta realizada', priority: 'Frío');
-      final filter = ProspectFilters.forSeller();
-      final result =
-          [
-              cold,
-              hot,
-              sale,
-              fresh,
-              today,
-              overdue,
-            ].where((p) => filter.matches(p, now)).toList()
-            ..sort((a, b) => filter.compare(a, b, now: now));
-      expect(result.map((p) => p.name), [
-        'Vencido',
-        'Hoy',
-        'Nuevo',
-        'Caliente',
-      ]);
-      expect(filter.copy().temperatures, {'Caliente', 'Tibio'});
-      expect(ProspectFilters().matches(cold, now), isTrue);
-    },
-  );
-  test('Overdue uses actual contact time and last-contact sort uses recorded dates', () {
-    final now = DateTime(2026, 10, 16, 12);
-    ProspectRecord lead(DateTime? next, DateTime? last) => ProspectRecord(
-      name: 'Test',
-      phone: '',
-      email: '',
-      status: 'Seguimiento',
-      temperature: 'Caliente',
-      nextContact: next,
-      lastCallAt: last,
-      avatarColor: Colors.teal,
-      statusColor: Colors.orange,
-    );
-    final filters = ProspectFilters(nextContact: 'Atrasados');
-    expect(
-      filters.matches(
-        lead(now.subtract(const Duration(minutes: 1)), null),
-        now,
-      ),
-      isTrue,
-    );
-    expect(
-      filters.matches(lead(now.add(const Duration(minutes: 1)), null), now),
-      isFalse,
-    );
-    expect(filters.matches(lead(null, null), now), isFalse);
-    final sorter = ProspectFilters(sort: 'Último contacto');
-    expect(
-      sorter.compare(
-        lead(null, now),
-        lead(null, now.subtract(const Duration(days: 1))),
-      ),
-      lessThan(0),
-    );
-    expect(sorter.compare(lead(null, null), lead(null, now)), greaterThan(0));
-  });
-  ProspectRecord record({DateTime? next, DateTime? assigned}) => ProspectRecord(
-    name: 'Test',
+  ProspectRecord record({
+    String name = 'Álvaro',
+    String status = 'Nuevo',
+    String temperature = 'Caliente',
+    String result = 'Contestó',
+    DateTime? next,
+    DateTime? assigned,
+  }) => ProspectRecord(
+    name: name,
     phone: '',
     email: '',
-    status: 'Nuevo',
-    temperature: 'Caliente',
+    status: status,
+    temperature: temperature,
     avatarColor: Colors.red,
     statusColor: Colors.red,
-    appointment: DateTime(2026),
     nextContact: next,
     assignedAt: assigned,
-    lastContactResult: 'Contestó',
+    lastContactResult: result,
   );
-  test('Contact and assignment boundaries and empty selections', () {
-    final now = DateTime(2026, 10, 16, 18);
-    final filters = ProspectFilters(nextContact: 'Hoy');
-    expect(filters.matches(record(next: DateTime(2026, 10, 16)), now), isTrue);
-    expect(filters.matches(record(next: DateTime(2026, 10, 17)), now), isFalse);
-    filters.nextContact = 'Sin programar';
-    expect(filters.matches(record(), now), isTrue);
-    filters.assignment = 'Rango personalizado';
-    filters.range = DateTimeRange(
-      start: DateTime(2026, 10, 1),
-      end: DateTime(2026, 10, 5),
+
+  test('presets, summary and clearGroup preserve unrelated filters', () {
+    final seller = ProspectFilters.forSeller();
+    expect(seller.isSellerPreset, isTrue);
+    seller.sort = 'Nombre';
+    expect(seller.isSellerPreset, isTrue, reason: 'El preset ignora el orden');
+    expect(ProspectFilters.all().isAllPreset, isTrue);
+
+    final filters = ProspectFilters(
+      status: 'Nuevo',
+      nextContact: 'Hoy',
+      assignment: 'Últimos 7 días',
+      temperatures: {'Caliente', 'Tibio'},
+      results: {'Contestó'},
+      prospectIds: {1},
+      sourceLabel: 'Nuevos',
     );
     expect(
-      filters.matches(record(assigned: DateTime(2026, 10, 5, 23, 59)), now),
+      filters.summary.map((item) => item.label),
+      containsAll([
+        'Estatus: Nuevo',
+        'Contacto: Hoy',
+        'Prioridad: Caliente, Tibio',
+        'Asignación: Últimos 7 días',
+        'Resultado: Contestó',
+        'Selección: Nuevos',
+      ]),
+    );
+    final cleared = filters.clearGroup(ProspectFilterGroup.assignment);
+    expect(cleared.assignment, isNull);
+    expect(cleared.range, isNull);
+    expect(cleared.status, 'Nuevo');
+  });
+
+  test('matching is case and accent insensitive', () {
+    final now = DateTime(2026, 10, 16, 12);
+    final filter = ProspectFilters(
+      status: 'NUEVO',
+      temperatures: {'caliente'},
+      results: {'CONTESTO'},
+    );
+    for (final value in ['caliente', 'CALIENTE', 'Caliente']) {
+      expect(filter.matches(record(temperature: value), now), isTrue);
+    }
+  });
+
+  test('complete result selection does not hide server result variants', () {
+    final now = DateTime(2026, 10, 16, 12);
+    final filters = ProspectFilters.all();
+    expect(filters.matches(record(result: 'Contacto exitoso'), now), isTrue);
+    expect(filters.matches(record(result: 'Sin respuesta'), now), isTrue);
+  });
+
+  test('Contacto vencido uses the start of today as boundary', () {
+    final now = DateTime(2026, 10, 16, 12);
+    final filter = ProspectFilters(nextContact: 'Contacto vencido');
+    expect(
+      filter.matches(record(next: DateTime(2026, 10, 15, 23, 30)), now),
       isTrue,
     );
-    expect(
-      filters.matches(record(assigned: DateTime(2026, 10, 6)), now),
-      isFalse,
-    );
-    filters.temperatures.clear();
-    expect(
-      filters.matches(record(assigned: DateTime(2026, 10, 5)), now),
-      isFalse,
-    );
+    expect(filter.matches(record(next: DateTime(2026, 10, 16)), now), isFalse);
+    expect(filter.summary.single.label, 'Contacto: Vencido');
   });
-  testWidgets('Sheet edits a draft, closes without applying and resets', (
-    tester,
-  ) async {
-    final initial = ProspectFilters();
-    ProspectFilters? applied;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                applied = await showModalBottomSheet<ProspectFilters>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => SizedBox(
-                    height: 500,
-                    child: ProspectFiltersSheet(
-                      initial: initial,
-                      count: (filters) => filters.temperatures.length,
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Open'),
-            ),
-          ),
-        ),
+
+  test('custom range without a range does not restrict', () {
+    final filter = ProspectFilters(assignment: 'Rango personalizado');
+    expect(filter.matches(record(), DateTime(2026, 10, 16)), isTrue);
+  });
+
+  test('custom range summary and matching are inclusive', () {
+    final filter = ProspectFilters(
+      assignment: 'Rango personalizado',
+      range: DateTimeRange(
+        start: DateTime(2026, 10, 1),
+        end: DateTime(2026, 10, 5),
       ),
     );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.widgetWithText(CheckboxListTile, 'Caliente'),
-    );
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
-    await tester.pumpAndSettle();
+    expect(filter.summary.single.label, 'Asignación: 01/10/2026 – 05/10/2026');
     expect(
-      find.text('VER ${ProspectFilters.priorities.length - 1} RESULTADOS'),
-      findsOneWidget,
+      filter.matches(
+        record(assigned: DateTime(2026, 10, 5, 23, 59)),
+        DateTime(2026, 10, 16),
+      ),
+      isTrue,
     );
-    expect(initial.temperatures.length, ProspectFilters.priorities.length);
-    await tester.tap(find.byTooltip('Cerrar filtros'));
-    await tester.pumpAndSettle();
-    expect(applied, isNull);
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.widgetWithText(CheckboxListTile, 'Caliente'),
-    );
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('LIMPIAR FILTROS'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('VER 2 RESULTADOS'));
-    await tester.pumpAndSettle();
-    expect(applied!.temperatures, {'Caliente', 'Tibio'});
-    expect(applied!.sort, 'Atención prioritaria');
-    expect(applied!.nextContact, isNull);
-    expect(applied!.assignment, isNull);
-    expect(tester.takeException(), isNull);
+  });
+
+  test('compare requires now and uses normalized alphabetical tiebreaker', () {
+    final filter = ProspectFilters(sort: 'Nombre');
+    final values = [record(name: 'Zoe'), record(name: 'Álvaro')]
+      ..sort((a, b) => filter.compare(a, b, now: DateTime(2026, 10, 16)));
+    expect(values.map((item) => item.name), ['Álvaro', 'Zoe']);
   });
 }

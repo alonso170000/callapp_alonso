@@ -19,10 +19,7 @@ class ProspectTile extends StatelessWidget {
         children: [
           Stack(
             clipBehavior: Clip.none,
-            children: [
-              ProspectAvatar(item: item),
-              const Positioned(right: -3, top: -4, child: _CallBadge()),
-            ],
+            children: [ProspectAvatar(item: item)],
           ),
           const SizedBox(height: 5),
           Text(
@@ -61,27 +58,6 @@ class ProspectTile extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _CallBadge extends StatelessWidget {
-  const _CallBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 29,
-      height: 29,
-      decoration: BoxDecoration(
-        color: AppColors.homeBadge,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Icon(
-        Iconsax.call_calling_copy,
-        color: Colors.black,
-        size: 17,
       ),
     );
   }

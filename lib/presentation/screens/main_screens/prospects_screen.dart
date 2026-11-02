@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_card.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_search.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -42,12 +43,14 @@ class ProspectsScreen extends StatefulWidget {
   final Future<List<ProspectRecord>> Function()? loadProspects;
   final ValueChanged<AgendaActivity>? onNotificationActivity;
   final PhoneCallService? phoneCallService;
+  final DateTime Function()? now;
   const ProspectsScreen({
     super.key,
     this.controller,
     this.loadProspects,
     this.onNotificationActivity,
     this.phoneCallService,
+    this.now,
   });
 
   @override
@@ -125,7 +128,6 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     ++_request;
     _records.clear();
     _search.clear();
-    _status = 'Todos';
     _advanced = ProspectFilters.forSeller();
     _load();
   }
@@ -159,7 +161,6 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   void _showFromHome(Set<int> ids, String label) {
     setState(() {
       _search.clear();
-      _status = 'Todos';
       _advanced = ProspectFilters(
         prospectIds: ids,
         sourceLabel: label,
@@ -205,7 +206,6 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     if (!mounted || created != true) return;
     setState(() {
       _search.clear();
-      _status = 'Todos';
       _advanced = ProspectFilters.forSeller();
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -214,19 +214,28 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     await _load();
   }
 
-  static const _filters = [
-    'Todos',
-    'Atrasados',
-    'Nuevo',
-    'Contactado y validado',
-    'Seguimiento',
-    'Cotización',
-    'Negociación',
-    'Venta realizada',
-  ];
   final _search = TextEditingController();
-  String _status = 'Todos';
   ProspectFilters _advanced = ProspectFilters.forSeller();
+
+  DateTime get _now => (widget.now ?? businessNow)();
+
+  List<String> get _statuses {
+    final byNormalized = <String, String>{};
+    for (final record in _records) {
+      final normalized = ProspectSearch.normalize(record.status);
+      if (normalized.isEmpty ||
+          normalized == ProspectSearch.normalize('Atrasados')) {
+        continue;
+      }
+      byNormalized.putIfAbsent(normalized, () => record.status.trim());
+    }
+    final values = byNormalized.values.toList()
+      ..sort(
+        (a, b) =>
+            ProspectSearch.normalize(a).compareTo(ProspectSearch.normalize(b)),
+      );
+    return ['Todos', ...values];
+  }
 
   @override
   void dispose() {
@@ -455,26 +464,16 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     return false;
   }
 
-  String _normalize(String value) {
-    var result = value.toLowerCase();
-    const accents = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u'};
-    accents.forEach((key, value) => result = result.replaceAll(key, value));
-    return result;
-  }
-
   List<ProspectRecord> get _visible => _filtered(_advanced);
   List<ProspectRecord> _filtered(ProspectFilters filters) {
-    final now = DateTime.now();
-    final query = _normalize(_search.text.trim());
+    final now = _now;
+    final query = ProspectSearch.normalize(_search.text.trim());
     final result = _records
         .where(
           (p) =>
-              (_status == 'Todos' ||
-                  (_status == 'Atrasados'
-                      ? p.nextContact != null && p.nextContact!.isBefore(now)
-                      : _normalize(p.status.trim()) == _normalize(_status))) &&
               filters.matches(p, now) &&
-              _normalize('${p.name} ${p.phone} ${p.email}').contains(query),
+              ProspectSearch.normalize('${p.name} ${p.phone} ${p.email}')
+                  .contains(query),
         )
         .toList();
     result.sort((a, b) => filters.compare(a, b, now: now));
@@ -495,6 +494,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
         child: ProspectFiltersSheet(
           initial: _advanced,
           count: (filters) => _filtered(filters).length,
+          now: widget.now ?? businessNow,
         ),
       ),
     );
@@ -560,23 +560,25 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       ),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.all(6),
-                        child: IconButton.filled(
-                          tooltip: 'Filtrar prospectos',
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
-                            foregroundColor:
-                                !_advanced.active || _advanced.isSellerDefault
-                                ? Colors.white
-                                : AppColors.accentColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        child: Badge(
+                          isLabelVisible: _advanced.summary.isNotEmpty,
+                          label: Text('${_advanced.summary.length}'),
+                          child: Semantics(
+                            container: true,
+                            value:
+                                '${_advanced.summary.length} filtros activos',
+                            child: IconButton.filled(
+                              tooltip: 'Filtrar prospectos',
+                              style: IconButton.styleFrom(
+                                backgroundColor: palette.brandFill,
+                                foregroundColor: palette.onBrand,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: _showFilters,
+                              icon: const Icon(Icons.tune_rounded, size: 20),
                             ),
-                          ),
-                          onPressed: _showFilters,
-                          icon: const Icon(
-                            Icons.tune_rounded,
-                            color: AppColors.accentColor,
-                            size: 20,
                           ),
                         ),
                       ),
@@ -586,14 +588,21 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: _filters
+                    children: _statuses
                         .map(
                           (filter) => ChoiceChip(
                             label: Text(filter),
-                            selected: _status == filter,
+                            selected: filter == 'Todos'
+                                ? _advanced.status == null
+                                : ProspectSearch.normalize(
+                                        _advanced.status ?? '',
+                                      ) ==
+                                      ProspectSearch.normalize(filter),
                             showCheckmark: false,
                             onSelected: (_) => setState(() {
-                              _status = filter;
+                              _advanced.status = filter == 'Todos'
+                                  ? null
+                                  : filter;
                             }),
                             selectedColor: palette.chipSelectedFill,
                             backgroundColor: palette.chipFill,
@@ -610,7 +619,13 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                             labelStyle: TextStyle(
                               fontFamily: 'SulphurPoint',
                               fontSize: 12,
-                              color: _status == filter
+                              color:
+                                  (filter == 'Todos'
+                                      ? _advanced.status == null
+                                      : ProspectSearch.normalize(
+                                              _advanced.status ?? '',
+                                            ) ==
+                                            ProspectSearch.normalize(filter))
                                   ? palette.chipSelectedForeground
                                   : palette.chipForeground,
                             ),
@@ -618,31 +633,32 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         )
                         .toList(),
                   ),
-                  if (_advanced.active && !_advanced.isSellerDefault)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: InputChip(
-                        label: Text(
-                          _advanced.sourceLabel ?? 'Filtros activos',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        backgroundColor: AppColors.primaryColor,
-                        labelStyle: const TextStyle(
-                          fontFamily: 'SulphurPoint',
-                          color: AppColors.homeBackground,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        deleteIcon: const Icon(Icons.close_rounded, size: 18),
-                        deleteIconColor: AppColors.homeBackground,
-                        side: BorderSide.none,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        onDeleted: () =>
-                            setState(() => _advanced = ProspectFilters()),
-                      ),
+                  if (_advanced.isSellerPreset || _advanced.summary.isNotEmpty)
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (_advanced.isSellerPreset)
+                          InputChip(
+                            label: const Text('Por atender'),
+                            deleteIcon: const Icon(Icons.close_rounded),
+                            onDeleted: () => setState(
+                              () => _advanced = ProspectFilters.all(),
+                            ),
+                          ),
+                        if (!_advanced.isSellerPreset)
+                          ..._advanced.summary.map(
+                            (filter) => InputChip(
+                              label: Text(filter.label),
+                              deleteIcon: const Icon(Icons.close_rounded),
+                              onDeleted: () => setState(
+                                () => _advanced = _advanced.clearGroup(
+                                  filter.group,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -652,7 +668,9 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     runSpacing: 4,
                     children: [
                       Text(
-                        'MOSTRANDO ${prospects.length} PROSPECTOS',
+                        prospects.length == 1
+                            ? 'MOSTRANDO 1 PROSPECTO'
+                            : 'MOSTRANDO ${prospects.length} PROSPECTOS',
                         style: TextStyle(
                           fontFamily: 'BebasNeue',
                           fontSize: 20,
@@ -769,7 +787,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                 ),
               ),
             ),
-          if (prospects.isEmpty && !_loading && _error == null)
+          if (_records.isEmpty && !_loading && _error == null)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -785,7 +803,50 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No se encontraron prospectos',
+                      'Aún no tienes prospectos asignados',
+                      style: TextStyle(
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _load,
+                      child: Text(
+                        'Actualizar',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontFamily: 'SulphurPoint',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_records.isNotEmpty &&
+              prospects.isEmpty &&
+              !_loading &&
+              _error == null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 40,
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Iconsax.search_normal_1_copy,
+                      size: 40,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No hay prospectos con estos filtros',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'SulphurPoint',
                         fontSize: 18,
@@ -795,19 +856,15 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     TextButton(
                       onPressed: () => setState(() {
                         _search.clear();
-                        _status = 'Todos';
-                        _advanced = ProspectFilters.forSeller();
+                        _advanced = ProspectFilters.all();
                       }),
-                      child: Text(
-                        'Limpiar filtros',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontFamily: 'SulphurPoint',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 20,
-                        ),
-                      ),
+                      child: const Text('Ver todos'),
                     ),
+                    if (_search.text.isNotEmpty)
+                      TextButton(
+                        onPressed: () => setState(_search.clear),
+                        child: const Text('Limpiar búsqueda'),
+                      ),
                   ],
                 ),
               ),

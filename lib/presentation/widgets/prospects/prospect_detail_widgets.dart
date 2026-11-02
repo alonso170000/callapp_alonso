@@ -1,4 +1,3 @@
-import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';

@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activity_dialog.dart';
 
 void main() {
@@ -141,5 +142,74 @@ void main() {
         },
       );
     }
+  }
+
+  for (final type in ['Seguimiento', 'Tarea']) {
+    testWidgets('editing $type keeps its type visible and locked', (
+      tester,
+    ) async {
+      final auth = AuthService(
+        client: MockClient(
+          (_) async =>
+              http.Response('{"status":"success","token":"session"}', 200),
+        ),
+      );
+      await auth.login('ana', 'password');
+      final prospects = ProspectsService(
+        auth: auth,
+        client: MockClient(
+          (_) async => http.Response('{"success":true,"data":[]}', 200),
+        ),
+      );
+      final agenda = AgendaService(
+        auth: auth,
+        client: MockClient((_) async => http.Response('{}', 500)),
+      );
+      addTearDown(prospects.dispose);
+      addTearDown(agenda.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NewAgendaActivityDialog(
+              initialDate: DateTime(2026, 11, 3),
+              activity: AgendaActivity(
+                id: 7,
+                type: type,
+                title: type.toUpperCase(),
+                prospect: type == 'Tarea' ? 'Sin prospecto' : 'Ana',
+                description: 'Descripción existente',
+                date: DateTime(2026, 11, 3, 12),
+                status: AgendaStatus.pending,
+              ),
+              agendaService: agenda,
+              prospectsService: prospects,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final field = find.descendant(
+        of: find.byKey(const ValueKey('activity-type-field')),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      expect(field, findsOneWidget);
+      expect(
+        tester.widget<DropdownButtonFormField<String>>(field).onChanged,
+        isNull,
+      );
+      expect(find.text(type), findsOneWidget);
+      expect(
+        find.text(
+          'El tipo de actividad no puede cambiarse después de crearla.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(field);
+      await tester.pump();
+      expect(find.text('Visita presencial'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
   }
 }
