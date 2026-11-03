@@ -46,6 +46,7 @@ class ProspectDetailScreen extends StatefulWidget {
   final AgendaActivity? sourceActivity;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final PhoneCallService? phoneCallService;
+  final CallSessionController? callSession;
   final bool callStarted;
   final bool callSuccessful;
   const ProspectDetailScreen({
@@ -54,6 +55,7 @@ class ProspectDetailScreen extends StatefulWidget {
     this.sourceActivity,
     this.loadActivities,
     this.phoneCallService,
+    this.callSession,
     this.callStarted = false,
     this.callSuccessful = false,
   });
@@ -77,7 +79,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
   bool _calling = false;
-  final _callSession = CallSessionController.instance;
+  late final CallSessionController _callSession;
   int? _lastCallId;
   bool _openingCallResult = false;
   bool get _viewingCompletedFollowUp =>
@@ -108,6 +110,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   void initState() {
     super.initState();
     _phoneCallService = widget.phoneCallService ?? PhoneCallService();
+    _callSession = widget.callSession ?? CallSessionController.instance;
     WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
     _telephoneCallCompleted = widget.callStarted;
@@ -129,6 +132,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
 
   Future<void> _detectCompletedCall() async {
     if (_openingCallResult || _callSession.activeCall == null) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    final resolution = await _callSession.resolveAfterDialer();
+    if (!mounted || _openingCallResult || _callSession.activeCall == null) return;
+    if (resolution == PendingCallResolution.inProgress ||
+        resolution == PendingCallResolution.unverifiable) {
+      return;
+    }
     final completed = await _callSession.claimCompletedCall();
     if (completed && mounted) await _finishCall();
   }
@@ -304,7 +314,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       builder: (dialogContext) => AlertDialog(
         title: const Text('Antes de marcar'),
         content: const Text(
-          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta.',
         ),
         actions: [
           TextButton(
@@ -472,6 +482,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   Widget build(BuildContext context) {
     final p = _prospect;
     final palette = AppPalette.of(context);
+    final activeCall = _callSession.activeCall;
+    final callVerified = activeCall?.verified == true;
     return Theme(
       data: Theme.of(context).copyWith(
         textTheme: Theme.of(context).textTheme
@@ -575,11 +587,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
           body: SafeArea(
             child: Column(
               children: [
-                if (_callSession.activeCall != null)
+                if (callVerified)
                   CallInProgressBar(
-                    name: _callSession.activeCall!.prospect.name,
+                    name: activeCall!.prospect.name,
                     elapsed: _callSession.elapsed,
                     onFinish: _finishCall,
+                    onDiscard: () => _callSession.cancel(),
                   ),
                 ProspectDetailHeader(
                   prospect: p,
@@ -612,7 +625,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                 ),
                                 prospect: p,
                                 telephoneCallCompleted: _telephoneCallCompleted,
-                                callInProgress: _callSession.activeCall != null,
+                                callInProgress: callVerified,
                                 llamadaId: _lastCallId,
                                 initialContactSuccess: _telephoneCallSuccessful,
                                 sourceActivity: widget.sourceActivity,

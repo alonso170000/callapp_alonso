@@ -5,6 +5,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follo
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
+import 'package:callerapp_frontend/services/call_log_service.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,15 @@ class _RecordingProspectsService extends ProspectsService {
 
   @override
   Future<List<ProspectHistoryComment>> contactHistory(int id) async => const [];
+}
+
+class _UnverifiableCallLogService extends CallLogService {
+  @override
+  Future<CallLogMatch?> latestFor(String phone, DateTime startedAt) async =>
+      null;
+
+  @override
+  Future<bool?> isCallActive() async => null;
 }
 
 void main() {
@@ -149,10 +159,15 @@ void main() {
     tester,
   ) async {
     Uri? dialedUri;
+    final controller = CallSessionController(
+      callLog: _UnverifiableCallLogService(),
+    );
+    addTearDown(controller.dispose);
     await tester.pumpWidget(
       MaterialApp(
         home: ProspectDetailScreen(
           prospect: prospect,
+          callSession: controller,
           loadActivities: () async => [],
           phoneCallService: PhoneCallService(
             canLaunch: (_) async => true,
@@ -170,13 +185,24 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'MARCAR'));
     await tester.pumpAndSettle();
     expect(dialedUri, Uri(scheme: 'tel', path: '9981234567'));
+    // Al volver del marcador se verifica la llamada. En el entorno de pruebas
+    // no hay canal nativo, así que se conserva la sesión como no verificable.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await tester.pumpAndSettle();
+    expect(controller.activeCall, isNotNull);
+    expect(controller.activeCall!.verified, isTrue);
     expect(find.textContaining('EN LLAMADA'), findsOneWidget);
     expect(
       find.text('Termina la llamada para registrar el seguimiento.'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
-    await CallSessionController.instance.cancel();
+    await controller.cancel();
   });
 
   testWidgets(

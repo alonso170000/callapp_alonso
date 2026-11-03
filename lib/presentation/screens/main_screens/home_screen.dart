@@ -63,6 +63,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _callSession.restore();
       if (mounted && _callSession.hasStaleSession) _offerStaleCallDiscard();
+      if (mounted && _callSession.activeCall != null) {
+        await _detectCompletedCall();
+      }
     });
   }
 
@@ -158,6 +161,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _detectCompletedCall() async {
     if (_openingCallResult || _callSession.activeCall == null) return;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    final resolution = await _callSession.resolveAfterDialer();
+    if (!mounted || _openingCallResult || _callSession.activeCall == null) return;
+    if (resolution == PendingCallResolution.inProgress ||
+        resolution == PendingCallResolution.unverifiable) {
+      return;
+    }
     final completed = await _callSession.claimCompletedCall();
     if (completed && mounted) await _finishCall();
   }
@@ -325,6 +335,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final activeCall = _callSession.activeCall;
+    final callVerified = activeCall?.verified == true;
     return Scaffold(
       backgroundColor: Colors.black,
       body: DecoratedBox(
@@ -335,12 +347,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               bottom: false,
               child: Column(
                 children: [
-                  if (_callSession.activeCall != null)
+                  if (callVerified)
                     CallInProgressBar(
-                      name: _callSession.activeCall!.prospect.name,
+                      name: activeCall!.prospect.name,
                       elapsed: _callSession.elapsed,
                       onFinish: _finishCall,
                       onReturn: _returnToCall,
+                      onDiscard: () => _callSession.cancel(),
                     ),
                   Expanded(
                     child: IndexedStack(

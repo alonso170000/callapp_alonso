@@ -17,6 +17,8 @@ class CallLogMatch {
 class CallLogService {
   static const _channel = MethodChannel('callerapp/call_log');
 
+  /// [startedAt] debe ser el instante real en que se abrió el marcador (epoch
+  /// correcto), no la hora de negocio.
   Future<CallLogMatch?> latestFor(String phone, DateTime startedAt) async {
     try {
       final raw = await _channel.invokeMapMethod<String, dynamic>('latestFor', {
@@ -33,6 +35,21 @@ class CallLogService {
             ? DateTime.fromMillisecondsSinceEpoch(raw['startedAtMs'] as int)
             : null,
       );
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  /// Indica si el dispositivo tiene una llamada activa ahora mismo.
+  ///
+  /// Devuelve `null` cuando no hay permiso o la plataforma no lo soporta, para
+  /// que la app pueda conservar la sesión en lugar de descartar una llamada
+  /// real por falta de información.
+  Future<bool?> isCallActive() async {
+    try {
+      return await _channel.invokeMethod<bool>('isCallActive');
     } on PlatformException {
       return null;
     } on MissingPluginException {

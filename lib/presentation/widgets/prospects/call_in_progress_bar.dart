@@ -9,17 +9,40 @@ class CallInProgressBar extends StatelessWidget {
     required this.elapsed,
     required this.onFinish,
     this.onReturn,
+    this.onDiscard,
   });
 
   final String name;
   final Duration elapsed;
   final VoidCallback onFinish;
   final VoidCallback? onReturn;
+  final VoidCallback? onDiscard;
 
   String get _time {
     final minutes = elapsed.inMinutes.toString().padLeft(2, '0');
     final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
+  }
+
+  Future<void> _confirmDiscard(BuildContext context) async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Descartar llamada'),
+        content: const Text('¿Deseas descartar esta llamada sin registrarla?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CANCELAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('DESCARTAR'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true) onDiscard?.call();
   }
 
   @override
@@ -60,6 +83,12 @@ class CallInProgressBar extends StatelessWidget {
                   tooltip: 'Volver a la llamada',
                   onPressed: onReturn,
                   icon: const Icon(Icons.open_in_new),
+                ),
+              if (onDiscard != null)
+                IconButton(
+                  tooltip: 'Descartar llamada',
+                  onPressed: () => _confirmDiscard(context),
+                  icon: const Icon(Icons.delete_outline),
                 ),
               FilledButton.tonalIcon(
                 onPressed: onFinish,

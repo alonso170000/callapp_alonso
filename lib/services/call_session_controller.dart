@@ -18,14 +18,60 @@ class ActiveCall {
   const ActiveCall({
     required this.prospect,
     required this.startedAt,
+    required this.windowStart,
     required this.origin,
     this.sourceActivityId,
+    this.verified = false,
+    this.callLogId,
   });
 
   final ProspectRecord prospect;
+
+  /// Hora de negocio usada para el payload y la duración estimada.
   final DateTime startedAt;
+
+  /// Instante real (epoch correcto) desde el que se busca la llamada en el
+  /// registro del sistema. No usa la hora de negocio para evitar corrimientos.
+  final DateTime windowStart;
+
   final String origin;
   final int? sourceActivityId;
+
+  /// `true` cuando el registro de llamadas o el estado del teléfono confirman
+  /// que la llamada ocurrió. Mientras sea `false` la sesión es solo un intento.
+  final bool verified;
+  final String? callLogId;
+
+  ActiveCall copyWith({bool? verified, String? callLogId}) => ActiveCall(
+    prospect: prospect,
+    startedAt: startedAt,
+    windowStart: windowStart,
+    origin: origin,
+    sourceActivityId: sourceActivityId,
+    verified: verified ?? this.verified,
+    callLogId: callLogId ?? this.callLogId,
+  );
+}
+
+/// Resultado de comprobar si la llamada realmente ocurrió al volver del
+/// marcador del teléfono.
+enum PendingCallResolution {
+  /// No había una sesión pendiente que verificar.
+  notPending,
+
+  /// Hay evidencia de la llamada; la sesión se conserva.
+  verified,
+
+  /// La llamada sigue activa en el dispositivo; la barra debe mostrarse pero
+  /// todavía no hay registro que cerrar.
+  inProgress,
+
+  /// No hubo llamada; la sesión se descartó en silencio.
+  discarded,
+
+  /// No se pudo verificar (permisos o plataforma). Se conserva para que el
+  /// usuario pueda registrarla o descartarla manualmente.
+  unverifiable,
 }
 
 class CallRegistrationResult {
@@ -72,36 +118,117 @@ class CallSessionController extends ChangeNotifier {
   int? _lastCallId;
   bool _staleSession = false;
   bool _autoClosureClaimed = false;
+  bool _resolvingPending = false;
+  Future<bool>? _claimInFlight;
 
   ActiveCall? get activeCall => _activeCall;
   Duration get elapsed => _elapsed;
   int? get lastCallId => _lastCallId;
   bool get hasStaleSession => _staleSession;
 
+  /// `true` mientras la sesión se abrió al lanzar el marcador pero todavía no
+  /// hay evidencia de que la llamada haya ocurrido.
+  bool get hasUnverifiedCall => _activeCall != null && !_activeCall!.verified;
+
   Future<CallLogMatch?> latestLog() {
     final current = _activeCall;
     if (current == null) return Future.value();
-    return _callLog.latestFor(current.prospect.phone, current.startedAt);
+    return _callLog.latestFor(current.prospect.phone, current.windowStart);
   }
 
-  Future<bool> claimCompletedCall() async {
+  /// Comprueba, al volver del marcador, si la llamada realmente ocurrió.
+  ///
+  /// Si solo se abrió la app de teléfono y no se marcó, la sesión se descarta
+  /// en silencio para no registrar llamadas inexistentes.
+  Future<PendingCallResolution> resolveAfterDialer({
+    int attempts = 3,
+    Duration retryDelay = const Duration(seconds: 1),
+  }) async {
+    final current = _activeCall;
+    if (current == null || current.verified) {
+      return PendingCallResolution.notPending;
+    }
+    if (_resolvingPending) return PendingCallResolution.notPending;
+    _resolvingPending = true;
+    try {
+      CallLogMatch? logged;
+      for (var attempt = 0; attempt < attempts; attempt++) {
+        final pending = _activeCall;
+        if (pending == null) return PendingCallResolution.discarded;
+        logged = await _callLog.latestFor(
+          pending.prospect.phone,
+          pending.windowStart,
+        );
+        if (logged != null) break;
+        if (attempt < attempts - 1) {
+          await Future<void>.delayed(retryDelay);
+        }
+      }
+      final pending = _activeCall;
+      if (pending == null) return PendingCallResolution.discarded;
+      if (logged != null) {
+        _activeCall = pending.copyWith(
+          verified: true,
+          callLogId: logged.id,
+        );
+        await _persist();
+        notifyListeners();
+        return PendingCallResolution.verified;
+      }
+      final activeOnDevice = await _callLog.isCallActive();
+      if (activeOnDevice == null) {
+        // Sin permiso o sin soporte nativo no se puede confirmar: se conserva
+        // la sesión para no perder una llamada real.
+        _activeCall = pending.copyWith(verified: true);
+        await _persist();
+        notifyListeners();
+        return PendingCallResolution.unverifiable;
+      }
+      if (activeOnDevice) {
+        _activeCall = pending.copyWith(verified: true);
+        await _persist();
+        notifyListeners();
+        return PendingCallResolution.inProgress;
+      }
+      await cancel();
+      return PendingCallResolution.discarded;
+    } finally {
+      _resolvingPending = false;
+    }
+  }
+
+  Future<bool> claimCompletedCall({
+    int attempts = 6,
+    Duration retryDelay = const Duration(seconds: 1),
+  }) {
+    final inFlight = _claimInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _claimCompletedCall(attempts: attempts, retryDelay: retryDelay);
+    _claimInFlight = future;
+    return future.whenComplete(() => _claimInFlight = null);
+  }
+
+  Future<bool> _claimCompletedCall({
+    required int attempts,
+    required Duration retryDelay,
+  }) async {
     final current = _activeCall;
     if (current == null || _autoClosureClaimed) return false;
-    for (var attempt = 0; attempt < 6; attempt++) {
+    for (var attempt = 0; attempt < attempts; attempt++) {
       final logged = await _callLog.latestFor(
         current.prospect.phone,
-        current.startedAt,
+        current.windowStart,
       );
       final loggedAt = logged?.startedAt;
       if (logged != null &&
           (loggedAt == null ||
               !loggedAt.isBefore(
-                current.startedAt.subtract(const Duration(seconds: 5)),
+                current.windowStart.subtract(const Duration(seconds: 5)),
               ))) {
         _autoClosureClaimed = true;
         return true;
       }
-      if (attempt < 5) await Future<void>.delayed(const Duration(seconds: 1));
+      if (attempt < attempts - 1) await Future<void>.delayed(retryDelay);
     }
     return false;
   }
@@ -131,6 +258,7 @@ class CallSessionController extends ChangeNotifier {
     _activeCall = ActiveCall(
       prospect: prospect,
       startedAt: startedAt,
+      windowStart: DateTime.now(),
       origin: origin,
       sourceActivityId: sourceActivityId,
     );
@@ -162,7 +290,7 @@ class CallSessionController extends ChangeNotifier {
     final endedAt = businessNow();
     final logged = await _callLog.latestFor(
       current.prospect.phone,
-      current.startedAt,
+      current.windowStart,
     );
     final call = ProspectCallSession(
       startedAt: current.startedAt,
@@ -236,8 +364,15 @@ class CallSessionController extends ChangeNotifier {
           statusColor: AppColors.primaryColor,
         ),
         startedAt: startedAt,
+        windowStart: json['window_start_ms'] is int
+            ? DateTime.fromMillisecondsSinceEpoch(json['window_start_ms'] as int)
+            : startedAt,
         origin: json['origin'] as String,
         sourceActivityId: json['source_activity_id'] as int?,
+        // Las sesiones antiguas no guardaban el estado de verificación; se
+        // conservan para no interrumpir una llamada que ya estaba en curso.
+        verified: json['verified'] as bool? ?? true,
+        callLogId: json['call_log_id'] as String?,
       );
       _autoClosureClaimed = false;
       _elapsed = businessNow().difference(startedAt);
@@ -278,8 +413,11 @@ class CallSessionController extends ChangeNotifier {
         'status': current.prospect.status,
         'temperature': current.prospect.temperature,
         'started_at': current.startedAt.toIso8601String(),
+        'window_start_ms': current.windowStart.millisecondsSinceEpoch,
         'origin': current.origin,
         'source_activity_id': current.sourceActivityId,
+        'verified': current.verified,
+        'call_log_id': current.callLogId,
       }),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
