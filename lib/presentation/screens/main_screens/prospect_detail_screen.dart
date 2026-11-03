@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +26,7 @@ import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -34,11 +37,13 @@ class ProspectDetailArguments {
     this.sourceActivity,
     this.callStarted = false,
     this.callSuccessful = false,
+    this.callId,
   });
   final ProspectRecord prospect;
   final AgendaActivity? sourceActivity;
   final bool callStarted;
   final bool callSuccessful;
+  final int? callId;
 }
 
 class ProspectDetailScreen extends StatefulWidget {
@@ -49,6 +54,8 @@ class ProspectDetailScreen extends StatefulWidget {
   final CallSessionController? callSession;
   final bool callStarted;
   final bool callSuccessful;
+  final int? callId;
+  final Future<void> Function(ProspectRecord)? showCallReminder;
   const ProspectDetailScreen({
     super.key,
     required this.prospect,
@@ -58,6 +65,8 @@ class ProspectDetailScreen extends StatefulWidget {
     this.callSession,
     this.callStarted = false,
     this.callSuccessful = false,
+    this.callId,
+    this.showCallReminder,
   });
   @override
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
@@ -116,6 +125,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
     _callRegistered = widget.callStarted;
+    _lastCallId = widget.callId;
     _callSession.addListener(_callSessionChanged);
     if (_viewingCompletedFollowUp) {
       _selected.addAll(ProspectSection.values.map((section) => section.label));
@@ -134,7 +144,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     if (_openingCallResult || _callSession.activeCall == null) return;
     if (ModalRoute.of(context)?.isCurrent != true) return;
     final resolution = await _callSession.resolveAfterDialer();
-    if (!mounted || _openingCallResult || _callSession.activeCall == null) return;
+    if (!mounted || _openingCallResult || _callSession.activeCall == null) {
+      return;
+    }
     if (resolution == PendingCallResolution.inProgress ||
         resolution == PendingCallResolution.unverifiable) {
       return;
@@ -348,6 +360,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       sourceActivityId: widget.sourceActivity?.id,
       startedAt: startedAt,
     );
+    unawaited(
+      (widget.showCallReminder ??
+          NotificationService.instance.showCallReminder)(_prospect),
+    );
   }
 
   Future<void> _finishCall() async {
@@ -396,8 +412,6 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         _callRegistered = true;
         _lastCallId = result.callId;
         _selected.add(ProspectSection.followUp.label);
-        _panelRevisions[ProspectSection.followUp.label] =
-            (_panelRevisions[ProspectSection.followUp.label] ?? 0) + 1;
       });
     }
     _openingCallResult = false;
@@ -454,28 +468,27 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     );
   }
 
+  bool get _requiresFollowUp =>
+      _telephoneCallCompleted && _callRegistered && !_viewingCompletedFollowUp;
+
   Future<void> _handlePendingCallExit(bool didPop, Object? _) async {
-    if (didPop || !_telephoneCallCompleted || _callRegistered) return;
-    final discard = await showDialog<bool>(
+    if (didPop || !_requiresFollowUp) return;
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Llamada sin registrar'),
+        title: const Text('Seguimiento obligatorio'),
         content: const Text(
-          'La llamada aún no está registrada en el seguimiento. ¿Deseas salir sin guardarla?',
+          'Después de una llamada debes completar y guardar el formulario de seguimiento antes de salir.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CONTINUAR EDITANDO'),
-          ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('SALIR SIN GUARDAR'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('LLENAR SEGUIMIENTO'),
           ),
         ],
       ),
     );
-    if (discard == true && mounted) Navigator.pop(context);
+    if (mounted) setState(() => _selected.add(ProspectSection.followUp.label));
   }
 
   @override
@@ -498,7 +511,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         ),
       ),
       child: PopScope(
-        canPop: !_telephoneCallCompleted || _callRegistered,
+        canPop: !_requiresFollowUp,
         onPopInvokedWithResult: _handlePendingCallExit,
         child: Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -621,7 +634,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                               ProspectSection.followUp,
                               ProspectFollowUpForm(
                                 key: ValueKey(
-                                  'follow-up-$_telephoneCallCompleted',
+                                  'follow-up-${p.id}-${widget.sourceActivity?.id}',
                                 ),
                                 prospect: p,
                                 telephoneCallCompleted: _telephoneCallCompleted,
@@ -632,6 +645,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                 loadActivities: widget.loadActivities,
                                 onOpenActivity: _openActivity,
                                 onSaved: (entry) {
+                                  unawaited(
+                                    NotificationService.instance
+                                        .cancelCallReminder(),
+                                  );
                                   setState(() {
                                     _history.insert(0, entry);
                                     _telephoneCallCompleted = false;

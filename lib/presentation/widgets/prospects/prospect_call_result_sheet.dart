@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -76,18 +78,27 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
       _audioMessage = null;
     });
     try {
-      final candidates = await _audioService.findCandidates(
-        ProspectCallSession(
-          startedAt: widget.startedAt,
-          endedAt: businessNow(),
-          outcome: ProspectCallOutcome.other,
-          phone: widget.phone,
-          origin: 'detalle',
-        ),
-      );
+      List<CubeAcrAudioCandidate> candidates = const [];
+      for (var attempt = 0; attempt < 6 && candidates.isEmpty; attempt++) {
+        candidates = await _audioService.findCandidates(
+          ProspectCallSession(
+            startedAt: widget.startedAt,
+            endedAt: businessNow(),
+            outcome: ProspectCallOutcome.other,
+            phone: widget.phone,
+            origin: 'detalle',
+          ),
+        );
+        if (candidates.isEmpty && attempt < 5) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          if (!mounted) return;
+        }
+      }
       if (!mounted) return;
       if (candidates.isEmpty) {
-        setState(() => _audioMessage = 'No se detectó una grabación');
+        setState(
+          () => _audioMessage = 'No se detectó una grabación. Verifica que vinculaste la carpeta raíz de Cube ACR.',
+        );
         return;
       }
       var selected = candidates.first;
@@ -109,6 +120,22 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
       }
       final audio = await _audioService.copyToPrivate(selected);
       if (mounted) setState(() => _audio = audio);
+    } on AudioImportException catch (error) {
+      if (mounted) setState(() => _audioMessage = error.message);
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _pickAudioManually() async {
+    setState(() {
+      _searching = true;
+      _audioMessage = null;
+    });
+    try {
+      final audio = await _audioService.pickRecording();
+      if (!mounted || audio == null) return;
+      setState(() => _audio = audio);
     } on AudioImportException catch (error) {
       if (mounted) setState(() => _audioMessage = error.message);
     } finally {
@@ -179,7 +206,12 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
               ChoiceChip(
                 label: const Text('Sí, aceptó'),
                 selected: _consent == true,
-                onSelected: (_) => setState(() => _consent = true),
+                onSelected: (_) {
+                  setState(() => _consent = true);
+                  if (_configured && _audio == null && !_searching) {
+                    unawaited(_findAudio());
+                  }
+                },
               ),
               ChoiceChip(
                 label: const Text('No aceptó'),
@@ -201,13 +233,26 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
             else if (_searching)
               const Center(child: Text('Buscando grabación…'))
             else
-              OutlinedButton(
-                onPressed: _findAudio,
-                child: Text(
-                  _audio == null
-                      ? 'BUSCAR NUEVAMENTE'
-                      : 'Grabación detectada: ${_audio!.name}',
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OutlinedButton(
+                    onPressed: _findAudio,
+                    child: Text(
+                      _audio == null
+                          ? 'BUSCAR NUEVAMENTE'
+                          : 'Grabación detectada: ${_audio!.name}',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _linkFolder,
+                    child: const Text('CAMBIAR CARPETA DE CUBE ACR'),
+                  ),
+                  TextButton(
+                    onPressed: _pickAudioManually,
+                    child: const Text('SELECCIONAR GRABACIÓN MANUALMENTE'),
+                  ),
+                ],
               ),
           ],
           if (_audioMessage != null)

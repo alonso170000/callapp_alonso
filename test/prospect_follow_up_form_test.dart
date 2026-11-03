@@ -274,6 +274,10 @@ void main() {
       );
       await tester.ensureVisible(acknowledge);
       await tester.tap(acknowledge);
+      await tester.enterText(
+        find.byKey(const ValueKey('follow-up-notes')),
+        'Se confirmó la propuesta durante la llamada.',
+      );
       final save = find.widgetWithText(FilledButton, 'GUARDAR').last;
       await tester.ensureVisible(save);
       await tester.tap(save);
@@ -325,6 +329,138 @@ void main() {
       expect(find.text('Primero debes realizar una llamada.'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'Agenda follow-up through WhatsApp saves without requiring a call',
+    (tester) async {
+      final followUp = AgendaActivity(
+        id: 20,
+        prospectId: 17,
+        type: 'seguimiento',
+        medium: 'whatsapp',
+        title: 'SEGUIMIENTO',
+        prospect: prospect.name,
+        description: 'Enviar información por WhatsApp',
+        date: DateTime(2026, 11, 4, 10),
+        status: AgendaStatus.pending,
+      );
+      final service = _RecordingProspectsService();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProspectFollowUpForm(
+                prospect: prospect,
+                prospectsService: service,
+                sourceActivity: followUp,
+                loadActivities: () async => [followUp],
+                onSaved: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final acknowledge = find.byKey(
+        const ValueKey('acknowledge-follow-up-completion'),
+      );
+      await tester.ensureVisible(acknowledge);
+      await tester.tap(acknowledge);
+      await tester.pump();
+
+      final save = find.widgetWithText(FilledButton, 'GUARDAR').last;
+      expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Primero debes realizar una llamada.'), findsNothing);
+      expect(service.fields?['actividad_origen_id'], 20);
+      expect(service.fields?['medio'], 'whatsapp');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Call completion preserves the follow-up draft', (tester) async {
+    var completed = false;
+    late StateSetter updateHost;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              updateHost = setState;
+              return SingleChildScrollView(
+                child: ProspectFollowUpForm(
+                  prospect: prospect,
+                  prospectsService: _RecordingProspectsService(),
+                  telephoneCallCompleted: completed,
+                  loadActivities: () async => [],
+                  onSaved: (_) {},
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('follow-up-notes')),
+      'El prospecto pidió revisar la cotización mañana.',
+    );
+    updateHost(() => completed = true);
+    await tester.pump();
+
+    expect(
+      find.text('El prospecto pidió revisar la cotización mañana.'),
+      findsOneWidget,
+    );
+    expect(find.text('Llamada telefónica'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Completed call requires interaction notes before saving', (
+    tester,
+  ) async {
+    final service = _RecordingProspectsService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: prospect,
+              prospectsService: service,
+              telephoneCallCompleted: true,
+              loadActivities: () async => [],
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final acknowledge = find.byKey(
+      const ValueKey('acknowledge-follow-up-completion'),
+    );
+    await tester.ensureVisible(acknowledge);
+    await tester.tap(acknowledge);
+    final save = find.widgetWithText(FilledButton, 'GUARDAR').last;
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pump();
+
+    expect(
+      find.text(
+        'Escribe las notas de la interacción para guardar el seguimiento de la llamada.',
+      ),
+      findsOneWidget,
+    );
+    expect(service.fields, isNull);
+  });
 
   testWidgets('Completed follow-up keeps the original form style read-only', (
     tester,

@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
@@ -137,6 +138,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _openingCallResult = false;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(result.message)));
+    if (result.success && mounted) {
+      final prospect = result.prospect ?? active.prospect;
+      context.push(
+        '/prospectos/${Uri.encodeComponent(prospect.phone)}',
+        extra: ProspectDetailArguments(
+          prospect: prospect,
+          callStarted: true,
+          callSuccessful: closure.outcome.successful,
+          callId: result.callId,
+        ),
+      );
+    }
   }
 
   void _returnToCall() {
@@ -163,7 +176,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_openingCallResult || _callSession.activeCall == null) return;
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     final resolution = await _callSession.resolveAfterDialer();
-    if (!mounted || _openingCallResult || _callSession.activeCall == null) return;
+    if (!mounted || _openingCallResult || _callSession.activeCall == null) {
+      return;
+    }
     if (resolution == PendingCallResolution.inProgress ||
         resolution == PendingCallResolution.unverifiable) {
       return;

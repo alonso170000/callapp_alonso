@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.CallLog
 import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import android.telephony.TelephonyManager
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -17,7 +18,9 @@ class MainActivity : FlutterActivity() {
     private val cubeChannelName = "callerapp/cube_acr"
     private val requestCode = 781
     private val cubeFolderRequestCode = 782
+    private val cubeAudioRequestCode = 783
     private var cubeFolderResult: MethodChannel.Result? = null
+    private var cubeAudioResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -91,6 +94,17 @@ class MainActivity : FlutterActivity() {
                             result.success(listCubeRecordings(Uri.parse(treeUri)))
                         }
                     }
+                    "pickRecording" -> {
+                        cubeAudioResult = result
+                        startActivityForResult(
+                            Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "audio/*"
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            },
+                            cubeAudioRequestCode,
+                        )
+                    }
                     "copyRecording" -> {
                         val source = call.argument<String>("uri")
                         val name = call.argument<String>("name")
@@ -132,31 +146,69 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != cubeFolderRequestCode) return
-        val result = cubeFolderResult ?: return
-        cubeFolderResult = null
-        val uri = data?.data
-        if (resultCode != RESULT_OK || uri == null) {
-            result.success(null)
+        if (requestCode == cubeAudioRequestCode) {
+            val result = cubeAudioResult ?: return
+            cubeAudioResult = null
+            val uri = data?.data
+            if (resultCode != RESULT_OK || uri == null) {
+                result.success(null)
+                return
+            }
+            val name = contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            } ?: "grabacion_${System.currentTimeMillis()}"
+            result.success(mapOf("uri" to uri.toString(), "name" to name))
             return
         }
-        try {
-            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            result.success(mapOf("uri" to uri.toString(), "name" to DocumentsContract.getTreeDocumentId(uri).substringAfterLast(':')))
-        } catch (error: SecurityException) {
-            result.error("folder_permission", "No se pudo conservar el acceso a la carpeta.", error.message)
+        if (requestCode == cubeFolderRequestCode) {
+            val result = cubeFolderResult ?: return
+            cubeFolderResult = null
+            val uri = data?.data
+            if (resultCode != RESULT_OK || uri == null) {
+                result.success(null)
+                return
+            }
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                result.success(mapOf("uri" to uri.toString(), "name" to DocumentsContract.getTreeDocumentId(uri).substringAfterLast(':')))
+            } catch (error: SecurityException) {
+                result.error("folder_permission", "No se pudo conservar el acceso a la carpeta.", error.message)
+            }
         }
     }
 
-    private fun listCubeRecordings(treeUri: Uri): List<Map<String, String>> {
+    private fun listCubeRecordings(treeUri: Uri): List<Map<String, Any>> {
+        val values = mutableListOf<Map<String, Any>>()
+        val rootId = DocumentsContract.getTreeDocumentId(treeUri)
+        collectCubeRecordings(treeUri, rootId, values, mutableSetOf())
+        return values
+    }
+
+    private fun collectCubeRecordings(
+        treeUri: Uri,
+        parentId: String,
+        values: MutableList<Map<String, Any>>,
+        visited: MutableSet<String>,
+    ) {
+        if (!visited.add(parentId) || values.size >= 2000) return
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
             treeUri,
-            DocumentsContract.getTreeDocumentId(treeUri),
+            parentId,
         )
-        val values = mutableListOf<Map<String, String>>()
         contentResolver.query(
             childrenUri,
-            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+            ),
             null,
             null,
             null,
@@ -164,13 +216,19 @@ class MainActivity : FlutterActivity() {
             while (cursor.moveToNext()) {
                 val id = cursor.getString(0)
                 val name = cursor.getString(1) ?: continue
-                if (!name.endsWith(".amr", ignoreCase = true)) continue
+                val mimeType = cursor.getString(2)
+                if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
+                    collectCubeRecordings(treeUri, id, values, visited)
+                    continue
+                }
+                val extension = name.substringAfterLast('.', "").lowercase()
+                if (extension !in setOf("amr", "m4a", "mp3", "wav", "aac", "ogg", "3gp", "opus")) continue
                 values.add(mapOf(
                     "uri" to DocumentsContract.buildDocumentUriUsingTree(treeUri, id).toString(),
                     "name" to name,
+                    "modifiedAtMs" to cursor.getLong(3),
                 ))
             }
         }
-        return values
     }
 }

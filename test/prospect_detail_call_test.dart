@@ -21,6 +21,27 @@ class _FakeCallLogService extends CallLogService {
 }
 
 void main() {
+  testWidgets('impide salir después de una llamada sin guardar seguimiento', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProspectDetailScreen(
+          prospect: demoProspects[1],
+          callStarted: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seguimiento obligatorio'), findsOneWidget);
+    expect(find.textContaining('debes completar y guardar'), findsOneWidget);
+    expect(find.text('LLENAR SEGUIMIENTO'), findsOneWidget);
+  });
+
   testWidgets('volver del marcador sin llamar descarta la sesión', (
     tester,
   ) async {
@@ -28,6 +49,7 @@ void main() {
     final controller = CallSessionController(callLog: log);
     addTearDown(controller.dispose);
     final prospect = demoProspects[1];
+    ProspectRecord? reminderProspect;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -38,6 +60,7 @@ void main() {
             canLaunch: (_) async => true,
             launch: (_) async => true,
           ),
+          showCallReminder: (prospect) async => reminderProspect = prospect,
         ),
       ),
     );
@@ -49,6 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.activeCall, isNotNull);
+    expect(reminderProspect, prospect);
     expect(find.byType(CallInProgressBar), findsNothing);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

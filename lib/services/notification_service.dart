@@ -33,7 +33,9 @@ class NotificationService extends ChangeNotifier {
   static final instance = NotificationService._();
   static const _payloadPrefix = 'callerapp:activity:';
   static const _assignmentPayloadPrefix = 'callerapp:prospect:';
+  static const _callPayloadPrefix = 'callerapp:call:';
   static const _notificationIdOffset = 1000000;
+  static const _callReminderNotificationId = 2000000000;
   static const _channelId = 'activity_reminders';
   static const _channelName = 'Recordatorios y prospectos';
   static const _channelDescription =
@@ -151,15 +153,20 @@ class NotificationService extends ChangeNotifier {
     final prospectId = prospectIdFromPayload(response?.payload);
     if (prospectId == null) return;
     pendingProspectId.value = prospectId;
-    unawaited(markRead(-prospectId));
+    if (response?.payload?.startsWith(_assignmentPayloadPrefix) ?? false) {
+      unawaited(markRead(-prospectId));
+    }
   }
 
-  /// Extrae el prospecto del payload de un aviso de asignación.
+  /// Extrae el prospecto de un aviso de asignación o de llamada.
   static int? prospectIdFromPayload(String? payload) {
-    if (payload == null || !payload.startsWith(_assignmentPayloadPrefix)) {
-      return null;
+    if (payload == null) return null;
+    for (final prefix in [_assignmentPayloadPrefix, _callPayloadPrefix]) {
+      if (payload.startsWith(prefix)) {
+        return int.tryParse(payload.substring(prefix.length));
+      }
     }
-    return int.tryParse(payload.substring(_assignmentPayloadPrefix.length));
+    return null;
   }
 
   /// Consume el prospecto pendiente y limpia el aviso para no repetirlo.
@@ -287,6 +294,49 @@ class NotificationService extends ChangeNotifier {
     _scheduleCleanup();
     notifyListeners();
     await _showAssignmentAlerts(newAssignments);
+  }
+
+  Future<void> showCallReminder(ProspectRecord prospect) async {
+    if (!_enabled || kIsWeb) return;
+    await initialize();
+    if (!_initialized) return;
+    try {
+      await _requestPermissions();
+      if (_permissionGranted == false) return;
+      await _plugin.show(
+        id: _callReminderNotificationId,
+        title: 'Recuerda guardar los datos del prospecto',
+        body: 'Toca para volver a CallerApp y registrar el seguimiento.',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: prospect.id == null
+            ? null
+            : '$_callPayloadPrefix${prospect.id}',
+      );
+    } catch (_) {
+      // La llamada continúa aunque el sistema no pueda mostrar el aviso.
+    }
+  }
+
+  Future<void> cancelCallReminder() async {
+    if (!_initialized || kIsWeb) return;
+    try {
+      await _plugin.cancel(id: _callReminderNotificationId);
+    } catch (_) {
+      // Guardar el seguimiento no debe fallar si el SO ya retiró el aviso.
+    }
   }
 
   Future<AndroidScheduleMode> _requestPermissions() async {

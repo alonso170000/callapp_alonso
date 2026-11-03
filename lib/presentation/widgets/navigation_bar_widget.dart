@@ -178,7 +178,7 @@ class _NavigationOption extends StatelessWidget {
                   style: TextStyle(
                     color: palette.navSelectedForeground,
                     fontFamily: 'SulphurPoint',
-                    fontSize: 16,
+                    fontSize: 14,
                     height: 1,
                     fontWeight: FontWeight.w700,
                   ),

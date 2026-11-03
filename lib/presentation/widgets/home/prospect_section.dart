@@ -127,7 +127,7 @@ class _AddProspectTile extends StatelessWidget {
             style: TextStyle(
               color: Colors.black,
               fontFamily: 'SulphurPoint',
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

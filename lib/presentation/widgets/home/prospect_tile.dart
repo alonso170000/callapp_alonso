@@ -29,7 +29,7 @@ class ProspectTile extends StatelessWidget {
             style: const TextStyle(
               color: Colors.black,
               fontFamily: 'SulphurPoint',
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               height: 0.95,
             ),

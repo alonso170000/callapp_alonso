@@ -32,54 +32,62 @@ void main() {
     );
     expect(data.newProspects.map((p) => p.id), [3, 1, 2]);
   });
-  test('Dashboard excludes other media and cancellations and deduplicates prospects', () {
-    final now = DateTime(2026, 10, 13, 12);
-    AgendaActivity activity(
-      int hour,
-      AgendaStatus status, {
-      String medium = 'llamada',
-      int? prospect = 7,
-    }) => AgendaActivity(
-      type: 'seguimiento',
-      medium: medium,
-      title: 'Seguimiento',
-      prospect: 'Ana',
-      prospectId: prospect,
-      description: '',
-      date: DateTime(2026, 10, 13, hour),
-      status: status,
-    );
-    final data = HomeDashboardData(
-      [
-        ProspectRecord(
-          id: 7,
-          name: 'Ana',
-          phone: '',
-          email: '',
-          status: 'Nuevo',
-          assignedAt: now,
-          temperature: '',
-          avatarColor: Colors.teal,
-          statusColor: Colors.orange,
-        ),
-      ],
-      [
-        activity(9, AgendaStatus.completed),
-        activity(10, AgendaStatus.overdue),
-        activity(15, AgendaStatus.pending),
-        activity(11, AgendaStatus.cancelled),
-        activity(16, AgendaStatus.pending, medium: 'whatsapp'),
-        activity(17, AgendaStatus.pending, prospect: null),
-      ],
-      now,
-    );
-    expect(data.completed, 1);
-    expect(data.pending, 3);
-    expect(data.overdueCalls.length, 1);
-    expect(data.todayProspects.length, 1);
-    expect(data.newProspects.single.id, 7);
-    expect(data.week[1].calls, 4);
-    expect(data.week[1].isSelected, isTrue);
-    expect(data.week.first.calls, 0);
-  });
+  test(
+    'Dashboard counts multichannel follow-ups and keeps call-only metrics',
+    () {
+      final now = DateTime(2026, 10, 13, 12);
+      AgendaActivity activity(
+        int hour,
+        AgendaStatus status, {
+        String medium = 'llamada',
+        int? prospect = 7,
+      }) => AgendaActivity(
+        type: 'seguimiento',
+        medium: medium,
+        title: 'Seguimiento',
+        prospect: 'Ana',
+        prospectId: prospect,
+        description: '',
+        date: DateTime(2026, 10, 13, hour),
+        status: status,
+      );
+      final data = HomeDashboardData(
+        [
+          ProspectRecord(
+            id: 7,
+            name: 'Ana',
+            phone: '',
+            email: '',
+            status: 'Nuevo',
+            assignedAt: now,
+            temperature: '',
+            avatarColor: Colors.teal,
+            statusColor: Colors.orange,
+          ),
+        ],
+        [
+          activity(9, AgendaStatus.completed),
+          activity(10, AgendaStatus.overdue),
+          activity(15, AgendaStatus.pending),
+          activity(11, AgendaStatus.cancelled),
+          activity(16, AgendaStatus.pending, medium: 'whatsapp'),
+          activity(17, AgendaStatus.pending, prospect: null),
+          activity(8, AgendaStatus.completed, medium: 'whatsapp'),
+          activity(14, AgendaStatus.pending, medium: 'facebook'),
+          activity(13, AgendaStatus.overdue, medium: 'correo'),
+          activity(12, AgendaStatus.pending, medium: 'visita'),
+        ],
+        now,
+      );
+      expect(data.completed, 2);
+      expect(data.pending, 6);
+      expect(data.followUpsToday.length, 9);
+      expect(data.overdueCalls.length, 1);
+      expect(data.todayProspects.length, 1);
+      expect(data.newProspects.single.id, 7);
+      expect(data.week[1].calls, 4);
+      expect(data.week[1].isSelected, isTrue);
+      expect(data.week.first.calls, 0);
+    },
+  );
 }

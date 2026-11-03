@@ -234,6 +234,14 @@ void main() {
     expect(NotificationService.prospectIdFromPayload(null), isNull);
   });
 
+  test('reads the prospect id from a call reminder payload', () {
+    expect(NotificationService.prospectIdFromPayload('callerapp:call:42'), 42);
+    expect(
+      NotificationService.prospectIdFromPayload('callerapp:call:'),
+      isNull,
+    );
+  });
+
   test('conserva el estado de leído al cerrar e iniciar sesión', () async {
     final database = AppDatabase(
       factory: databaseFactoryFfi,

@@ -89,6 +89,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   bool get _requiresCompletedCall =>
       widget.sourceActivity?.isFollowUp == true &&
+      widget.sourceActivity?.medium?.trim().toLowerCase() == 'llamada' &&
       !widget.telephoneCallCompleted;
 
   void _showCallRequiredNotice() => setState(() {
@@ -112,15 +113,19 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _activityDate = DateUtils.dateOnly(initial);
     _activityTime = TimeOfDay.fromDateTime(initial);
     _schedule = false;
-    if (widget.telephoneCallCompleted) {
-      final now = businessNow();
-      final hour = now.hour.toString().padLeft(2, '0');
-      final minute = now.minute.toString().padLeft(2, '0');
-      _notes.text = 'Llamada realizada a las $hour:$minute.';
-    }
     _completionAcknowledged = widget.prospect.id == null;
     _loadActivityContext();
     if (widget.readOnly) _loadSavedFollowUp();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProspectFollowUpForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.telephoneCallCompleted &&
+        widget.telephoneCallCompleted &&
+        widget.sourceActivity?.medium == null) {
+      _method = 'Llamada telefónica';
+    }
   }
 
   Future<void> _loadSavedFollowUp() async {
@@ -458,6 +463,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   Future<void> _saveFollowUp() async {
     if (_saving || _saved != null) return;
+    if (widget.telephoneCallCompleted && _notes.text.trim().isEmpty) {
+      setState(
+        () => _error = 'Escribe las notas de la interacción para guardar el seguimiento de la llamada.',
+      );
+      return;
+    }
     if (_loadingContext || _contextError != null) {
       setState(
         () => _error = 'No se pudo validar la actividad que será completada.',
@@ -896,6 +907,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               _label(
                 'Notas de la interacción',
                 TextField(
+                  key: const ValueKey('follow-up-notes'),
                   controller: _notes,
                   readOnly: widget.readOnly,
                   minLines: 2,

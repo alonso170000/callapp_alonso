@@ -401,7 +401,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         child: MetricSummaryCard(
                           onTap: () => widget.onAgenda(
                             _selectedDate,
-                            data.callsToday
+                            data.followUpsToday
                                 .where(
                                   (a) => a.status == AgendaStatus.completed,
                                 )
@@ -422,7 +422,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         child: MetricSummaryCard(
                           onTap: () => widget.onAgenda(
                             _selectedDate,
-                            data.callsToday
+                            data.followUpsToday
                                 .where(data.isOpen)
                                 .map((a) => a.id)
                                 .whereType<int>()

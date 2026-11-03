@@ -349,7 +349,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     historySurfaceInk: Color(0xFFEFD3FA),
     fieldErrorInk: Color(0xFF8B1116),
     errorSurfaceFill: Color.fromARGB(255, 124, 66, 73),
-    noticeSurfaceFill: Color(0xFF3A3320),
+    noticeSurfaceFill: Color.fromARGB(255, 74, 133, 100),
     noticeSurfaceInk: Color(0xFFFFE6A8),
     historyCardFill: Color(0xFF3D2551),
     historyCardInk: Color(0xFFEFD3FA),

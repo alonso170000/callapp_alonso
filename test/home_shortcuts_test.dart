@@ -114,13 +114,21 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Prospectos del día'), findsOneWidget);
         for (var metric = 0; metric < 2; metric++) {
+          final expectedActivityIds = metric == 0 ? {11} : {12, 14};
           final cards = tester
               .widgetList<MetricSummaryCard>(find.byType(MetricSummaryCard))
               .toList();
-          expect(cards[metric].metric.value, 1);
+          expect(cards[metric].metric.value, expectedActivityIds.length);
           cards[metric].onTap!();
           await tester.pumpAndSettle();
-          expect(find.text('MOSTRANDO 1 ACTIVIDAD'), findsOneWidget);
+          expect(
+            find.text(
+              expectedActivityIds.length == 1
+                  ? 'MOSTRANDO 1 ACTIVIDAD'
+                  : 'MOSTRANDO ${expectedActivityIds.length} ACTIVIDADES',
+            ),
+            findsOneWidget,
+          );
           expect(
             find.text(
               metric == 0
@@ -129,10 +137,9 @@ void main() {
             ),
             findsOneWidget,
           );
-          expect(
-            find.text('Actividad ${metric == 0 ? 11 : 12}'),
-            findsOneWidget,
-          );
+          for (final id in expectedActivityIds) {
+            expect(find.text('Actividad $id'), findsOneWidget);
+          }
           await tester.tap(find.bySemanticsLabel('Inicio').last);
           await tester.pumpAndSettle();
         }
@@ -159,7 +166,11 @@ void main() {
               .toSet();
           expect(expected.containsAll(shown), isTrue);
           expect(
-            find.text('MOSTRANDO ${expected.length} PROSPECTOS'),
+            find.text(
+              expected.length == 1
+                  ? 'MOSTRANDO 1 PROSPECTO'
+                  : 'MOSTRANDO ${expected.length} PROSPECTOS',
+            ),
             findsOneWidget,
           );
           final chip = tester.widget<InputChip>(find.byType(InputChip).first);

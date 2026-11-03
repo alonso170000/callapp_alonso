@@ -4,7 +4,7 @@ import 'agenda_models.dart';
 import 'home_models.dart';
 import 'prospect_models.dart';
 
-/// Counts scheduled calls; a follow-up through another medium is not a call.
+/// Builds the activity metrics shown on the home dashboard.
 class HomeDashboardData {
   HomeDashboardData(
     this.prospects,
@@ -19,6 +19,14 @@ class HomeDashboardData {
 
   bool isCall(AgendaActivity a) =>
       a.type == 'llamada' || (a.type == 'seguimiento' && a.medium == 'llamada');
+  bool isTrackedFollowUp(AgendaActivity a) {
+    final type = (a.type ?? a.title).trim().toLowerCase();
+    if (type == 'llamada') return true;
+    if (type != 'seguimiento') return false;
+    const trackedMedia = {'llamada', 'whatsapp', 'facebook', 'correo'};
+    return trackedMedia.contains(a.medium?.trim().toLowerCase());
+  }
+
   bool isOpen(AgendaActivity a) =>
       a.status == AgendaStatus.pending || a.status == AgendaStatus.overdue;
   bool isToday(DateTime date) => DateUtils.isSameDay(date, selectedDate);
@@ -33,9 +41,11 @@ class HomeDashboardData {
 
   List<AgendaActivity> get callsToday =>
       activities.where((a) => isCall(a) && isToday(a.date)).toList();
+  List<AgendaActivity> get followUpsToday =>
+      activities.where((a) => isTrackedFollowUp(a) && isToday(a.date)).toList();
   int get completed =>
-      callsToday.where((a) => a.status == AgendaStatus.completed).length;
-  int get pending => callsToday.where(isOpen).length;
+      followUpsToday.where((a) => a.status == AgendaStatus.completed).length;
+  int get pending => followUpsToday.where(isOpen).length;
   List<AgendaActivity> get overdueCalls =>
       activities
           .where((a) => isCall(a) && isOpen(a) && a.date.isBefore(cutoff))

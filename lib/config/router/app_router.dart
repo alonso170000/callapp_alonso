@@ -2,14 +2,12 @@ import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
-//go_conter sirve para navegar la navecion de la app
+
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/screens/auth/login_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/search_screen.dart';
 
-// usar go_router nos ayuda a nosotros no tengamos que hacer configuraciones especiales si queremos usarlo en la web
-// creamos la configuracion global del router y esto define como navegamos entre pantallas
 final appRouter = GoRouter(
   initialLocation: '/login',
   refreshListenable: AuthService.instance,
@@ -33,6 +31,7 @@ final appRouter = GoRouter(
             sourceActivity: arguments.sourceActivity,
             callStarted: arguments.callStarted,
             callSuccessful: arguments.callSuccessful,
+            callId: arguments.callId,
           );
         }
         if (state.extra is ProspectRecord) {

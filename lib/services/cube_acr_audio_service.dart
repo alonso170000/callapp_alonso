@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -85,6 +86,13 @@ class CubeAcrAudioService {
       'treeUri': treeUri,
     });
     if (raw == null) return const [];
+    return candidatesFromRaw(raw, call);
+  }
+
+  static List<CubeAcrAudioCandidate> candidatesFromRaw(
+    List<dynamic> raw,
+    ProspectCallSession call,
+  ) {
     final number = PhoneNumber.digits(call.phone);
     final suffix = number.length > 10
         ? number.substring(number.length - 10)
@@ -98,26 +106,56 @@ class CubeAcrAudioService {
       final uri = value['uri'];
       if (name is! String || uri is! String) continue;
       final match = RegExp(
-        r'^phone_(\d{8})-(\d{6})_(\d{7,15})\.amr$',
+        r'(\d{8})[-_](\d{6})',
         caseSensitive: false,
       ).firstMatch(name);
-      if (match == null) continue;
-      final recordedAt = _parseDate(match.group(1)!, match.group(2)!);
-      final recordedNumber = PhoneNumber.digits(match.group(3)!);
-      final recordedSuffix = recordedNumber.length > 10
-          ? recordedNumber.substring(recordedNumber.length - 10)
-          : recordedNumber;
-      if (recordedAt == null ||
-          recordedAt.isBefore(start) ||
-          recordedAt.isAfter(end)) {
-        continue;
-      }
-      if (suffix.isEmpty || suffix != recordedSuffix) continue;
+      final modifiedAtMs = value['modifiedAtMs'];
+      final fileNameRecordedAt = match == null
+          ? null
+          : _parseDate(match.group(1)!, match.group(2)!);
+      final modifiedAt = modifiedAtMs is int
+          ? DateTime.fromMillisecondsSinceEpoch(modifiedAtMs)
+          : modifiedAtMs is String
+          ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(modifiedAtMs) ?? 0)
+          : null;
+      final matchingTimes =
+          [fileNameRecordedAt, modifiedAt]
+              .whereType<DateTime>()
+              .where(
+                (date) =>
+                    date.millisecondsSinceEpoch != 0 &&
+                    !date.isBefore(start) &&
+                    !date.isAfter(end),
+              )
+              .toList()
+            ..sort(
+              (a, b) => a
+                  .difference(call.endedAt)
+                  .abs()
+                  .compareTo(b.difference(call.endedAt).abs()),
+            );
+      if (matchingTimes.isEmpty) continue;
+      final recordedAt = matchingTimes.first;
+      final recordedNumbers = RegExp(r'\d{7,15}')
+          .allMatches(name)
+          .map((match) => PhoneNumber.digits(match.group(0)!));
+      final hasPhoneInName = recordedNumbers.any((recordedNumber) {
+        final recordedSuffix = recordedNumber.length > 10
+            ? recordedNumber.substring(recordedNumber.length - 10)
+            : recordedNumber;
+        return suffix.isNotEmpty && suffix == recordedSuffix;
+      });
+      final hasNumberToken = RegExp(r'\d{7,15}').hasMatch(name);
+      if (hasNumberToken && !hasPhoneInName) continue;
       candidates.add(
         CubeAcrAudioCandidate(uri: uri, name: name, recordedAt: recordedAt),
       );
     }
-    candidates.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    candidates.sort((a, b) {
+      final aDistance = a.recordedAt.difference(call.endedAt).abs();
+      final bDistance = b.recordedAt.difference(call.endedAt).abs();
+      return aDistance.compareTo(bDistance);
+    });
     return candidates;
   }
 
@@ -137,13 +175,27 @@ class CubeAcrAudioService {
     return ImportedCallAudio(path: filePath, name: candidate.name);
   }
 
+  Future<ImportedCallAudio?> pickRecording() async {
+    final selected = await _channel.invokeMapMethod<String, dynamic>(
+      'pickRecording',
+    );
+    final uri = selected?['uri'];
+    final name = selected?['name'];
+    if (uri is! String || uri.isEmpty || name is! String || name.isEmpty) {
+      return null;
+    }
+    return copyToPrivate(
+      CubeAcrAudioCandidate(uri: uri, name: name, recordedAt: businessNow()),
+    );
+  }
+
   Future<void> remove(String? filePath) async {
     if (filePath == null || filePath.isEmpty) return;
     final file = File(filePath);
     if (await file.exists()) await file.delete();
   }
 
-  DateTime? _parseDate(String date, String time) {
+  static DateTime? _parseDate(String date, String time) {
     try {
       return DateTime(
         int.parse(date.substring(0, 4)),
