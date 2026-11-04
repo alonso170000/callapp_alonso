@@ -25,6 +25,7 @@ class AppColors {
   static const Color secondaryColor = Color.fromRGBO(172, 239, 226, 114);
   static const Color accentColor = Color.fromRGBO(248, 219, 157, 1);
   static const Color transparentColor = Color(0x00000000);
+  static const Color brandColor = Color.fromARGB(255, 103, 204, 255);
 
   static const Color backgroundColor = Color(0xFF121212);
   // Superficie base del tema oscuro; también da tono a las flechas de navegación.

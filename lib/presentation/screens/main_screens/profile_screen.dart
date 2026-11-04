@@ -277,20 +277,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        ProfileSection(
-          title: 'CONFIGURACIÓN',
-          children: [
-            ProfileSettingRow(
-              title: 'APARIENCIA',
-              value: AppearanceController.instance.appearance.label,
-              titleColor: AppColors.profileConfiguracion,
-              icon: Icons.dark_mode_outlined,
-              actionLabel: 'Apariencia',
-              onPressed: _chooseAppearance,
-            ),
-          ],
-        ),
+        // const SizedBox(height: 18),
+        // ProfileSection(
+        //   title: 'CONFIGURACIÓN',
+        //   children: [
+        //     ProfileSettingRow(
+        //       title: 'APARIENCIA',
+        //       value: AppearanceController.instance.appearance.label,
+        //       titleColor: AppColors.profileConfiguracion,
+        //       icon: Icons.dark_mode_outlined,
+        //       actionLabel: 'Apariencia',
+        //       onPressed: _chooseAppearance,
+        //     ),
+        //   ],
+        // ),
         const SizedBox(height: 18),
         ProfileSection(
           title: 'SINCRONIZACIÓN',

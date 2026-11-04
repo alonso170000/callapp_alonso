@@ -6,6 +6,7 @@ import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_filters_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
@@ -320,24 +321,34 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void _showActivity(AgendaActivity activity) {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (detailContext) => Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          body: SafeArea(
-            bottom: false,
-            child: AgendaActivityDetail(
-              activity: activity,
-              loadProspects: widget.loadProspects ?? _cachedProspects,
-              onClose: () => Navigator.pop(detailContext),
-              onMessage: () => _showActionMessage(
-                'Mensaje para ${activity.prospect}',
-                detailContext,
+        builder: (detailContext) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: AppColors.primaryColor,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          child: Scaffold(
+            backgroundColor: Theme.of(detailContext).colorScheme.surface,
+            body: ColoredBox(
+              color: AppColors.primaryColor,
+              child: SafeArea(
+                bottom: false,
+                child: AgendaActivityDetail(
+                  activity: activity,
+                  loadProspects: widget.loadProspects ?? _cachedProspects,
+                  onClose: () => Navigator.pop(detailContext),
+                  onMessage: () => _showActionMessage(
+                    'Mensaje para ${activity.prospect}',
+                    detailContext,
+                  ),
+                  onCall: () => _callActivity(activity, detailContext),
+                  onOpenProspect: () => _openProspect(activity, detailContext),
+                  onDelete: () => _deleteActivity(activity, detailContext),
+                  onEdit: () => _editActivity(activity, detailContext),
+                  onComplete: () => _completeActivity(activity, detailContext),
+                  onReschedule: () => _cancelActivity(activity, detailContext),
+                ),
               ),
-              onCall: () => _callActivity(activity, detailContext),
-              onOpenProspect: () => _openProspect(activity, detailContext),
-              onDelete: () => _deleteActivity(activity, detailContext),
-              onEdit: () => _editActivity(activity, detailContext),
-              onComplete: () => _completeActivity(activity, detailContext),
-              onReschedule: () => _cancelActivity(activity, detailContext),
             ),
           ),
         ),
@@ -902,14 +913,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Filtrar actividades',
-                      icon: Icon(
-                        _filters.active ? Icons.filter_alt : Icons.tune,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      onPressed: _showFilters,
-                    ),
-                    IconButton(
                       tooltip: 'Ir a hoy',
                       onPressed: () => setState(
                         () => _date = DateUtils.dateOnly(businessNow()),
@@ -918,6 +921,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         Iconsax.calendar_copy,
                         color: Theme.of(context).colorScheme.primary,
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Filtrar actividades',
+                      icon: Icon(
+                        _filters.active ? Icons.filter_alt : Icons.tune,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: _showFilters,
                     ),
                   ],
                 ),

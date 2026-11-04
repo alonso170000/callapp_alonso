@@ -411,11 +411,81 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     );
   }
 
+  Widget _header() => Stack(
+    children: [
+      Positioned.fill(
+        bottom: 44,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.primaryColor,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  tooltip: 'Cerrar detalle',
+                  onPressed: onClose,
+                  color: Colors.white,
+                  icon: const Icon(Icons.arrow_back_ios_new),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        activity.title,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'BebasNeue',
+                          fontSize: 25,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusColor,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          activity.status.label,
+                          style: const TextStyle(
+                            color: AppColors.textDarkColor,
+                            fontFamily: 'BebasNeue',
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _prospectCard(),
+          ],
+        ),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) => Material(
     color: Theme.of(context).colorScheme.surface,
     child: Column(
       children: [
+        _header(),
         Expanded(
           child: RefreshIndicator(
             notificationPredicate: (notification) =>
@@ -429,186 +499,108 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 parent: BouncingScrollPhysics(),
               ),
               padding: const EdgeInsets.only(bottom: 20),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 44,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryColor,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Column(
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Cerrar detalle',
-                                  onPressed: onClose,
-                                  color: Colors.white,
-                                  icon: const Icon(Icons.arrow_back_ios_new),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        activity.title,
-                                        textAlign: TextAlign.right,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontFamily: 'BebasNeue',
-                                          fontSize: 25,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 9,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _statusColor,
-                                          borderRadius: BorderRadius.circular(
-                                            3,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          activity.status.label,
-                                          style: const TextStyle(
-                                            color: AppColors.textDarkColor,
-                                            fontFamily: 'BebasNeue',
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            _prospectCard(),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 18),
-                        _sectionTitle('DETALLES DE LA ACTIVIDAD'),
-                        IntrinsicHeight(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _infoCard(
-                                  '${activity.date.day}',
-                                  'Fecha',
-                                  '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
-                                  AppColors.homeBlueSection,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _infoCard(
-                                  _time.split(' ').first,
-                                  'Hora',
-                                  _time.split(' ').last,
-                                  AppColors.homeYellowCard,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        IntrinsicHeight(
-                          child: Row(
-                            children: [
-                              if (_showLocation)
-                                Expanded(
-                                  child: _infoCard(
-                                    activity.location.toUpperCase(),
-                                    'Ubicación',
-                                    'Lugar de la actividad',
-                                    AppColors.homeOrangeSection,
-                                  ),
-                                ),
-                              if (_showLocation) const SizedBox(width: 10),
-                              Expanded(
-                                child: _infoCard(
-                                  activity.hasReminder
-                                      ? '${activity.reminderMinutes}'
-                                      : 'Sin recordatorio',
-                                  'Recordatorio',
-                                  activity.hasReminder
-                                      ? 'minutos antes'
-                                      : 'No programado',
-                                  AppColors.homeGreenCard,
-                                ),
-                              ),
-                              if (activity.isFollowUp) ...[
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _infoCard(
-                                    _mediumLabel,
-                                    'Medio',
-                                    'Canal de contacto',
-                                    AppColors.profileConfiguracion,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _sectionTitle('DESCRIPCIÓN DE LA ACTIVIDAD'),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryColor,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            activity.description,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'SulphurPoint',
-                              fontSize: 15,
-                              height: 1.35,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 18),
+                    _sectionTitle('DETALLES DE LA ACTIVIDAD'),
+                    IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _infoCard(
+                              '${activity.date.day}',
+                              'Fecha',
+                              '${_days[activity.date.weekday - 1]} · ${_months[activity.date.month - 1]} ${activity.date.year}',
+                              AppColors.homeBlueSection,
                             ),
                           ),
-                        ),
-                        if (activity.isFollowUp) ...[
-                          const SizedBox(height: 18),
-                          if (activity.prospectId != null)
-                            ProspectCommentsPanel(
-                              key: _commentsKey,
-                              prospectId: activity.prospectId!,
-                            )
-                          else
-                            const Text(
-                              'Esta actividad no tiene un prospecto asociado.',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _infoCard(
+                              _time.split(' ').first,
+                              'Hora',
+                              _time.split(' ').last,
+                              AppColors.homeYellowCard,
                             ),
+                          ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          if (_showLocation)
+                            Expanded(
+                              child: _infoCard(
+                                activity.location.toUpperCase(),
+                                'Ubicación',
+                                'Lugar de la actividad',
+                                AppColors.homeOrangeSection,
+                              ),
+                            ),
+                          if (_showLocation) const SizedBox(width: 10),
+                          Expanded(
+                            child: _infoCard(
+                              activity.hasReminder
+                                  ? '${activity.reminderMinutes}'
+                                  : 'Sin recordatorio',
+                              'Recordatorio',
+                              activity.hasReminder
+                                  ? 'minutos antes'
+                                  : 'No programado',
+                              AppColors.homeGreenCard,
+                            ),
+                          ),
+                          if (activity.isFollowUp) ...[
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _infoCard(
+                                _mediumLabel,
+                                'Medio',
+                                'Canal de contacto',
+                                AppColors.profileConfiguracion,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _sectionTitle('DESCRIPCIÓN DE LA ACTIVIDAD'),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        activity.description,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'SulphurPoint',
+                          fontSize: 15,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    if (activity.isFollowUp) ...[
+                      const SizedBox(height: 18),
+                      if (activity.prospectId != null)
+                        ProspectCommentsPanel(
+                          key: _commentsKey,
+                          prospectId: activity.prospectId!,
+                        )
+                      else
+                        const Text(
+                          'Esta actividad no tiene un prospecto asociado.',
+                        ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),

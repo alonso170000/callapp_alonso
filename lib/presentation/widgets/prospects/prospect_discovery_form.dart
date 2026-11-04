@@ -1178,7 +1178,12 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         .map(
                           (development) => DropdownMenuItem<int>(
                             value: development['id'] as int,
-                            child: Text(development['nombre'] as String),
+                            child: Text(
+                              development['nombre'] as String,
+                              style: const TextStyle(
+                                color: AppColors.discoveryFieldText,
+                              ),
+                            ),
                           ),
                         )
                         .toList(),

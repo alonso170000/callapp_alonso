@@ -28,6 +28,7 @@ import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -449,18 +450,29 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   void _openActivity(AgendaActivity activity) {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (detailContext) => Scaffold(
-          body: SafeArea(
-            bottom: false,
-            child: AgendaActivityDetail(
-              activity: activity,
-              onClose: () => Navigator.pop(detailContext),
-              onMessage: () {},
-              onCall: () {},
-              onOpenProspect: () => Navigator.pop(detailContext),
-              onEdit: () {},
-              onComplete: () {},
-              onReschedule: () {},
+        builder: (detailContext) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: AppColors.primaryColor,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          child: Scaffold(
+            backgroundColor: Theme.of(detailContext).colorScheme.surface,
+            body: ColoredBox(
+              color: AppColors.primaryColor,
+              child: SafeArea(
+                bottom: false,
+                child: AgendaActivityDetail(
+                  activity: activity,
+                  onClose: () => Navigator.pop(detailContext),
+                  onMessage: () {},
+                  onCall: () {},
+                  onOpenProspect: () => Navigator.pop(detailContext),
+                  onEdit: () {},
+                  onComplete: () {},
+                  onReschedule: () {},
+                ),
+              ),
             ),
           ),
         ),
@@ -513,230 +525,248 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       child: PopScope(
         canPop: !_requiresFollowUp,
         onPopInvokedWithResult: _handlePendingCallExit,
-        child: Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          bottomNavigationBar: _viewingCompletedFollowUp
-              ? null
-              : SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(30, 10, 30, 16),
-                    child: Row(
-                      children: [
-                        _actionButton(
-                          'Enviar correo',
-                          Iconsax.send_2_copy,
-                          _sendingEmail ? () {} : _openEmailOptions,
-                        ),
-                        const SizedBox(width: 7),
-                        _actionButton(
-                          'Datos de contacto',
-                          Iconsax.profile_tick_copy,
-                          _contact,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          flex: 2,
-                          child: SizedBox(
-                            height: 54,
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: palette.brandFill,
-                                foregroundColor: palette.onBrand,
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: palette.brandFill,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          child: Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            bottomNavigationBar: _viewingCompletedFollowUp
+                ? null
+                : SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(30, 10, 30, 16),
+                      child: Row(
+                        children: [
+                          _actionButton(
+                            'Enviar correo',
+                            Iconsax.send_2_copy,
+                            _sendingEmail ? () {} : _openEmailOptions,
+                          ),
+                          const SizedBox(width: 7),
+                          _actionButton(
+                            'Datos de contacto',
+                            Iconsax.profile_tick_copy,
+                            _contact,
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 54,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: palette.brandFill,
+                                  foregroundColor: palette.onBrand,
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                              ),
-                              onPressed: _calling ? null : _startCall,
-                              child: Semantics(
-                                label: 'Llamar a ${p.name}',
-                                button: true,
-                                enabled: !_calling,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    _calling
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
+                                onPressed: _calling ? null : _startCall,
+                                child: Semantics(
+                                  label: 'Llamar a ${p.name}',
+                                  button: true,
+                                  enabled: !_calling,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _calling
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Iconsax.call_calling,
+                                              size: 25,
                                             ),
-                                          )
-                                        : const Icon(
-                                            Iconsax.call_calling,
-                                            size: 25,
-                                          ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Llamar',
-                                      style: TextStyle(
-                                        fontFamily: 'SulphurPoint',
-                                        fontSize: 12,
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Llamar',
+                                        style: TextStyle(
+                                          fontFamily: 'SulphurPoint',
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 7),
-                        _actionButton(
-                          'Descartar prospecto',
-                          Iconsax.profile_delete_copy,
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'El descarte estará disponible al conectar el servicio.',
+                          const SizedBox(width: 7),
+                          _actionButton(
+                            'Descartar prospecto',
+                            Iconsax.profile_delete_copy,
+                            () => ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'El descarte estará disponible al conectar el servicio.',
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                if (callVerified)
-                  CallInProgressBar(
-                    name: activeCall!.prospect.name,
-                    elapsed: _callSession.elapsed,
-                    onFinish: _finishCall,
-                    onDiscard: () => _callSession.cancel(),
-                  ),
-                ProspectDetailHeader(
-                  prospect: p,
-                  selected: _selected,
-                  onToggle: _toggleSection,
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    notificationPredicate: (notification) =>
-                        p.id != null &&
-                        _commentsKey.currentState != null &&
-                        notification.depth == 0,
-                    onRefresh: () async {
-                      await _commentsKey.currentState?.refresh();
-                      await _loadEmails();
-                    },
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
+            body: ColoredBox(
+              color: palette.brandFill,
+              child: SafeArea(
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Column(
+                    children: [
+                      if (callVerified)
+                        CallInProgressBar(
+                          name: activeCall!.prospect.name,
+                          elapsed: _callSession.elapsed,
+                          onFinish: _finishCall,
+                          onDiscard: () => _callSession.cancel(),
+                        ),
+                      ProspectDetailHeader(
+                        prospect: p,
+                        selected: _selected,
+                        onToggle: _toggleSection,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          children: [
-                            _section(
-                              ProspectSection.followUp,
-                              ProspectFollowUpForm(
-                                key: ValueKey(
-                                  'follow-up-${p.id}-${widget.sourceActivity?.id}',
-                                ),
-                                prospect: p,
-                                telephoneCallCompleted: _telephoneCallCompleted,
-                                callInProgress: callVerified,
-                                llamadaId: _lastCallId,
-                                initialContactSuccess: _telephoneCallSuccessful,
-                                sourceActivity: widget.sourceActivity,
-                                loadActivities: widget.loadActivities,
-                                onOpenActivity: _openActivity,
-                                onSaved: (entry) {
-                                  unawaited(
-                                    NotificationService.instance
-                                        .cancelCallReminder(),
-                                  );
-                                  setState(() {
-                                    _history.insert(0, entry);
-                                    _telephoneCallCompleted = false;
-                                    _callRegistered = true;
-                                  });
-                                  _commentsKey.currentState?.refresh();
-                                },
-                                onProspectUpdated: (updated) =>
-                                    setState(() => _prospect = updated),
-                                readOnly: _viewingCompletedFollowUp,
-                              ),
-                              title: _viewingCompletedFollowUp
-                                  ? 'Seguimiento registrado'
-                                  : null,
+                      Expanded(
+                        child: RefreshIndicator(
+                          notificationPredicate: (notification) =>
+                              p.id != null &&
+                              _commentsKey.currentState != null &&
+                              notification.depth == 0,
+                          onRefresh: () async {
+                            await _commentsKey.currentState?.refresh();
+                            await _loadEmails();
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
                             ),
-                            _section(
-                              ProspectSection.discovery,
-                              ProspectDiscoveryForm(
-                                prospectId: p.id,
-                                prospect: p,
-                                readOnly: _viewingCompletedFollowUp,
-                                onSaved: (summary) =>
-                                    setState(() => _history.insert(0, summary)),
-                              ),
-                            ),
-                            _section(
-                              ProspectSection.scripts,
-                              Column(
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
                                 children: [
-                                  ProspectCallScripts(
-                                    script: demoAlanCallScript,
-                                    prospectName: p.name,
+                                  _section(
+                                    ProspectSection.followUp,
+                                    ProspectFollowUpForm(
+                                      key: ValueKey(
+                                        'follow-up-${p.id}-${widget.sourceActivity?.id}',
+                                      ),
+                                      prospect: p,
+                                      telephoneCallCompleted:
+                                          _telephoneCallCompleted,
+                                      callInProgress: callVerified,
+                                      llamadaId: _lastCallId,
+                                      initialContactSuccess:
+                                          _telephoneCallSuccessful,
+                                      sourceActivity: widget.sourceActivity,
+                                      loadActivities: widget.loadActivities,
+                                      onOpenActivity: _openActivity,
+                                      onSaved: (entry) {
+                                        unawaited(
+                                          NotificationService.instance
+                                              .cancelCallReminder(),
+                                        );
+                                        setState(() {
+                                          _history.insert(0, entry);
+                                          _telephoneCallCompleted = false;
+                                          _callRegistered = true;
+                                        });
+                                        _commentsKey.currentState?.refresh();
+                                      },
+                                      onProspectUpdated: (updated) =>
+                                          setState(() => _prospect = updated),
+                                      readOnly: _viewingCompletedFollowUp,
+                                    ),
+                                    title: _viewingCompletedFollowUp
+                                        ? 'Seguimiento registrado'
+                                        : null,
                                   ),
-                                  const SizedBox(height: 12),
-                                  ProspectFollowUpCallScript(
-                                    prospectName: p.name,
-                                    onContinue: () => setState(
-                                      () => _history.insert(
-                                        0,
-                                        'Guiones · Continuar al cierre',
+                                  _section(
+                                    ProspectSection.discovery,
+                                    ProspectDiscoveryForm(
+                                      prospectId: p.id,
+                                      prospect: p,
+                                      readOnly: _viewingCompletedFollowUp,
+                                      onSaved: (summary) => setState(
+                                        () => _history.insert(0, summary),
                                       ),
                                     ),
+                                  ),
+                                  _section(
+                                    ProspectSection.scripts,
+                                    Column(
+                                      children: [
+                                        ProspectCallScripts(
+                                          script: demoAlanCallScript,
+                                          prospectName: p.name,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ProspectFollowUpCallScript(
+                                          prospectName: p.name,
+                                          onContinue: () => setState(
+                                            () => _history.insert(
+                                              0,
+                                              'Guiones · Continuar al cierre',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  _section(
+                                    ProspectSection.data,
+                                    ProspectDataForm(
+                                      prospect: p,
+                                      readOnly: _viewingCompletedFollowUp,
+                                      onSaved: (summary) => setState(
+                                        () => _history.insert(0, summary),
+                                      ),
+                                    ),
+                                  ),
+                                  _section(
+                                    ProspectSection.history,
+                                    p.id != null
+                                        ? Column(
+                                            children: [
+                                              ProspectCommentsPanel(
+                                                key: _commentsKey,
+                                                prospectId: p.id!,
+                                              ),
+                                              const SizedBox(height: 10),
+                                              ProspectEmailHistoryPanel(
+                                                emails: _emails,
+                                                error: _emailError,
+                                                onRetry: _loadEmails,
+                                              ),
+                                            ],
+                                          )
+                                        : ProspectHistory(
+                                            comments:
+                                                demoProspectHistoryComments,
+                                            discoverySummary:
+                                                demoProspectDiscoverySummary,
+                                            emails: demoProspectEmailHistory,
+                                            callHours: demoProspectCallHours,
+                                            sessionEntries: _history,
+                                          ),
                                   ),
                                 ],
                               ),
                             ),
-                            _section(
-                              ProspectSection.data,
-                              ProspectDataForm(
-                                prospect: p,
-                                readOnly: _viewingCompletedFollowUp,
-                                onSaved: (summary) =>
-                                    setState(() => _history.insert(0, summary)),
-                              ),
-                            ),
-                            _section(
-                              ProspectSection.history,
-                              p.id != null
-                                  ? Column(
-                                      children: [
-                                        ProspectCommentsPanel(
-                                          key: _commentsKey,
-                                          prospectId: p.id!,
-                                        ),
-                                        const SizedBox(height: 10),
-                                        ProspectEmailHistoryPanel(
-                                          emails: _emails,
-                                          error: _emailError,
-                                          onRetry: _loadEmails,
-                                        ),
-                                      ],
-                                    )
-                                  : ProspectHistory(
-                                      comments: demoProspectHistoryComments,
-                                      discoverySummary:
-                                          demoProspectDiscoverySummary,
-                                      emails: demoProspectEmailHistory,
-                                      callHours: demoProspectCallHours,
-                                      sessionEntries: _history,
-                                    ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

@@ -562,7 +562,12 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         padding: const EdgeInsets.all(6),
                         child: Badge(
                           isLabelVisible: _advanced.summary.isNotEmpty,
-                          label: Text('${_advanced.summary.length}'),
+                          label: Text('${_advanced.summary.length}', style: TextStyle(
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 10,
+                            color: palette.textColor,
+                          ),),
+                          backgroundColor: AppColors.brandColor,
                           child: Semantics(
                             container: true,
                             value:

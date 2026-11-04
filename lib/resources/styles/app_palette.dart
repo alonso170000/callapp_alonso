@@ -9,6 +9,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.cardInk,
     required this.brandFill,
+    required this.navigationProspects,
     required this.onBrand,
     required this.selectedFill,
     required this.selectedForeground,
@@ -88,6 +89,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Relleno de marca (tarjetas y contenedores teal).
   final Color brandFill;
+  final Color navigationProspects;
   final Color onBrand;
 
   /// Día seleccionado en los selectores de fecha.
@@ -203,6 +205,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static const AppPalette light = AppPalette(
     cardInk: Colors.black,
     brandFill: AppColors.primaryColor,
+    navigationProspects: AppColors.homeBackground,
     onBrand: AppColors.accentColor,
     selectedFill: AppColors.primaryColor,
     selectedForeground: AppColors.homeBackground,
@@ -239,19 +242,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
     headerChipFill: Color(0xFF004F4B),
     headerChipForeground: Color(0xFFA9DCD3),
     headerForeground: AppColors.homeBackground,
-    insertFollowUpFill: Color(0xFF96E3F4),
+    insertFollowUpFill: Color.fromARGB(255, 20, 72, 85),
     chipFollowUp: Color(0xFF96E3F4),
     insertFollowUpInk: Colors.black,
-    insertDiscoveryFill: Color(0xFF95FF90),
+    insertDiscoveryFill: Color.fromARGB(255, 4, 99, 69),
     chipDiscovery: Color(0xFF8DE58A),
     insertDiscoveryInk: Colors.black,
-    insertScriptsFill: Color(0xFFFFF18A),
+    insertScriptsFill: Color.fromARGB(255, 72, 64, 2),
     chipScripts: Color(0xFFFFF18A),
     insertScriptsInk: Colors.black,
-    insertDataFill: Color(0xFFFF929C),
+    insertDataFill: Color.fromARGB(255, 130, 31, 39),
     chipData: Color(0xFFFF929C),
     insertDataInk: Colors.black,
-    insertHistoryFill: Color(0xFFCE82F3),
+    insertHistoryFill: Color.fromARGB(255, 77, 36, 97),
     chipHistory: Color.fromARGB(255, 225, 166, 255),
     insertHistoryInk: Colors.black,
     panelArrowFill: AppColors.whiteColor,
@@ -280,6 +283,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static const AppPalette dark = AppPalette(
     cardInk: Colors.black,
     brandFill: Color(0xFF0B4F48),
+    navigationProspects: AppColors.primaryColor,
     onBrand: AppColors.accentColor,
     selectedFill: Color(0xFF91E5D6),
     selectedForeground: Color(0xFF06211D),
@@ -365,6 +369,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   AppPalette copyWith({
     Color? cardInk,
     Color? brandFill,
+    Color? navigationProspects,
     Color? onBrand,
     Color? selectedFill,
     Color? selectedForeground,
@@ -440,6 +445,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   }) => AppPalette(
     cardInk: cardInk ?? this.cardInk,
     brandFill: brandFill ?? this.brandFill,
+    navigationProspects: navigationProspects ?? this.navigationProspects,
     onBrand: onBrand ?? this.onBrand,
     selectedFill: selectedFill ?? this.selectedFill,
     selectedForeground: selectedForeground ?? this.selectedForeground,
@@ -523,6 +529,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     return AppPalette(
       cardInk: mix(cardInk, other.cardInk),
       brandFill: mix(brandFill, other.brandFill),
+      navigationProspects: mix(navigationProspects, other.navigationProspects),
       onBrand: mix(onBrand, other.onBrand),
       selectedFill: mix(selectedFill, other.selectedFill),
       selectedForeground: mix(selectedForeground, other.selectedForeground),

@@ -108,6 +108,43 @@ void main() {
     expect(find.text('Canal de contacto'), findsOneWidget);
   });
 
+  testWidgets('Activity detail keeps its header fixed while content scrolls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaActivityDetail(
+            activity: _activity(businessNow()),
+            onClose: () {},
+            onMessage: () {},
+            onCall: () {},
+            onOpenProspect: () {},
+            onEdit: () {},
+            onComplete: () {},
+            onReschedule: () {},
+          ),
+        ),
+      ),
+    );
+
+    final closeButton = find.byTooltip('Cerrar detalle');
+    final initialTop = tester.getTopLeft(closeButton).dy;
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -250),
+    );
+    await tester.pump();
+
+    expect(tester.getTopLeft(closeButton).dy, initialTop);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Completed follow-up opens the saved follow-up detail', (
     tester,
   ) async {

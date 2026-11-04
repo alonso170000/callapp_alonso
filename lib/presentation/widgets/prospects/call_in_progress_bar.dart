@@ -82,13 +82,13 @@ class CallInProgressBar extends StatelessWidget {
                 IconButton(
                   tooltip: 'Volver a la llamada',
                   onPressed: onReturn,
-                  icon: const Icon(Icons.open_in_new),
+                  icon: const Icon(Icons.open_in_new, color: Colors.white),
                 ),
               if (onDiscard != null)
                 IconButton(
                   tooltip: 'Descartar llamada',
                   onPressed: () => _confirmDiscard(context),
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete_outline, color: Colors.white),
                 ),
               FilledButton.tonalIcon(
                 onPressed: onFinish,

@@ -90,12 +90,12 @@ const demoProspectDiscoverySummary = ProspectDiscoverySummary(
 
 final demoProspectEmailHistory = <ProspectEmailHistoryEntry>[
   ProspectEmailHistoryEntry(
-    templateName: 'RUNASecondEmail',
+    templateName: 'SEGUNDO EMAIL',
     description: 'Segundo Correo Runa Yucatán enviado',
     sentAt: DateTime(2026, 9, 15, 17, 25),
   ),
   ProspectEmailHistoryEntry(
-    templateName: 'WelcomeEmail',
+    templateName: 'EMAIL DE BIENVENIDA',
     description: 'Correo de Bienvenida enviado',
     sentAt: DateTime(2026, 9, 15, 17, 24),
   ),
