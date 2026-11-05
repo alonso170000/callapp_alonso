@@ -37,6 +37,9 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     text: widget.prospect.occupation,
   );
   late final _origin = TextEditingController(text: widget.prospect.origin);
+  late final _comment = TextEditingController(
+    text: widget.prospect.comments ?? '',
+  );
   Map<String, String>? _saved;
   int? _savedDevelopmentId, _savedLotId;
   late final ProspectsService _service;
@@ -89,6 +92,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _company,
     _occupation,
     _origin,
+    _comment,
   ];
 
   @override
@@ -120,6 +124,8 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     bool readOnly = false,
+    int maxLines = 1,
+    Key? fieldKey,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Column(
@@ -134,11 +140,13 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         ),
         const SizedBox(height: 3),
         TextFormField(
+          key: fieldKey,
           controller: controller,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
           readOnly: readOnly || widget.readOnly,
+          maxLines: maxLines,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: _decoration(),
         ),
@@ -201,6 +209,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _company.text = _saved?['company'] ?? widget.prospect.company;
     _occupation.text = _saved?['occupation'] ?? widget.prospect.occupation;
     _origin.text = _saved?['origin'] ?? widget.prospect.origin;
+    _comment.text = _saved?['comment'] ?? widget.prospect.comments ?? '';
     _developmentId =
         _savedDevelopmentId ?? widget.prospect.interestDevelopmentId;
     _lotId = _savedLotId ?? widget.prospect.interestLotId;
@@ -237,7 +246,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         'canal_id': widget.prospect.channelId,
         'estatus_id': widget.prospect.statusId,
         'campania_id': widget.prospect.campaignId,
-        'comentario': widget.prospect.comments,
+        'comentario': _comment.text.trim(),
         if (qualification.isNotEmpty) 'calificacion': qualification,
         'desarrollo_interes_id': _developmentId,
         'lote_id': _lotId,
@@ -249,6 +258,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         email: _email.text.trim(),
         company: _company.text.trim(),
         occupation: _occupation.text.trim(),
+        comments: _comment.text.trim(),
         interestDevelopmentId: _developmentId,
         interestLotId: _lotId,
       );
@@ -271,6 +281,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         'company': _company.text.trim(),
         'occupation': _occupation.text.trim(),
         'origin': _origin.text.trim(),
+        'comment': _comment.text.trim(),
       };
       _savedDevelopmentId = _developmentId;
       _savedLotId = _lotId;
@@ -337,6 +348,12 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
             validator: (value) => value == null || value.trim().isEmpty
                 ? 'El origen es obligatorio'
                 : null,
+          ),
+          _field(
+            'Comentario',
+            _comment,
+            maxLines: 3,
+            fieldKey: const Key('prospect_comment_field'),
           ),
           if (_loading) const LinearProgressIndicator(),
           _dropdown(

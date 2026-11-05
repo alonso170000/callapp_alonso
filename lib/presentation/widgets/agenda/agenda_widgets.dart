@@ -6,4 +6,5 @@ export 'agenda_activity_tile.dart';
 export 'agenda_activity_detail.dart';
 export 'agenda_week_selector.dart';
 export 'agenda_month_calendar.dart';
+export 'agenda_prospect_selector.dart';
 export 'new_agenda_activity_dialog.dart';

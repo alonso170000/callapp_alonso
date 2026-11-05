@@ -50,7 +50,7 @@ class CallInProgressBar extends StatelessWidget {
     final palette = AppPalette.of(context);
     final gap = AppStyles.spacingSmall(context);
     return Material(
-      color: palette.brandFill,
+      color: palette.callbar,
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -82,18 +82,22 @@ class CallInProgressBar extends StatelessWidget {
                 IconButton(
                   tooltip: 'Volver a la llamada',
                   onPressed: onReturn,
-                  icon: const Icon(Icons.open_in_new, color: Colors.white),
+                  icon: Icon(Icons.open_in_new, color: palette.onBrand),
                 ),
               if (onDiscard != null)
                 IconButton(
                   tooltip: 'Descartar llamada',
                   onPressed: () => _confirmDiscard(context),
-                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                  icon: Icon(Icons.delete_outline, color: palette.onBrand),
                 ),
               FilledButton.tonalIcon(
                 onPressed: onFinish,
                 icon: const Icon(Icons.call_end),
-                label: const Text('FINALIZAR'),
+                label: const Text('FINALIZAR', style: TextStyle(fontFamily: 'BebasNeue')),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 246, 37, 22),
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ),

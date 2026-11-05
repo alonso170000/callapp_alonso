@@ -5,6 +5,7 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_prospect_selector.dart';
 import 'package:flutter/material.dart';
 
 class NewAgendaActivityDialog extends StatefulWidget {
@@ -319,17 +320,31 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                             style: TextStyle(fontFamily: 'SulphurPoint'),
                           ),
                         ),
-                      _AgendaDropdown<int>(
-                        label: _type == 'tarea'
+                      _FieldLabel(
+                        _type == 'tarea'
                             ? 'Prospecto (opcional)'
                             : 'Prospecto*',
+                      ),
+                      AgendaProspectSelector<int>(
+                        key: const ValueKey('new-activity-prospect-selector'),
                         value: _prospect,
-                        items: {
-                          0,
-                          if (_prospect != 0) _prospect,
-                          ..._prospects.map((p) => p.id!),
-                        }.toList(),
-                        itemLabel: _prospectLabel,
+                        options: [
+                          const AgendaProspectOption(
+                            value: 0,
+                            label: 'Sin prospecto',
+                          ),
+                          if (_prospect != 0 &&
+                              !_prospects.any((p) => p.id == _prospect))
+                            AgendaProspectOption(
+                              value: _prospect,
+                              label: _prospectLabel(_prospect),
+                            ),
+                          for (final prospect in _prospects)
+                            AgendaProspectOption(
+                              value: prospect.id!,
+                              label: prospect.name,
+                            ),
+                        ],
                         validator: (id) =>
                             _type != 'tarea' && (id == null || id == 0)
                             ? 'Selecciona un prospecto'

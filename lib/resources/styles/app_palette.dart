@@ -9,6 +9,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.cardInk,
     required this.brandFill,
+    required this.callbar,
     required this.navigationProspects,
     required this.onBrand,
     required this.selectedFill,
@@ -89,6 +90,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Relleno de marca (tarjetas y contenedores teal).
   final Color brandFill;
+  final Color callbar;
   final Color navigationProspects;
   final Color onBrand;
 
@@ -205,6 +207,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static const AppPalette light = AppPalette(
     cardInk: Colors.black,
     brandFill: AppColors.primaryColor,
+    callbar: Color.fromARGB(255, 159, 11, 0),
     navigationProspects: AppColors.homeBackground,
     onBrand: AppColors.accentColor,
     selectedFill: AppColors.primaryColor,
@@ -283,6 +286,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static const AppPalette dark = AppPalette(
     cardInk: Colors.black,
     brandFill: Color(0xFF0B4F48),
+    callbar: AppColors.primaryColor,
     navigationProspects: AppColors.primaryColor,
     onBrand: AppColors.accentColor,
     selectedFill: Color(0xFF91E5D6),
@@ -369,6 +373,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   AppPalette copyWith({
     Color? cardInk,
     Color? brandFill,
+    Color? callbar,
     Color? navigationProspects,
     Color? onBrand,
     Color? selectedFill,
@@ -445,6 +450,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   }) => AppPalette(
     cardInk: cardInk ?? this.cardInk,
     brandFill: brandFill ?? this.brandFill,
+    callbar: callbar ?? this.callbar,
     navigationProspects: navigationProspects ?? this.navigationProspects,
     onBrand: onBrand ?? this.onBrand,
     selectedFill: selectedFill ?? this.selectedFill,
@@ -529,6 +535,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     return AppPalette(
       cardInk: mix(cardInk, other.cardInk),
       brandFill: mix(brandFill, other.brandFill),
+      callbar: mix(callbar, other.callbar),
       navigationProspects: mix(navigationProspects, other.navigationProspects),
       onBrand: mix(onBrand, other.onBrand),
       selectedFill: mix(selectedFill, other.selectedFill),

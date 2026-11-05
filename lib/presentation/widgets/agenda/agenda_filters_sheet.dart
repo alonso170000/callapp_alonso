@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
-import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_prospect_selector.dart';
 
 class AgendaFiltersSheet extends StatefulWidget {
   final AgendaFilters initial;
@@ -69,7 +69,6 @@ class _AgendaFiltersSheetState extends State<AgendaFiltersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     return SafeArea(
       top: false,
       child: Padding(
@@ -127,41 +126,18 @@ class _AgendaFiltersSheetState extends State<AgendaFiltersSheet> {
                             : _draft.statuses.remove(entry.key),
                       ),
                     _heading('Prospecto'),
-                    DropdownButtonFormField<String>(
+                    AgendaProspectSelector<String>(
                       key: ValueKey(_draft.prospect),
-                      initialValue: _draft.prospect ?? '',
-                      isExpanded: true,
-                      dropdownColor: palette.brandFill,
-                      iconEnabledColor: palette.onBrand,
-                      style: TextStyle(
-                        fontFamily: 'SulphurPoint',
-                        fontSize: 18,
-                        color: palette.onBrand,
-                      ),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: palette.brandFill,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        border: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(9)),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
+                      value: _draft.prospect ?? '',
+                      options: [
+                        const AgendaProspectOption(
                           value: '',
-                          child: Text('Todos los prospectos'),
+                          label: 'Todos los prospectos',
                         ),
                         for (final prospect in widget.prospects)
-                          DropdownMenuItem(
+                          AgendaProspectOption(
                             value: prospect,
-                            child: Text(
-                              prospect,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            label: prospect,
                           ),
                       ],
                       onChanged: (value) => setState(

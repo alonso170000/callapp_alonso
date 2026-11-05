@@ -115,6 +115,10 @@ void main() {
           if (type != 'Tarea') {
             await tester.tap(find.text('Sin prospecto'));
             await tester.pumpAndSettle();
+            final search = find.byKey(const ValueKey('agenda-prospect-search'));
+            expect(search, findsOneWidget);
+            await tester.enterText(search, 'an');
+            await tester.pumpAndSettle();
             await tester.tap(find.text('Ana').last);
             await tester.pumpAndSettle();
           }

@@ -455,6 +455,11 @@ void main() {
       expect(find.text('Ocupación'), findsOneWidget);
       expect(find.text('Origen del prospecto'), findsOneWidget);
       expect(find.text('Campaña FB'), findsOneWidget);
+      expect(find.text('Comentario'), findsOneWidget);
+      final commentField = find.byKey(const Key('prospect_comment_field'));
+      expect(commentField, findsOneWidget);
+      await tester.enterText(commentField, 'Comentario actualizado');
+      expect(find.text('Comentario actualizado'), findsOneWidget);
       final historyPanelTitle = find.text('Historial').last;
       await tester.ensureVisible(historyPanelTitle);
       await tester.pumpAndSettle();

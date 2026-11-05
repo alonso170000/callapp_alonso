@@ -45,6 +45,19 @@ void main() {
       await tester.tap(find.byTooltip('Filtrar actividades'));
       await tester.pumpAndSettle();
       expect(find.text('VER 3 RESULTADOS'), findsOneWidget);
+      await tester.tap(find.text('Todos los prospectos'));
+      await tester.pumpAndSettle();
+      final prospectSearch = find.byKey(
+        const ValueKey('agenda-prospect-search'),
+      );
+      expect(prospectSearch, findsOneWidget);
+      await tester.enterText(prospectSearch, 'prospecto inexistente');
+      await tester.pumpAndSettle();
+      expect(find.text('No se encontraron prospectos'), findsOneWidget);
+      await tester.tap(find.byTooltip('Limpiar búsqueda'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Todos los prospectos').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(CheckboxListTile, 'Seguimiento'));
       await tester.pumpAndSettle();
       expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
