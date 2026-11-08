@@ -562,11 +562,14 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         padding: const EdgeInsets.all(6),
                         child: Badge(
                           isLabelVisible: _advanced.summary.isNotEmpty,
-                          label: Text('${_advanced.summary.length}', style: TextStyle(
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 10,
-                            color: palette.textColor,
-                          ),),
+                          label: Text(
+                            '${_advanced.summary.length}',
+                            style: TextStyle(
+                              fontFamily: 'SulphurPoint',
+                              fontSize: 10,
+                              color: palette.textColor,
+                            ),
+                          ),
                           backgroundColor: AppColors.brandColor,
                           child: Semantics(
                             container: true,
@@ -590,80 +593,88 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: _statuses
-                        .map(
-                          (filter) => ChoiceChip(
-                            label: Text(filter),
-                            selected: filter == 'Todos'
-                                ? _advanced.status == null
-                                : ProspectSearch.normalize(
-                                        _advanced.status ?? '',
-                                      ) ==
-                                      ProspectSearch.normalize(filter),
-                            showCheckmark: false,
-                            onSelected: (_) => setState(() {
-                              _advanced.status = filter == 'Todos'
-                                  ? null
-                                  : filter;
-                            }),
-                            selectedColor: palette.chipSelectedFill,
-                            backgroundColor: palette.chipFill,
-                            side: BorderSide.none,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
+                  SingleChildScrollView(
+                    key: const ValueKey('prospect-status-filters'),
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 6,
+                      children: _statuses
+                          .map(
+                            (filter) => ChoiceChip(
+                              label: Text(filter),
+                              selected: filter == 'Todos'
+                                  ? _advanced.status == null
+                                  : ProspectSearch.normalize(
+                                          _advanced.status ?? '',
+                                        ) ==
+                                        ProspectSearch.normalize(filter),
+                              showCheckmark: false,
+                              onSelected: (_) => setState(() {
+                                _advanced.status = filter == 'Todos'
+                                    ? null
+                                    : filter;
+                              }),
+                              selectedColor: palette.chipSelectedFill,
+                              backgroundColor: palette.chipFill,
+                              side: BorderSide.none,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                              labelPadding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                              ),
+                              labelStyle: TextStyle(
+                                fontFamily: 'SulphurPoint',
+                                fontSize: 12,
+                                color:
+                                    (filter == 'Todos'
+                                        ? _advanced.status == null
+                                        : ProspectSearch.normalize(
+                                                _advanced.status ?? '',
+                                              ) ==
+                                              ProspectSearch.normalize(filter))
+                                    ? palette.chipSelectedForeground
+                                    : palette.chipForeground,
+                              ),
                             ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                            labelPadding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                            ),
-                            labelStyle: TextStyle(
-                              fontFamily: 'SulphurPoint',
-                              fontSize: 12,
-                              color:
-                                  (filter == 'Todos'
-                                      ? _advanced.status == null
-                                      : ProspectSearch.normalize(
-                                              _advanced.status ?? '',
-                                            ) ==
-                                            ProspectSearch.normalize(filter))
-                                  ? palette.chipSelectedForeground
-                                  : palette.chipForeground,
-                            ),
-                          ),
-                        )
-                        .toList(),
+                          )
+                          .toList(),
+                    ),
                   ),
                   if (_advanced.isSellerPreset || _advanced.summary.isNotEmpty)
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        if (_advanced.isSellerPreset)
-                          InputChip(
-                            label: const Text('Por atender'),
-                            deleteIcon: const Icon(Icons.close_rounded),
-                            onDeleted: () => setState(
-                              () => _advanced = ProspectFilters.all(),
-                            ),
-                          ),
-                        if (!_advanced.isSellerPreset)
-                          ..._advanced.summary.map(
-                            (filter) => InputChip(
-                              label: Text(filter.label),
+                    SingleChildScrollView(
+                      key: const ValueKey('prospect-active-filters'),
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 6,
+                        children: [
+                          if (_advanced.isSellerPreset)
+                            InputChip(
+                              label: const Text('Por atender'),
                               deleteIcon: const Icon(Icons.close_rounded),
                               onDeleted: () => setState(
-                                () => _advanced = _advanced.clearGroup(
-                                  filter.group,
+                                () => _advanced = ProspectFilters.all(),
+                              ),
+                            ),
+                          if (!_advanced.isSellerPreset)
+                            ..._advanced.summary.map(
+                              (filter) => InputChip(
+                                label: Text(filter.label),
+                                deleteIcon: const Icon(Icons.close_rounded),
+                                onDeleted: () => setState(
+                                  () => _advanced = _advanced.clearGroup(
+                                    filter.group,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 12),
                   Wrap(

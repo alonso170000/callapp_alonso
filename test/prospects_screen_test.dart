@@ -45,6 +45,17 @@ void main() {
       final count = demoProspects.where((p) => filters.matches(p, now)).length;
       expect(find.text('MOSTRANDO $count PROSPECTOS'), findsOneWidget);
       expect(find.widgetWithText(InputChip, 'Por atender'), findsOneWidget);
+      final activeFiltersScroller = tester.widget<SingleChildScrollView>(
+        find.byKey(const ValueKey('prospect-active-filters')),
+      );
+      expect(activeFiltersScroller.scrollDirection, Axis.horizontal);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('prospect-active-filters')),
+          matching: find.byType(Wrap),
+        ),
+        findsNothing,
+      );
       await tester.tap(
         find.descendant(
           of: find.widgetWithText(InputChip, 'Por atender'),
@@ -74,6 +85,17 @@ void main() {
 
   testWidgets('Status filters and empty state can be reset', (tester) async {
     await openProspects(tester);
+    final statusScroller = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey('prospect-status-filters')),
+    );
+    expect(statusScroller.scrollDirection, Axis.horizontal);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('prospect-status-filters')),
+        matching: find.byType(Wrap),
+      ),
+      findsNothing,
+    );
     await tester.enterText(find.byType(TextField), 'sin coincidencias');
     await tester.pumpAndSettle();
     expect(find.text('No hay prospectos con estos filtros'), findsOneWidget);
@@ -84,6 +106,8 @@ void main() {
         .where((p) => ProspectFilters.all().matches(p, now))
         .length;
     expect(find.text('MOSTRANDO $defaultCount PROSPECTOS'), findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Nuevo'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
     await tester.pumpAndSettle();
     expect(find.text('JUAN UCH'), findsOneWidget);
@@ -117,6 +141,8 @@ void main() {
     tester,
   ) async {
     await openProspects(tester);
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Nuevo'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Nuevo'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Filtrar prospectos'));
@@ -128,6 +154,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Estatus: Nuevo'), findsOneWidget);
     expect(find.text('Asignación: Últimos 7 días'), findsOneWidget);
+    final activeFiltersScroller = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey('prospect-active-filters')),
+    );
+    expect(activeFiltersScroller.scrollDirection, Axis.horizontal);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('prospect-active-filters')),
+        matching: find.byType(Wrap),
+      ),
+      findsNothing,
+    );
+    await tester.ensureVisible(
+      find.widgetWithText(InputChip, 'Asignación: Últimos 7 días'),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
         of: find.widgetWithText(InputChip, 'Asignación: Últimos 7 días'),

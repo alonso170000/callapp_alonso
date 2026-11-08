@@ -642,7 +642,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                         onPressed: _saving
                             ? null
                             : () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
+                        child: Text('Cancelar', style: TextStyle(fontSize: 18)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -660,7 +660,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                           ),
                           textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                         ),
-                        child: Text(_saving ? 'Guardando…' : 'Guardar'),
+                        child: Text(_saving ? 'Guardando…' : 'Guardar', style: TextStyle(fontSize: 18)),
                       ),
                     ),
                   ],
