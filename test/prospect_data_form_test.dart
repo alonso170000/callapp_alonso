@@ -11,6 +11,58 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  testWidgets(
+    'guarda teléfono normalizado y notifica el prospecto actualizado',
+    (tester) async {
+      final auth = AuthService(
+        client: MockClient(
+          (_) async => http.Response(
+            '{"status":"success","token":"test","usuario":{"id":3},"desarrollo_activo":{"id":4}}',
+            200,
+          ),
+        ),
+      );
+      await auth.login('agente', 'password');
+      final service = _CapturingProspectsService(auth: auth);
+      ProspectRecord? updated;
+      final prospect = demoProspects[1].copyWith(
+        id: 10,
+        channelId: 9,
+        statusId: 1,
+        interestDevelopmentId: 4,
+        interestDevelopment: 'Runa',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProspectDataForm(
+                prospect: prospect,
+                onSaved: (_) {},
+                onProspectUpdated: (value) => updated = value,
+                prospectsService: service,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('prospect_phone_field')),
+        '+52 (998) 123-4567',
+      );
+      final save = find.widgetWithText(FilledButton, 'GUARDAR');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      expect(service.updatedFields?['telefono_normalizado'], '529981234567');
+      expect(updated?.phone, '529981234567');
+    },
+  );
+
   testWidgets('edición carga desarrollo y lotes cacheados sin red', (
     tester,
   ) async {
@@ -72,6 +124,34 @@ void main() {
     expect(find.text('Lote 23'), findsOneWidget);
     expect(find.text('Sin conexión'), findsNothing);
   });
+}
+
+class _CapturingProspectsService extends ProspectsService {
+  _CapturingProspectsService({required super.auth});
+
+  Map<String, dynamic>? updatedFields;
+
+  @override
+  Future<List<Map<String, dynamic>>> availableDevelopments() async => const [
+    {'id': 4, 'nombre': 'Runa'},
+  ];
+
+  @override
+  Future<List<Map<String, dynamic>>> availableLots([
+    int? developmentId,
+  ]) async => const [];
+
+  @override
+  Future<void> update(
+    int prospectId,
+    Map<String, dynamic> fields, {
+    String? operationKey,
+  }) async {
+    updatedFields = Map<String, dynamic>.from(fields);
+  }
+
+  @override
+  void dispose() {}
 }
 
 class _OfflineInterestsService extends ProspectsService {

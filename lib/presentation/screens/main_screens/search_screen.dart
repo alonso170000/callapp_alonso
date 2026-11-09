@@ -210,7 +210,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _focusNode.requestFocus();
   }
 
-  void _openProspect(ProspectRecord prospect) {
+  Future<void> _openProspect(ProspectRecord prospect) async {
     unawaited(_rememberCurrentQuery(prospect: prospect));
     final callback = widget.onOpenProspect;
     if (callback != null) {
@@ -220,10 +220,11 @@ class _SearchScreenState extends State<SearchScreen> {
     final identifier = prospect.phone.trim().isEmpty
         ? 'id-${prospect.id}'
         : prospect.phone.trim();
-    context.push(
+    await context.push(
       '/prospectos/${Uri.encodeComponent(identifier)}',
       extra: prospect,
     );
+    if (mounted) await _load();
   }
 
   void _close() {

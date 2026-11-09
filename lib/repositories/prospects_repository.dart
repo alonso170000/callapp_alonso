@@ -66,6 +66,14 @@ class ProspectsRepository {
 
   Future<List<ProspectRecord>> readCache() => _cache.read(scope);
 
+  Future<ProspectRecord?> cachedById(int id) async {
+    final prospects = await _cache.read(scope);
+    for (final prospect in prospects) {
+      if (prospect.id == id) return prospect;
+    }
+    return null;
+  }
+
   /// Momento de la última actualización confirmada de la caché del ámbito.
   Future<DateTime?> cachedAt() => _cache.cachedAt(scope);
 

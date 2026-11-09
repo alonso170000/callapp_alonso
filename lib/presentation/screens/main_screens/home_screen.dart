@@ -140,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .showSnackBar(SnackBar(content: Text(result.message)));
     if (result.success && mounted) {
       final prospect = result.prospect ?? active.prospect;
-      context.push(
+      await context.push(
         '/prospectos/${Uri.encodeComponent(prospect.phone)}',
         extra: ProspectDetailArguments(
           prospect: prospect,
@@ -149,16 +149,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           callId: result.callId,
         ),
       );
+      if (mounted) _refreshSyncedViews();
     }
   }
 
-  void _returnToCall() {
+  Future<void> _returnToCall() async {
     final active = _callSession.activeCall;
     if (active == null) return;
-    context.push(
+    await context.push(
       '/prospectos/${Uri.encodeComponent(active.prospect.phone)}',
       extra: ProspectDetailArguments(prospect: active.prospect),
     );
+    if (mounted) _refreshSyncedViews();
   }
 
   @override

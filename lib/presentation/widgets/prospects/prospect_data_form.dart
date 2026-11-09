@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectDataForm extends StatefulWidget {
@@ -12,6 +13,7 @@ class ProspectDataForm extends StatefulWidget {
   final ProspectsService? prospectsService;
   final ProspectsRepository? repository;
   final bool readOnly;
+  final ValueChanged<ProspectRecord>? onProspectUpdated;
 
   const ProspectDataForm({
     super.key,
@@ -20,6 +22,7 @@ class ProspectDataForm extends StatefulWidget {
     this.prospectsService,
     this.repository,
     this.readOnly = false,
+    this.onProspectUpdated,
   });
 
   @override
@@ -239,7 +242,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       final fields = <String, dynamic>{
         'nombre': _name.text.trim(),
         'ciudad': _city.text.trim(),
-        'telefono_normalizado': _phone.text.replaceAll(RegExp(r'\D'), ''),
+        'telefono_normalizado': PhoneNumber.digits(_phone.text),
         'correo': _email.text.trim(),
         'nombre_compania': _company.text.trim(),
         'ocupacion': _occupation.text.trim(),
@@ -251,16 +254,34 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         'desarrollo_interes_id': _developmentId,
         'lote_id': _lotId,
       };
+      final development = _developments
+          .cast<Map<String, dynamic>?>()
+          .firstWhere(
+            (item) => item?['id'] == _developmentId,
+            orElse: () => null,
+          );
+      final lot = _lots.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['id'] == _lotId,
+        orElse: () => null,
+      );
       final optimistic = widget.prospect.copyWith(
         name: _name.text.trim(),
         city: _city.text.trim(),
-        phone: _phone.text.trim(),
+        phone: PhoneNumber.digits(_phone.text),
         email: _email.text.trim(),
         company: _company.text.trim(),
         occupation: _occupation.text.trim(),
         comments: _comment.text.trim(),
         interestDevelopmentId: _developmentId,
+        interestDevelopment:
+            development?['nombre']?.toString() ??
+            widget.prospect.interestDevelopment,
         interestLotId: _lotId,
+        interestLot: _lotId == null
+            ? 'Sin lote seleccionado'
+            : lot?['numero_lote'] == null
+            ? widget.prospect.interestLot
+            : 'Lote ${lot!['numero_lote']}',
       );
       final result =
           widget.repository == null && widget.prospectsService != null
@@ -286,6 +307,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       _savedDevelopmentId = _developmentId;
       _savedLotId = _lotId;
       if (!mounted) return;
+      widget.onProspectUpdated?.call(result?.prospect ?? optimistic);
       widget.onSaved('Prospecto · Datos actualizados');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -325,6 +347,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           _field(
             'Teléfono',
             _phone,
+            fieldKey: const Key('prospect_phone_field'),
             keyboardType: TextInputType.phone,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d+\s()-]')),

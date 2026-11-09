@@ -21,6 +21,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_contact_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -57,6 +58,7 @@ class ProspectDetailScreen extends StatefulWidget {
   final bool callSuccessful;
   final int? callId;
   final Future<void> Function(ProspectRecord)? showCallReminder;
+  final ProspectsRepository? prospectsRepository;
   const ProspectDetailScreen({
     super.key,
     required this.prospect,
@@ -68,6 +70,7 @@ class ProspectDetailScreen extends StatefulWidget {
     this.callSuccessful = false,
     this.callId,
     this.showCallReminder,
+    this.prospectsRepository,
   });
   @override
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
@@ -82,6 +85,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   final _emailService = ProspectsService();
   late final PhoneCallService _phoneCallService;
   late ProspectRecord _prospect;
+  late final ProspectsRepository _prospectsRepository;
+  late final bool _ownsProspectsRepository;
   List<ProspectEmailHistoryEntry> _emails = const [];
   String? _emailError;
   bool _sendingEmail = false;
@@ -123,6 +128,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _callSession = widget.callSession ?? CallSessionController.instance;
     WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
+    _prospectsRepository = widget.prospectsRepository ?? ProspectsRepository();
+    _ownsProspectsRepository = widget.prospectsRepository == null;
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
     _callRegistered = widget.callStarted;
@@ -270,6 +277,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     WidgetsBinding.instance.removeObserver(this);
     _callSession.removeListener(_callSessionChanged);
     _emailService.dispose();
+    if (_ownsProspectsRepository) _prospectsRepository.dispose();
     super.dispose();
   }
 
@@ -643,6 +651,14 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                           onRefresh: () async {
                             await _commentsKey.currentState?.refresh();
                             await _loadEmails();
+                            final id = _prospect.id;
+                            if (id != null) {
+                              final cached = await _prospectsRepository
+                                  .cachedById(id);
+                              if (cached != null && mounted) {
+                                setState(() => _prospect = cached);
+                              }
+                            }
                           },
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(
@@ -724,6 +740,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                     ProspectSection.data,
                                     ProspectDataForm(
                                       prospect: p,
+                                      repository: _prospectsRepository,
+                                      onProspectUpdated: (updated) =>
+                                          setState(() => _prospect = updated),
                                       readOnly: _viewingCompletedFollowUp,
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),

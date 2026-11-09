@@ -242,10 +242,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
           : '$title · ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
     ),
     onAdd: widget.onAddProspect,
-    onProspect: (index) => context.push(
-      '/prospectos/${records[index].phone}',
-      extra: records[index],
-    ),
+    onProspect: (index) async {
+      await context.push(
+        '/prospectos/${records[index].phone}',
+        extra: records[index],
+      );
+      if (mounted) await _load();
+    },
     prospects: records
         .map(
           (p) => ProspectItem(

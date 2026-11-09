@@ -184,10 +184,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       return;
     }
     final prospect = _records[index];
-    context.push(
+    await context.push(
       '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
       extra: prospect,
     );
+    if (mounted) await _load();
   }
 
   Future<void> _addProspect() async {
@@ -397,6 +398,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
         callSuccessful: false,
       ),
     );
+    if (mounted) await _load();
   }
 
   Future<bool?> _runCall(ProspectRecord prospect) async {
@@ -895,10 +897,13 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   prospect: prospects[index],
                   onContact: (message) =>
                       _contactProspect(prospects[index], message),
-                  onTap: () => context.push(
-                    '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
-                    extra: prospects[index],
-                  ),
+                  onTap: () async {
+                    await context.push(
+                      '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
+                      extra: prospects[index],
+                    );
+                    if (mounted) await _load();
+                  },
                 ),
               ),
             ),
