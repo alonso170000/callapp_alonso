@@ -27,9 +27,13 @@ void main() {
   test('presets, summary and clearGroup preserve unrelated filters', () {
     final seller = ProspectFilters.forSeller();
     expect(seller.isSellerPreset, isTrue);
+    expect(seller.sort, 'Atención prioritaria');
+    expect(seller.temperatures, ProspectFilters.priorities.toSet());
+    expect(seller.results, ProspectFilters.outcomes.toSet());
     seller.sort = 'Nombre';
     expect(seller.isSellerPreset, isTrue, reason: 'El preset ignora el orden');
     expect(ProspectFilters.all().isAllPreset, isTrue);
+    expect(ProspectFilters.all().sort, 'Atención prioritaria');
 
     final filters = ProspectFilters(
       status: 'Nuevo',
@@ -50,6 +54,10 @@ void main() {
         'Resultado: Contestó',
         'Selección: Nuevos',
       ]),
+    );
+    expect(
+      filters.visibleSummary.map((item) => item.label),
+      isNot(contains('Estatus: Nuevo')),
     );
     final cleared = filters.clearGroup(ProspectFilterGroup.assignment);
     expect(cleared.assignment, isNull);
@@ -108,6 +116,25 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('attention order follows the status priority of the section', () {
+    final now = DateTime(2026, 10, 16, 12);
+    final filter = ProspectFilters(sort: 'Atención prioritaria');
+    final values = [
+      record(name: 'Cinco', status: 'Contactado y validado'),
+      record(name: 'Cuatro', status: 'Seguimiento'),
+      record(name: 'Tres', status: 'Cotización'),
+      record(name: 'Dos', status: 'Negociación'),
+      record(name: 'Uno', status: 'Nuevo'),
+    ]..sort((a, b) => filter.compare(a, b, now: now));
+    expect(values.map((item) => item.name), [
+      'Uno',
+      'Dos',
+      'Tres',
+      'Cuatro',
+      'Cinco',
+    ]);
   });
 
   test('compare requires now and uses normalized alphabetical tiebreaker', () {

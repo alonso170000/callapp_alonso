@@ -166,7 +166,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Row(
                     children: [
                       Expanded(
@@ -206,36 +206,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                       ),
                     ),
                   ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                  child: Row(
-                    children: [
-                      for (final entry in {
-                        NotificationInboxFilter.all: 'Todas',
-                        NotificationInboxFilter.unread: 'Pendientes',
-                        NotificationInboxFilter.read: 'Leídas',
-                      }.entries) ...[
-                        FilterChip(
-                          selected: _filter == entry.key,
-                          label: Text(entry.value),
-                          onSelected: (_) =>
-                              setState(() => _filter = entry.key),
-                          selectedColor: palette.chipSelectedFill,
-                          checkmarkColor: palette.chipSelectedForeground,
-                          labelStyle: TextStyle(
-                            fontFamily: 'SulphurPoint',
-                            color: _filter == entry.key
-                                ? palette.chipSelectedForeground
-                                : palette.chipForeground,
-                          ),
-                          side: BorderSide(color: palette.chipBorder),
-                        ),
-                        const SizedBox(width: 7),
-                      ],
-                    ],
-                  ),
-                ),
+                
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(

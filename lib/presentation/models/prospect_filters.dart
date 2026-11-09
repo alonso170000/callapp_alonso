@@ -19,11 +19,8 @@ class ActiveFilter {
 }
 
 class ProspectFilters {
-  factory ProspectFilters.all() => ProspectFilters(sort: 'Último contacto');
-  factory ProspectFilters.forSeller() => ProspectFilters(
-    temperatures: {'Caliente', 'Tibio'},
-    sort: 'Atención prioritaria',
-  );
+  factory ProspectFilters.all() => ProspectFilters();
+  factory ProspectFilters.forSeller() => ProspectFilters();
 
   ProspectFilters({
     Set<int>? prospectIds,
@@ -34,12 +31,19 @@ class ProspectFilters {
     this.range,
     Set<String>? temperatures,
     Set<String>? results,
-    this.sort = 'Último contacto',
+    this.sort = 'Atención prioritaria',
   }) : prospectIds = prospectIds == null ? null : {...prospectIds},
        temperatures = {...temperatures ?? priorities.toSet()},
        results = {...results ?? outcomes.toSet()};
 
   static const priorities = ['Caliente', 'Tibio', 'Frío', 'Sin calificar'];
+  static const statusOrder = [
+    'Nuevo',
+    'Negociación',
+    'Cotización',
+    'Seguimiento',
+    'Contactado y validado',
+  ];
   static const outcomes = [
     'Contestó',
     'No contestó',
@@ -94,7 +98,7 @@ class ProspectFilters {
       nextContact == null &&
       assignment == null &&
       range == null &&
-      _sameSet(temperatures, const ['Caliente', 'Tibio']) &&
+      _sameSet(temperatures, priorities) &&
       _sameSet(results, outcomes);
 
   bool get isAllPreset =>
@@ -163,6 +167,12 @@ class ProspectFilters {
     }
     return filters;
   }
+
+  /// Filtros avanzados que se muestran como chips. El estatus se elige en su
+  /// propia fila de chips, por lo que no se duplica aquí.
+  List<ActiveFilter> get visibleSummary => summary
+      .where((filter) => filter.group != ProspectFilterGroup.status)
+      .toList(growable: false);
 
   ProspectFilters clearGroup(ProspectFilterGroup group) {
     if (group == ProspectFilterGroup.selection) {
@@ -289,7 +299,7 @@ class ProspectFilters {
     int group(ProspectRecord prospect) {
       final normalizedStatus = ProspectSearch.normalize(prospect.status);
       if (normalizedStatus == ProspectSearch.normalize('Venta realizada')) {
-        return 5;
+        return 100;
       }
       if (prospect.nextContact != null && prospect.nextContact!.isBefore(now)) {
         return 0;
@@ -298,8 +308,8 @@ class ProspectFilters {
           DateUtils.isSameDay(prospect.nextContact, now)) {
         return 1;
       }
-      if (normalizedStatus == 'nuevo') return 2;
-      return 3;
+      final rank = statusRank(prospect.status);
+      return rank < 0 ? 2 + statusOrder.length : 2 + rank;
     }
 
     var result = group(a).compareTo(group(b));
@@ -313,6 +323,13 @@ class ProspectFilters {
     if (a.assignedAt == null) return b.assignedAt == null ? 0 : 1;
     if (b.assignedAt == null) return -1;
     return b.assignedAt!.compareTo(a.assignedAt!);
+  }
+
+  static int statusRank(String value) {
+    final normalized = ProspectSearch.normalize(value);
+    return statusOrder.indexWhere(
+      (item) => ProspectSearch.normalize(item) == normalized,
+    );
   }
 
   static int _priority(ProspectRecord prospect) {

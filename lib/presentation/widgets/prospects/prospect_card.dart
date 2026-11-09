@@ -181,7 +181,7 @@ class ProspectCard extends StatelessWidget {
                   prospect.status == 'Atrasados'
                       ? 'ATRASADO'
                       : prospect.status.toUpperCase(),
-                  prospect.statusColor,
+                  ProspectTagColors.status(prospect.status),
                 ),
                 _tag(
                   prospect.temperature.toUpperCase(),

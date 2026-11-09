@@ -25,14 +25,14 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
   DateTime get _now => (widget.now ?? businessNow)();
   int get _count => widget.count(_draft);
 
-  Widget _title(String text) => Padding(
+  Widget _heading(String label) => Padding(
     padding: const EdgeInsets.only(top: 18, bottom: 4),
     child: Text(
-      text,
+      label,
       style: const TextStyle(
-        fontSize: 19,
-        fontWeight: FontWeight.bold,
         fontFamily: 'SulphurPoint',
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
       ),
     ),
   );
@@ -51,10 +51,13 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
           checked: (selected ?? 'Cualquiera') == value,
           child: RadioListTile<String>(
             value: value,
-            title: Text(value),
-            dense: true,
+            title: Text(
+              value,
+              style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 16),
+            ),
             contentPadding: EdgeInsets.zero,
-            visualDensity: const VisualDensity(vertical: -1),
+            dense: true,
+            visualDensity: const VisualDensity(vertical: -4, horizontal: -4),
             activeColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -70,11 +73,17 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
             checked: selected.contains(value),
             child: CheckboxListTile(
               value: selected.contains(value),
-              title: Text(value),
-              dense: true,
+              title: Text(
+                value,
+                style: const TextStyle(
+                  fontFamily: 'SulphurPoint',
+                  fontSize: 16,
+                ),
+              ),
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              visualDensity: const VisualDensity(vertical: -1),
+              dense: true,
+              visualDensity: const VisualDensity(vertical: -4, horizontal: -4),
               activeColor: Theme.of(context).colorScheme.primary,
               checkColor: Theme.of(context).colorScheme.onPrimary,
               side: BorderSide(color: Theme.of(context).colorScheme.outline),
@@ -136,6 +145,32 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
   String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
 
+  Widget _button(
+    String label,
+    Color background,
+    Color foreground,
+    VoidCallback? onPressed,
+  ) => Expanded(
+    child: FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: background,
+        foregroundColor: foreground,
+        minimumSize: const Size.fromHeight(42),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
@@ -148,72 +183,41 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
         ),
       ),
       child: SafeArea(
+        top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   const SizedBox(width: 48),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Filtros',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 22),
-                        ),
-                        Text(
-                          '$count resultados',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
+                  const Expanded(
+                    child: Text(
+                      'Filtros',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'SulphurPoint',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
                     tooltip: 'Cerrar filtros',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, size: 28),
                   ),
                 ],
               ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Por atender'),
-                    selected: _draft.isSellerPreset,
-                    selectedColor: palette.chipSelectedFill,
-                    labelStyle: TextStyle(
-                      color: _draft.isSellerPreset
-                          ? palette.chipSelectedForeground
-                          : palette.chipForeground,
-                    ),
-                    onSelected: (_) =>
-                        setState(() => _draft = ProspectFilters.forSeller()),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Todos'),
-                    selected: _draft.isAllPreset,
-                    selectedColor: palette.chipSelectedFill,
-                    labelStyle: TextStyle(
-                      color: _draft.isAllPreset
-                          ? palette.chipSelectedForeground
-                          : palette.chipForeground,
-                    ),
-                    onSelected: (_) =>
-                        setState(() => _draft = ProspectFilters.all()),
-                  ),
-                ],
-              ),
-              Expanded(
+              Flexible(
                 child: SingleChildScrollView(
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _title('Próximo contacto'),
+                      _heading('Próximo contacto'),
                       _options(
                         [
                           'Contacto vencido',
@@ -225,9 +229,9 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                         _draft.nextContact,
                         (value) => setState(() => _draft.nextContact = value),
                       ),
-                      _title('Prioridad'),
+                      _heading('Prioridad'),
                       _checks(ProspectFilters.priorities, _draft.temperatures),
-                      _title('Fecha de asignación'),
+                      _heading('Fecha de asignación'),
                       _options(
                         [
                           'Hoy',
@@ -259,7 +263,7 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                                 setState(() => _draft.range = null),
                           ),
                         ),
-                      _title('Resultado del último contacto'),
+                      _heading('Resultado del último contacto'),
                       _checks(ProspectFilters.outcomes, _draft.results),
                       const SizedBox(height: 16),
                     ],
@@ -274,53 +278,21 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                     textAlign: TextAlign.center,
                   ),
                 ),
+              const SizedBox(height: 18),
               Row(
                 children: [
-                  Expanded(
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        backgroundColor: palette.secondaryActionFill,
-                        foregroundColor: palette.secondaryActionForeground,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () =>
-                          setState(() => _draft = ProspectFilters.forSeller()),
-                      child: const Text(
-                        'RESTABLECER',
-                        style: TextStyle(fontFamily: 'BebasNeue', fontSize: 17),
-                      ),
-                    ),
+                  _button(
+                    'RESTABLECER',
+                    palette.secondaryActionFill,
+                    palette.secondaryActionForeground,
+                    () => setState(() => _draft = ProspectFilters.forSeller()),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        backgroundColor: palette.brandFill,
-                        foregroundColor: palette.onBrand,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                      ),
-                      onPressed: count == 0
-                          ? null
-                          : () => Navigator.pop(context, _draft),
-                      child: FittedBox(
-                        child: Text(
-                          count == 0
-                              ? 'SIN RESULTADOS'
-                              : 'VER $count RESULTADOS',
-                          style: const TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: 17,
-                          ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(width: 12),
+                  _button(
+                    count == 0 ? 'SIN RESULTADOS' : 'VER $count RESULTADOS',
+                    palette.brandFill,
+                    palette.onBrand,
+                    count == 0 ? null : () => Navigator.pop(context, _draft),
                   ),
                 ],
               ),

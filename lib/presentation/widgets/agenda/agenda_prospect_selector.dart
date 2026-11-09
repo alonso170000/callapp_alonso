@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -59,7 +60,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
             child: InputDecorator(
               decoration: InputDecoration(
                 filled: true,
-                fillColor: palette.brandFill,
+                fillColor: AppColors.primaryColor,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 9,
@@ -78,7 +79,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: palette.onBrand,
+                        color: AppColors.homeBackground,
                         fontFamily: 'SulphurPoint',
                         fontSize: 16,
                       ),
@@ -86,7 +87,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
                   ),
                   Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: palette.onBrand,
+                    color: AppColors.homeBackground,
                   ),
                 ],
               ),

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospects_screen.dart';
 
 void main() {
   final now = DateTime(2026, 11, 2, 12);
 
-  Future<void> openProspects(
-    WidgetTester tester, {
-    bool clearDefault = true,
-  }) async {
+  Future<void> openProspects(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -27,46 +25,52 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Filtros activos'), findsNothing);
-    if (clearDefault) {
-      await tester.tap(find.byTooltip('Filtrar prospectos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Todos').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('VER 6 RESULTADOS'));
-      await tester.pumpAndSettle();
-    }
   }
 
   testWidgets(
-    'Seller preset is visible and uses the same predicate as the list',
+    'Default filters show every prospect and hide active filter chips',
     (tester) async {
-      await openProspects(tester, clearDefault: false);
+      await openProspects(tester);
       final filters = ProspectFilters.forSeller();
       final count = demoProspects.where((p) => filters.matches(p, now)).length;
+      expect(count, demoProspects.length);
       expect(find.text('MOSTRANDO $count PROSPECTOS'), findsOneWidget);
-      expect(find.widgetWithText(InputChip, 'Por atender'), findsOneWidget);
-      final activeFiltersScroller = tester.widget<SingleChildScrollView>(
-        find.byKey(const ValueKey('prospect-active-filters')),
-      );
-      expect(activeFiltersScroller.scrollDirection, Axis.horizontal);
+      expect(find.widgetWithText(InputChip, 'Por atender'), findsNothing);
       expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('prospect-active-filters')),
-          matching: find.byType(Wrap),
-        ),
+        find.byKey(const ValueKey('prospect-active-filters')),
         findsNothing,
       );
-      await tester.tap(
-        find.descendant(
-          of: find.widgetWithText(InputChip, 'Por atender'),
-          matching: find.byIcon(Icons.close_rounded),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('MOSTRANDO 6 PROSPECTOS'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Home redirect keeps its selection chip visible', (tester) async {
+    final controller = ProspectsController();
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProspectsScreen(
+            controller: controller,
+            loadProspects: () async => demoProspects,
+            now: () => now,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    controller.showFromHome({1, 2}, 'Nuevos del día');
+    await tester.pumpAndSettle();
+    expect(find.text('Selección: Nuevos del día'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('prospect-active-filters')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('Search handles names without accents and phone numbers', (
     tester,
@@ -112,6 +116,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('JUAN UCH'), findsOneWidget);
     expect(find.text('BETSUA'), findsNothing);
+    final statusChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Nuevo'),
+    );
+    expect(statusChip.selected, isTrue);
+    expect(statusChip.selectedColor, ProspectTagColors.status('Nuevo'));
+    expect(find.byKey(const ValueKey('prospect-active-filters')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -147,13 +157,23 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Filtrar prospectos'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Últimos 7 días'));
-    await tester.tap(find.text('Últimos 7 días'));
-    await tester.pump();
+    await tester.ensureVisible(
+      find.widgetWithText(CheckboxListTile, 'Caliente'),
+    );
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Caliente'));
+    await tester.ensureVisible(
+      find.widgetWithText(CheckboxListTile, 'Contestó'),
+    );
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Contestó'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('VER ').last);
     await tester.pumpAndSettle();
-    expect(find.text('Estatus: Nuevo'), findsOneWidget);
-    expect(find.text('Asignación: Últimos 7 días'), findsOneWidget);
+    expect(find.text('Estatus: Nuevo'), findsNothing);
+    expect(find.text('Prioridad: Tibio, Frío, Sin calificar'), findsOneWidget);
+    expect(
+      find.text('Resultado: No contestó, Cita programada, Sin contacto'),
+      findsOneWidget,
+    );
     final activeFiltersScroller = tester.widget<SingleChildScrollView>(
       find.byKey(const ValueKey('prospect-active-filters')),
     );
@@ -165,19 +185,26 @@ void main() {
       ),
       findsNothing,
     );
-    await tester.ensureVisible(
-      find.widgetWithText(InputChip, 'Asignación: Últimos 7 días'),
+    await tester.drag(
+      find.byKey(const ValueKey('prospect-active-filters')),
+      const Offset(-320, 0),
     );
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
-        of: find.widgetWithText(InputChip, 'Asignación: Últimos 7 días'),
+        of: find.widgetWithText(
+          InputChip,
+          'Prioridad: Tibio, Frío, Sin calificar',
+        ),
         matching: find.byIcon(Icons.close_rounded),
       ),
     );
     await tester.pump();
-    expect(find.text('Asignación: Últimos 7 días'), findsNothing);
-    expect(find.text('Estatus: Nuevo'), findsOneWidget);
+    expect(find.text('Prioridad: Tibio, Frío, Sin calificar'), findsNothing);
+    expect(
+      find.text('Resultado: No contestó, Cita programada, Sin contacto'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Small screen supports temperature filters and contact actions', (

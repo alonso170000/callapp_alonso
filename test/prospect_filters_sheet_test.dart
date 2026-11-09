@@ -35,16 +35,17 @@ void main() {
         count: (filter) => filter.nextContact == null ? 6 : 2,
       ),
     );
-    expect(find.text('2 resultados'), findsOneWidget);
+    expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
     await tester.tap(find.text('Cualquiera').first);
     await tester.pump();
-    expect(find.text('6 resultados'), findsOneWidget);
+    expect(find.text('VER 6 RESULTADOS'), findsOneWidget);
   });
 
-  testWidgets('Todos shows all six demo prospects', (tester) async {
+  testWidgets('preset chips and the header counter are gone', (tester) async {
     await tester.pumpWidget(subject(initial: ProspectFilters.forSeller()));
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
-    await tester.pump();
+    expect(find.widgetWithText(ChoiceChip, 'Por atender'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Todos'), findsNothing);
+    expect(find.text('6 resultados'), findsNothing);
     expect(find.text('VER 6 RESULTADOS'), findsOneWidget);
   });
 
@@ -72,19 +73,33 @@ void main() {
     );
   });
 
-  testWidgets('Restablecer returns to the seller preset', (tester) async {
+  testWidgets('Restablecer returns to the default filters', (tester) async {
     await tester.pumpWidget(
-      subject(initial: ProspectFilters.all(), count: (_) => 6),
+      subject(
+        initial: ProspectFilters(
+          nextContact: 'Hoy',
+          temperatures: {'Caliente'},
+          results: {'Contestó'},
+        ),
+        count: (filter) => filter.isSellerPreset ? 6 : 2,
+      ),
     );
+    expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
     await tester.tap(find.text('RESTABLECER'));
     await tester.pump();
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Por atender'))
-          .selected,
-      isTrue,
-    );
-    for (final value in ['Caliente', 'Tibio']) {
+    expect(find.text('VER 6 RESULTADOS'), findsOneWidget);
+    for (final value in ProspectFilters.priorities) {
+      await tester.ensureVisible(find.widgetWithText(CheckboxListTile, value));
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, value),
+            )
+            .value,
+        isTrue,
+      );
+    }
+    for (final value in ProspectFilters.outcomes) {
       await tester.ensureVisible(find.widgetWithText(CheckboxListTile, value));
       expect(
         tester

@@ -16,10 +16,13 @@ class ProspectTagColors {
   };
 
   static Color status(String value) => switch (_key(value)) {
-    'cotizacion' => const Color(0xFFB69BF5),
-    'nuevo' => AppColors.homeBlueSection,
-    'negociacion' => AppColors.homeOrangeSection,
-    'venta realizada' => AppColors.homeGreenCard,
+    'nuevo' => AppColors.prospectStatusNew,
+    'negociacion' => AppColors.prospectStatusNegotiation,
+    'cotizacion' => AppColors.prospectStatusQuote,
+    'seguimiento' => AppColors.prospectStatusFollowUp,
+    'contactado y validado' => AppColors.prospectStatusContacted,
+    'venta realizada' => AppColors.prospectStatusSale,
+    'atrasados' => AppColors.prospectStatusOverdue,
     _ => AppColors.homeWarmText,
   };
 

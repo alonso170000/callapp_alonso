@@ -52,6 +52,16 @@ class AppColors {
   static const Color homeGreenToday = Color.fromARGB(255, 185, 237, 220);
   static const Color homeNotificationBadge = Color(0xFFD70016);
 
+  // Colores semánticos de los estatus de prospecto. Se usan en las etiquetas
+  // de las tarjetas y en los chips de estatus de Mis prospectos.
+  static const Color prospectStatusNew = Color(0xFF61DDFF);
+  static const Color prospectStatusNegotiation = Color(0xFFFFA389);
+  static const Color prospectStatusQuote = Color(0xFFB69AFF);
+  static const Color prospectStatusFollowUp = Color(0xFFFFFCA8);
+  static const Color prospectStatusContacted = Color(0xFFFF98DD);
+  static const Color prospectStatusSale = Color(0xFF9BFF92);
+  static const Color prospectStatusOverdue = Color(0xFFFFA3A6);
+
   // Paleta compartida por la bandeja de notificaciones.
   static const Color notificationFollowUp = Color(0xFFE34BB4);
   static const Color notificationFollowUpIcon = Color(0xFF89F293);
