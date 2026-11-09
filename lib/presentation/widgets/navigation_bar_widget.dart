@@ -148,7 +148,7 @@ class _NavMetrics {
   static const minimumCircle = 44.0;
   static const maximumCircle = 64.0;
   static const noAddMinimumCircle = 56.0;
-  static const gapValue = 8.0;
+  static const gapValue = 5.0;
   static const surfacePaddingValue = 8.0;
   static const spacingValue = 4.0;
   static const inactiveSlotValue = 32.0;
@@ -156,7 +156,7 @@ class _NavMetrics {
   static const pillPadding = 6.0;
   static const pillIconSize = 24.0;
   static const labelGap = 3.0;
-  static const pillVerticalInset = 8.0;
+  static const pillVerticalInset = 12.0;
   static const iconOnlyPillWidth = 48.0;
   static const searchIconRatio = 30 / 64;
   static const addIconRatio = 40 / 64;

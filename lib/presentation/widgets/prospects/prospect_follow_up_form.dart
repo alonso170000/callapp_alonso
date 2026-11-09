@@ -343,6 +343,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       items: values
           .map((v) => DropdownMenuItem(value: v, child: Text(v)))
           .toList(),
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: enabled && !widget.readOnly
           ? (v) => setState(() => change(v!))
           : null,
@@ -646,6 +647,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
             TextFormField(
               key: const ValueKey('follow-up-activity-description'),
               controller: _activityDescription,
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
               minLines: 2,
               maxLines: 4,
               style: const TextStyle(color: Colors.white),
@@ -909,6 +912,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 TextField(
                   key: const ValueKey('follow-up-notes'),
                   controller: _notes,
+                  onTapOutside: (_) =>
+                      FocusManager.instance.primaryFocus?.unfocus(),
                   readOnly: widget.readOnly,
                   minLines: 2,
                   maxLines: 5,

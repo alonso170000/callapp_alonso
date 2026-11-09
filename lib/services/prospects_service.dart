@@ -457,15 +457,26 @@ class ProspectsService {
   Future<List<Map<String, dynamic>>> availableDevelopments() async {
     final data = await _request('catalogs/desarrollos');
     final rows = data['data'];
-    if (rows is! List ||
-        rows.any(
-          (row) => row is! Map || row['id'] is! int || row['nombre'] is! String,
-        )) {
+    if (rows is! List) {
       throw const ProspectsException(
         'El listado de desarrollos recibido no es válido.',
       );
     }
-    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+    try {
+      return rows.map((raw) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        final id = int.tryParse('${row['id']}');
+        final name = row['nombre']?.toString().trim();
+        if (id == null || name == null || name.isEmpty) {
+          throw const FormatException();
+        }
+        return {...row, 'id': id, 'nombre': name};
+      }).toList();
+    } on Object {
+      throw const ProspectsException(
+        'El listado de desarrollos recibido no es válido.',
+      );
+    }
   }
 
   Future<List<Map<String, dynamic>>> availableLots([int? developmentId]) async {
@@ -474,14 +485,22 @@ class ProspectsService {
         : '?desarrollo_id=${Uri.encodeQueryComponent('$developmentId')}';
     final data = await _request('catalogs/lotes$query');
     final rows = data['data'];
-    if (rows is! List ||
-        rows.any(
-          (row) =>
-              row is! Map || row['id'] is! int || row['numero_lote'] is! int,
-        )) {
+    if (rows is! List) {
       throw const ProspectsException('El catálogo de lotes no es válido.');
     }
-    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+    try {
+      return rows.map((raw) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        final id = int.tryParse('${row['id']}');
+        final lotNumber = row['numero_lote']?.toString().trim();
+        if (id == null || lotNumber == null || lotNumber.isEmpty) {
+          throw const FormatException();
+        }
+        return {...row, 'id': id, 'numero_lote': lotNumber};
+      }).toList();
+    } on Object {
+      throw const ProspectsException('El catálogo de lotes no es válido.');
+    }
   }
 
   Future<int> create(

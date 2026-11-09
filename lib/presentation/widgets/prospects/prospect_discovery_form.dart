@@ -239,6 +239,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       items: values
           .map((item) => DropdownMenuItem(value: item, child: Text(item)))
           .toList(),
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: (item) => setState(() => change(item!)),
     ),
   );
@@ -311,6 +312,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     label,
     TextField(
       controller: controller,
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       minLines: 1,
       maxLines: 3,
       keyboardType: keyboardType,
@@ -492,7 +494,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   Future<void> _loadDevelopments() async {
     setState(() => _developmentsLoading = true);
     try {
-      final developments = await _service.availableDevelopments();
+      final developments = await _repository.loadDevelopments();
       if (!mounted) return;
       setState(() {
         _developments = developments;
@@ -523,7 +525,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       _lotsError = null;
     });
     try {
-      final lots = await _service.availableLots(developmentId);
+      final lots = await _repository.loadLots(developmentId);
       if (mounted) setState(() => _lots = lots);
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _lotsError = error.message);
@@ -1187,6 +1189,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           ),
                         )
                         .toList(),
+                    onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                     onChanged: _developmentsLoading || _developments.length <= 1
                         ? null
                         : (value) {
@@ -1241,7 +1244,10 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                     'Seleccionar lote *',
                     DropdownButtonFormField<int>(
                       key: ValueKey('lote-$_selectedLotId-${_lots.length}'),
-                      initialValue: _selectedLot?['id'] as int?,
+                      // Se presenta la selección como hint para que Flutter no
+                      // desplace el menú hasta ese índice al abrirlo. Así la
+                      // lista siempre comienza en el primer lote disponible.
+                      initialValue: null,
                       isExpanded: true,
                       dropdownColor: AppColors.discoveryField,
                       icon: const Icon(
@@ -1262,7 +1268,9 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                             : null,
                       ),
                       hint: Text(
-                        _lots.isEmpty
+                        _selectedLot != null
+                            ? _lotLabel(_selectedLot!)
+                            : _lots.isEmpty
                             ? 'No hay lotes disponibles'
                             : 'Seleccione un lote',
                         style: const TextStyle(
@@ -1277,6 +1285,8 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                             ),
                           )
                           .toList(),
+                      onTap: () =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
                       onChanged: _lots.isEmpty
                           ? null
                           : (value) => setState(() => _selectedLotId = value),
@@ -1406,6 +1416,8 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                             ),
                           )
                           .toList(),
+                      onTap: () =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
                       onChanged: _closersLoading || _closers.isEmpty
                           ? null
                           : (value) =>

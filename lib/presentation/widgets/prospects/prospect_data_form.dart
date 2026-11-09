@@ -145,6 +145,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         TextFormField(
           key: fieldKey,
           controller: controller,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
@@ -162,8 +163,9 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     int? value,
     List<Map<String, dynamic>> items,
     String Function(Map<String, dynamic>) text,
-    ValueChanged<int?>? changed,
-  ) => Padding(
+    ValueChanged<int?>? changed, {
+    bool openFromFirstItem = false,
+  }) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,11 +179,25 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         ),
         const SizedBox(height: 3),
         DropdownButtonFormField<int>(
-          initialValue: items.any((item) => item['id'] == value) ? value : null,
+          initialValue: openFromFirstItem
+              ? null
+              : items.any((item) => item['id'] == value)
+              ? value
+              : null,
           isExpanded: true,
           decoration: _decoration(),
           dropdownColor: const Color(0xFFAD393E),
           style: const TextStyle(color: Colors.white, fontSize: 18),
+          hint: openFromFirstItem && items.any((item) => item['id'] == value)
+              ? Text(
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'SulphurPoint',
+                  ),
+                  text(items.firstWhere((item) => item['id'] == value)),
+                )
+              : null,
           items: items
               .map(
                 (item) => DropdownMenuItem<int>(
@@ -198,6 +214,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 ),
               )
               .toList(),
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           onChanged: widget.readOnly ? null : changed,
         ),
       ],
@@ -415,6 +432,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
             _saving
                 ? null
                 : (value) => setState(() => _lotId = value == 0 ? null : value),
+            openFromFirstItem: true,
           ),
           if (_error != null)
             Padding(

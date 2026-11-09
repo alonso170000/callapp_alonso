@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
@@ -39,8 +41,9 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   late final ProspectsService _service;
   late final ProspectsRepository _repository;
   List<Map<String, dynamic>> _origins = [], _statuses = [];
+  List<Map<String, dynamic>> _developments = [];
   List<Map<String, dynamic>> _lots = [];
-  int? _origin, _status;
+  int? _origin, _status, _development;
   int _lot = 0;
   String _priority = 'caliente';
   bool _firstFollowUp = false;
@@ -70,11 +73,34 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     });
     try {
       final catalogs = await _repository.loadCatalogs();
+      final activeDevelopment = _service.activeDevelopment;
+      List<Map<String, dynamic>> developments;
+      try {
+        developments = await _repository.loadDevelopments();
+      } on ProspectsException {
+        developments = activeDevelopment?['id'] is int
+            ? [Map<String, dynamic>.from(activeDevelopment!)]
+            : const [];
+      }
+      if (!mounted) return;
+      final activeDevelopmentId = activeDevelopment?['id'] as int?;
+      final selectedDevelopment =
+          developments.any((item) => item['id'] == activeDevelopmentId)
+          ? activeDevelopmentId
+          : developments.firstOrNull?['id'] as int?;
+      final lots = selectedDevelopment == null
+          ? <Map<String, dynamic>>[]
+          : selectedDevelopment == activeDevelopmentId
+          ? catalogs.lots
+          : await _repository.loadLots(selectedDevelopment);
       if (!mounted) return;
       setState(() {
         _origins = catalogs.origins;
         _statuses = catalogs.statuses;
-        _lots = catalogs.lots;
+        _developments = developments;
+        _development = selectedDevelopment;
+        _lots = lots;
+        _lot = 0;
         _origin = _origins.first['id'] as int;
         _status = _statuses.isEmpty
             ? null
@@ -98,6 +124,32 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _selectDevelopment(int developmentId) {
+    _development = developmentId;
+    _lot = 0;
+    _lots = [];
+    _loading = true;
+    _error = null;
+    unawaited(_loadLotsForDevelopment(developmentId));
+  }
+
+  Future<void> _loadLotsForDevelopment(int developmentId) async {
+    try {
+      final lots = await _repository.loadLots(developmentId);
+      if (mounted && _development == developmentId) {
+        setState(() => _lots = lots);
+      }
+    } on ProspectsException catch (error) {
+      if (mounted && _development == developmentId) {
+        setState(() => _error = error.message);
+      }
+    } finally {
+      if (mounted && _development == developmentId) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -150,7 +202,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         if (_status != null) 'estatus_id': _status,
         'prioridad': _priority,
         if (_lot != 0) 'lote_id': _lot,
-        'desarrollo_interes_id': _service.activeDevelopment?['id'],
+        'desarrollo_interes_id': _development,
         if (_firstFollowUp)
           'primer_seguimiento': {
             'tipo': _activityType,
@@ -195,7 +247,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         origin: origin['nombre'] as String? ?? '',
         channelId: _origin,
         statusId: _status,
-        interestDevelopmentId: _service.activeDevelopment?['id'] as int?,
+        interestDevelopmentId: _development,
         interestLotId: _lot == 0 ? null : _lot,
         qualification: [
           if (_qualification['Decisión']!) 'decision',
@@ -499,15 +551,15 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                     const SizedBox(height: 16),
                     _field('Comentarios acerca del prospecto', lines: 3),
                     _heading('Información de interés'),
-                    if (_service.activeDevelopment?['id'] is int)
+                    if (_developments.isNotEmpty && _development != null)
                       _dropdown<int>(
                         'Desarrollo*',
-                        _service.activeDevelopment!['id'] as int,
-                        [_service.activeDevelopment!['id'] as int],
-                        (_) {},
-                        format: (_) =>
-                            _service.activeDevelopment!['nombre']?.toString() ??
-                            'Desarrollo activo',
+                        _development!,
+                        _developments.map((item) => item['id'] as int).toList(),
+                        _selectDevelopment,
+                        format: (id) => _developments
+                            .firstWhere((item) => item['id'] == id)['nombre']
+                            .toString(),
                       ),
                     _dropdown<int>(
                       'Lote',

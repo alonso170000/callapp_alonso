@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 
@@ -480,6 +481,53 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('saving an activity follow-up locks the editable sections', (
+    tester,
+  ) async {
+    final activity = AgendaActivity(
+      id: 91,
+      prospectId: demoProspects[1].id,
+      type: 'Seguimiento',
+      medium: 'WhatsApp',
+      title: 'Seguimiento',
+      prospect: demoProspects[1].name,
+      description: 'Contactar al prospecto',
+      date: DateTime(2026, 11, 9, 10),
+      status: AgendaStatus.pending,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProspectDetailScreen(
+          prospect: demoProspects[1],
+          sourceActivity: activity,
+          loadActivities: () async => [activity],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final notes = find.byKey(const ValueKey('follow-up-notes'));
+    await tester.enterText(notes, 'Seguimiento registrado');
+    final save = find.widgetWithText(FilledButton, 'GUARDAR');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seguimiento registrado'), findsWidgets);
+    expect(tester.widget<TextField>(notes).readOnly, isTrue);
+    expect(find.widgetWithText(FilledButton, 'GUARDAR'), findsNothing);
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Guiones'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Guiones'));
+    await tester.pumpAndSettle();
+    final scriptAbsorbers = tester.widgetList<AbsorbPointer>(
+      find.ancestor(
+        of: find.byType(ProspectCallScripts),
+        matching: find.byType(AbsorbPointer),
+      ),
+    );
+    expect(scriptAbsorbers.any((widget) => widget.absorbing), isTrue);
+  });
 
   testWidgets('the detail header stays fixed while the forms scroll', (
     tester,

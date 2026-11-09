@@ -89,6 +89,30 @@ void main() {
     expect(find.text('Otro factor *'), findsNothing);
   });
 
+  testWidgets('libera el campo de texto antes de abrir un desplegable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+
+    final knowsAreaToggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label == '¿Usted conoce la zona?',
+    );
+    await tester.tap(knowsAreaToggle);
+    await tester.pump();
+    final textField = find.byType(TextField).first;
+    await tester.tap(textField);
+    await tester.pump();
+    final editable = tester.widget<EditableText>(find.byType(EditableText).first);
+    expect(editable.focusNode.hasFocus, isTrue);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pump();
+
+    expect(editable.focusNode.hasFocus, isFalse);
+  });
+
   testWidgets('ubicaciones y motivadores permiten selección múltiple', (
     tester,
   ) async {

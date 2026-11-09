@@ -93,6 +93,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _telephoneCallCompleted = false;
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
+  bool _followUpSaved = false;
   bool _calling = false;
   late final CallSessionController _callSession;
   int? _lastCallId;
@@ -100,6 +101,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool get _viewingCompletedFollowUp =>
       widget.sourceActivity?.isFollowUp == true &&
       widget.sourceActivity?.status == AgendaStatus.completed;
+  bool get _formsReadOnly => _viewingCompletedFollowUp || _followUpSaved;
   Widget _actionButton(String label, IconData icon, VoidCallback onPressed) {
     final palette = AppPalette.of(context);
     return Expanded(
@@ -693,14 +695,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                           _history.insert(0, entry);
                                           _telephoneCallCompleted = false;
                                           _callRegistered = true;
+                                          _followUpSaved =
+                                              widget.sourceActivity != null;
                                         });
                                         _commentsKey.currentState?.refresh();
                                       },
                                       onProspectUpdated: (updated) =>
                                           setState(() => _prospect = updated),
-                                      readOnly: _viewingCompletedFollowUp,
+                                      readOnly: _formsReadOnly,
                                     ),
-                                    title: _viewingCompletedFollowUp
+                                    title: _formsReadOnly
                                         ? 'Seguimiento registrado'
                                         : null,
                                   ),
@@ -709,7 +713,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                     ProspectDiscoveryForm(
                                       prospectId: p.id,
                                       prospect: p,
-                                      readOnly: _viewingCompletedFollowUp,
+                                      readOnly: _formsReadOnly,
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),
                                       ),
@@ -717,23 +721,26 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                   ),
                                   _section(
                                     ProspectSection.scripts,
-                                    Column(
-                                      children: [
-                                        ProspectCallScripts(
-                                          script: demoAlanCallScript,
-                                          prospectName: p.name,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        ProspectFollowUpCallScript(
-                                          prospectName: p.name,
-                                          onContinue: () => setState(
-                                            () => _history.insert(
-                                              0,
-                                              'Guiones · Continuar al cierre',
+                                    AbsorbPointer(
+                                      absorbing: _formsReadOnly,
+                                      child: Column(
+                                        children: [
+                                          ProspectCallScripts(
+                                            script: demoAlanCallScript,
+                                            prospectName: p.name,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          ProspectFollowUpCallScript(
+                                            prospectName: p.name,
+                                            onContinue: () => setState(
+                                              () => _history.insert(
+                                                0,
+                                                'Guiones · Continuar al cierre',
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   _section(
@@ -743,7 +750,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       repository: _prospectsRepository,
                                       onProspectUpdated: (updated) =>
                                           setState(() => _prospect = updated),
-                                      readOnly: _viewingCompletedFollowUp,
+                                      readOnly: _formsReadOnly,
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),
                                       ),

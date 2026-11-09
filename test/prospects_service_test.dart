@@ -227,6 +227,33 @@ void main() {
     expect(closers.single['nombre_completo'], 'Cerrador Dos');
   });
 
+  test('normaliza ids y números de lote recibidos como texto', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/desarrollos')) {
+          return http.Response(
+            '{"success":true,"data":[{"id":"4","nombre":"Runa"}]}',
+            200,
+          );
+        }
+        expect(request.url.queryParameters['desarrollo_id'], '4');
+        return http.Response(
+          '{"success":true,"data":[{"id":"7","numero_lote":"A-23","precio":"500000.00"}]}',
+          200,
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+
+    final developments = await service.availableDevelopments();
+    final lots = await service.availableLots(developments.single['id'] as int);
+
+    expect(developments.single['id'], 4);
+    expect(lots.single['id'], 7);
+    expect(lots.single['numero_lote'], 'A-23');
+  });
+
   test(
     'Un 409 con la operación en proceso se trata como recuperable',
     () async {
