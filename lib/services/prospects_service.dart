@@ -563,7 +563,7 @@ class ProspectsService {
         throw ProspectsException(
           response.statusCode == 400 && data is Map && data['message'] is String
               ? data['message'] as String
-              : 'No se pudieron cargar los prospectos. Intenta nuevamente.',
+              : 'No se pudieron cargar los prospectos. Intenta nuevamente o cierra la sesión.',
         );
       }
       return (data['data'] as List)

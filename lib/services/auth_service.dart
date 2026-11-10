@@ -22,7 +22,7 @@ class AuthService extends ChangeNotifier {
            baseUrl ??
            const String.fromEnvironment(
              'API_BASE_URL',
-             defaultValue: 'https://api-crm-mx9l.onrender.com',
+             defaultValue: 'https://api-crm.hadacorp.com.mx',
            );
 
   static final instance = AuthService();
