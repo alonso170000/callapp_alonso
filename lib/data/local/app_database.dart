@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final instance = AppDatabase();
 
-  static const schemaVersion = 4;
+  static const schemaVersion = 5;
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
   static const catalogsResource = 'catalogs';
@@ -79,6 +79,7 @@ class AppDatabase {
             await _createAppMetadataTable(database);
           }
           if (oldVersion < 4) await _createPendingOperationsTable(database);
+          if (oldVersion < 5) await _addProspectTypeColumns(database);
         },
       ),
     );
@@ -126,6 +127,7 @@ class AppDatabase {
         interest_lot_id INTEGER,
         interest_lot TEXT NOT NULL,
         qualification_json TEXT NOT NULL DEFAULT '[]',
+        tipo_prospecto TEXT NOT NULL DEFAULT 'regular',
         PRIMARY KEY (user_id, development_id, prospect_id)
       )
     ''');
@@ -215,6 +217,7 @@ class AppDatabase {
         last_contact TEXT NOT NULL,
         completed_at_ms INTEGER,
         delete_until_ms INTEGER,
+        prospecto_tipo TEXT NOT NULL DEFAULT 'regular',
         PRIMARY KEY (user_id, development_id, activity_id)
       )
     ''');
@@ -231,6 +234,34 @@ class AppDatabase {
         value TEXT NOT NULL
       )
     ''');
+  }
+
+  static Future<void> _addProspectTypeColumns(Database database) async {
+    await _addColumnIfMissing(
+      database,
+      'cached_prospects',
+      'tipo_prospecto',
+      "TEXT NOT NULL DEFAULT 'regular'",
+    );
+    await _addColumnIfMissing(
+      database,
+      'cached_activities',
+      'prospecto_tipo',
+      "TEXT NOT NULL DEFAULT 'regular'",
+    );
+  }
+
+  static Future<void> _addColumnIfMissing(
+    Database database,
+    String table,
+    String column,
+    String declaration,
+  ) async {
+    final columns = await database.rawQuery('PRAGMA table_info($table)');
+    if (columns.any((row) => row['name'] == column)) return;
+    await database.execute(
+      'ALTER TABLE $table ADD COLUMN $column $declaration',
+    );
   }
 
   static Future<void> _createPendingOperationsTable(Database database) async {

@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/models/prospect_type.dart';
+
 enum AgendaPeriod { day, week, month }
 
 enum AgendaStatus {
@@ -29,6 +31,7 @@ class AgendaActivity {
   final int reminderMinutes;
   final bool hasReminder;
   final String lastContact;
+  final String tipoProspecto;
 
   const AgendaActivity({
     this.prospectAvatarUrl,
@@ -48,7 +51,11 @@ class AgendaActivity {
     this.reminderMinutes = 15,
     this.hasReminder = true,
     this.lastContact = 'Llamada · Hace 1 día',
+    this.tipoProspecto = 'regular',
   });
+
+  bool get isReactivation =>
+      prospectId != null && isReactivationType(tipoProspecto);
 
   AgendaActivity copyWith({
     int? id,
@@ -62,6 +69,7 @@ class AgendaActivity {
     String? location,
     int? reminderMinutes,
     bool? hasReminder,
+    String? tipoProspecto,
   }) => AgendaActivity(
     prospectAvatarUrl: prospectAvatarUrl,
     deleteUntil: deleteUntil,
@@ -80,6 +88,7 @@ class AgendaActivity {
     reminderMinutes: reminderMinutes ?? this.reminderMinutes,
     hasReminder: hasReminder ?? this.hasReminder,
     lastContact: lastContact,
+    tipoProspecto: tipoProspecto ?? this.tipoProspecto,
   );
 }
 

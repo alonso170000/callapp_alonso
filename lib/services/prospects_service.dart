@@ -492,11 +492,19 @@ class ProspectsService {
       return rows.map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
         final id = int.tryParse('${row['id']}');
-        final lotNumber = row['numero_lote']?.toString().trim();
-        if (id == null || lotNumber == null || lotNumber.isEmpty) {
+        final lotNumber = int.tryParse('${row['numero_lote']}');
+        if (id == null || lotNumber == null) {
           throw const FormatException();
         }
-        return {...row, 'id': id, 'numero_lote': lotNumber};
+        final clusterId = int.tryParse('${row['cluster_id']}');
+        final stageNumber = int.tryParse('${row['numero_etapa']}');
+        return {
+          ...row,
+          'id': id,
+          'numero_lote': lotNumber,
+          'cluster_id': ?clusterId,
+          'numero_etapa': ?stageNumber,
+        };
       }).toList();
     } on Object {
       throw const ProspectsException('El catálogo de lotes no es válido.');
@@ -658,6 +666,7 @@ class ProspectsService {
                 .inDays
                 .clamp(0, 100000),
       comments: row['comentario'] as String? ?? 'Sin comentarios registrados.',
+      tipoProspecto: row['tipo_prospecto']?.toString() ?? 'regular',
     );
   }
 

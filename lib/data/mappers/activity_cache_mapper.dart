@@ -35,6 +35,7 @@ class ActivityCacheMapper {
     'last_contact': activity.lastContact,
     'completed_at_ms': activity.completedAt?.millisecondsSinceEpoch,
     'delete_until_ms': activity.deleteUntil?.millisecondsSinceEpoch,
+    'prospecto_tipo': activity.tipoProspecto,
   };
 
   static AgendaActivity fromRow(Map<String, Object?> row, {DateTime? now}) {
@@ -63,6 +64,7 @@ class ActivityCacheMapper {
       lastContact: row['last_contact']! as String,
       completedAt: _date(row['completed_at_ms']),
       deleteUntil: _date(row['delete_until_ms']),
+      tipoProspecto: row['prospecto_tipo'] as String? ?? 'regular',
     );
   }
 

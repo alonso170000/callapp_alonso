@@ -56,6 +56,7 @@ void main() {
       qualification: const ['decisión', 'presupuesto'],
       decision: true,
       lastCallDuration: const Duration(minutes: 4, seconds: 12),
+      tipoProspecto: 'reactivacion',
     );
 
     await cache.replace(scope, [prospect]);
@@ -66,6 +67,8 @@ void main() {
     expect(restored.qualification, prospect.qualification);
     expect(restored.decision, isTrue);
     expect(restored.lastCallDuration, prospect.lastCallDuration);
+    expect(restored.tipoProspecto, 'reactivacion');
+    expect(restored.isReactivation, isTrue);
   });
 }
 

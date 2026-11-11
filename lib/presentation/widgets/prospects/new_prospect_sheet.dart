@@ -5,6 +5,8 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/models/first_follow_up_schedule.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/selected_lot_card.dart';
 import 'package:callerapp_frontend/presentation/validators/prospect_validators.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
@@ -45,6 +47,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   List<Map<String, dynamic>> _lots = [];
   int? _origin, _status, _development;
   int _lot = 0;
+  int _stage = 0;
   String _priority = 'caliente';
   bool _firstFollowUp = false;
   String _activityType = 'seguimiento';
@@ -100,6 +103,8 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         _developments = developments;
         _development = selectedDevelopment;
         _lots = lots;
+        final stages = LotCatalog.stageOptions(lots);
+        _stage = stages.length == 1 ? stages.single.id : 0;
         _lot = 0;
         _origin = _origins.first['id'] as int;
         _status = _statuses.isEmpty
@@ -129,6 +134,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
 
   void _selectDevelopment(int developmentId) {
     _development = developmentId;
+    _stage = 0;
     _lot = 0;
     _lots = [];
     _loading = true;
@@ -140,7 +146,11 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     try {
       final lots = await _repository.loadLots(developmentId);
       if (mounted && _development == developmentId) {
-        setState(() => _lots = lots);
+        setState(() {
+          _lots = lots;
+          final stages = LotCatalog.stageOptions(lots);
+          _stage = stages.length == 1 ? stages.single.id : 0;
+        });
       }
     } on ProspectsException catch (error) {
       if (mounted && _development == developmentId) {
@@ -213,7 +223,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
               'descripcion': text('Descripción del primer seguimiento'),
             if (_activityType == 'visita_presencial')
               'ubicacion': _location == 'Lote' && _lot != 0
-                  ? 'Lote ${_lotLabel(_lot)}'
+                  ? _lotLabel(_lot)
                   : _location,
             if (_activityType == 'seguimiento') 'medio': _contactMedium,
           },
@@ -249,6 +259,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
         statusId: _status,
         interestDevelopmentId: _development,
         interestLotId: _lot == 0 ? null : _lot,
+        interestLot: _lot == 0 ? 'Sin lote seleccionado' : _lotLabel(_lot),
         qualification: [
           if (_qualification['Decisión']!) 'decision',
           if (_qualification['Disposición']!) 'disposicion',
@@ -354,7 +365,19 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
   );
 
   String _lotLabel(int id) =>
-      '${_lots.firstWhere((lot) => lot['id'] == id)['numero_lote']}';
+      LotCatalog.lotLabel(_lots.firstWhere((lot) => lot['id'] == id));
+
+  Map<String, dynamic>? get _selectedLot =>
+      LotCatalog.findById(_lots, _lot == 0 ? null : _lot);
+
+  String? get _developmentName {
+    for (final development in _developments) {
+      if (development['id'] == _development) {
+        return development['nombre']?.toString();
+      }
+    }
+    return null;
+  }
 
   Future<void> _selectActivityDate() async {
     final selected = await showDatePicker(
@@ -561,15 +584,52 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                             .firstWhere((item) => item['id'] == id)['nombre']
                             .toString(),
                       ),
+                    if (LotCatalog.stageOptions(_lots).isNotEmpty)
+                      _dropdown<int>(
+                        'Etapa',
+                        _stage,
+                        [
+                          0,
+                          ...LotCatalog.stageOptions(_lots)
+                              .map((stage) => stage.id),
+                        ],
+                        (value) {
+                          _stage = value;
+                          if (_lot != 0 &&
+                              !LotCatalog.filterByStage(
+                                _lots,
+                                value,
+                              ).any((lot) => lot['id'] == _lot)) {
+                            _lot = 0;
+                          }
+                        },
+                        format: (id) => id == 0
+                            ? 'Todas las etapas'
+                            : LotCatalog.stageOptions(_lots)
+                                  .firstWhere((stage) => stage.id == id)
+                                  .label,
+                      ),
                     _dropdown<int>(
                       'Lote',
                       _lot,
-                      [0, ..._lots.map((lot) => lot['id'] as int)],
+                      [
+                        0,
+                        ...LotCatalog.filterByStage(
+                          _lots,
+                          _stage,
+                        ).map((lot) => lot['id'] as int),
+                      ],
                       (value) => _lot = value,
-                      format: (id) => id == 0
-                          ? 'Sin lote seleccionado'
-                          : 'Lote ${_lotLabel(id)}',
+                      format: (id) =>
+                          id == 0 ? 'Sin lote seleccionado' : _lotLabel(id),
                     ),
+                    if (_selectedLot case final lot?)
+                      SelectedLotCard(
+                        lot: lot,
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.homeBackground,
+                        developmentFallback: _developmentName,
+                      ),
                     KeyedSubtree(
                       key: const ValueKey('first-follow-up'),
                       child: _dropdown<bool>(
@@ -712,7 +772,10 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                           ),
                           textStyle: const TextStyle(fontFamily: 'BebasNeue'),
                         ),
-                        child: Text(_saving ? 'Guardando…' : 'Guardar', style: TextStyle(fontSize: 18)),
+                        child: Text(
+                          _saving ? 'Guardando…' : 'Guardar',
+                          style: TextStyle(fontSize: 18),
+                        ),
                       ),
                     ),
                   ],

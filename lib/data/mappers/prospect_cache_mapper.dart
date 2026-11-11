@@ -49,6 +49,7 @@ class ProspectCacheMapper {
     'interest_lot_id': prospect.interestLotId,
     'interest_lot': prospect.interestLot,
     'qualification_json': jsonEncode(prospect.qualification),
+    'tipo_prospecto': prospect.tipoProspecto,
   };
 
   static ProspectRecord fromRow(Map<String, Object?> row) {
@@ -97,6 +98,7 @@ class ProspectCacheMapper {
       interestLot: row['interest_lot']! as String,
       qualification: (jsonDecode(row['qualification_json']! as String) as List)
           .cast<String>(),
+      tipoProspecto: row['tipo_prospecto'] as String? ?? 'regular',
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
@@ -188,6 +189,7 @@ class ProspectCard extends StatelessWidget {
                   temperatureColor,
                   foreground: Colors.white,
                 ),
+                if (prospect.isReactivation) const ReactivationTag(),
                 if (date != null)
                   _tag(
                     '${two(date.day)}-${two(date.month)}-${date.year}',

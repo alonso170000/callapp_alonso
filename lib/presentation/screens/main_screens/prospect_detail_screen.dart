@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
@@ -32,6 +33,7 @@ import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProspectDetailArguments {
   const ProspectDetailArguments({
@@ -85,6 +87,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   final _emailService = ProspectsService();
   late final PhoneCallService _phoneCallService;
   late ProspectRecord _prospect;
+  ContactMedium? _primaryMedium;
+  bool _mediumResolved = false;
+  bool _primaryMediumFromActivity = false;
   late final ProspectsRepository _prospectsRepository;
   late final bool _ownsProspectsRepository;
   List<ProspectEmailHistoryEntry> _emails = const [];
@@ -123,6 +128,149 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     );
   }
 
+  Widget _primaryAction(AppPalette palette) {
+    final medium = _primaryMedium;
+    if (!_mediumResolved) {
+      return Expanded(
+        flex: 2,
+        child: SizedBox(
+          height: 54,
+          child: Semantics(
+            label: 'Cargando canal de contacto',
+            button: true,
+            enabled: false,
+            child: FilledButton(
+              onPressed: null,
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    if (medium == null) {
+      return Expanded(
+        flex: 2,
+        child: SizedBox(
+          height: 54,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.brandFill,
+              foregroundColor: palette.onBrand,
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: _openProspectData,
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.profile_tick_copy, size: 25),
+                SizedBox(height: 2),
+                Text(
+                  'Completar datos',
+                  style: TextStyle(fontFamily: 'SulphurPoint', fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final busy =
+        (medium == ContactMedium.llamada && _calling) ||
+        (medium == ContactMedium.correo && _sendingEmail);
+    final enabled = medium != ContactMedium.facebook && !busy;
+    final button = Expanded(
+      flex: 2,
+      child: SizedBox(
+        height: 54,
+        child: Semantics(
+          label: '${medium.actionLabel} a ${_prospect.name}',
+          button: true,
+          enabled: enabled,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.brandFill,
+              foregroundColor: palette.onBrand,
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: enabled ? () => _runMediumAction(medium) : null,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(medium.icon, size: 25),
+                const SizedBox(height: 2),
+                Text(
+                  medium.actionLabel,
+                  style: const TextStyle(
+                    fontFamily: 'SulphurPoint',
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (medium != ContactMedium.facebook) return button;
+    return Expanded(
+      flex: 2,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _showFacebookUnavailable,
+        child: SizedBox(
+          height: 54,
+          child: Semantics(
+            label: '${medium.actionLabel} de ${_prospect.name}',
+            button: true,
+            enabled: false,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.brandFill,
+                foregroundColor: palette.onBrand,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: null,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(medium.icon, size: 25),
+                  const SizedBox(height: 2),
+                  Text(
+                    medium.actionLabel,
+                    style: const TextStyle(
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -130,6 +278,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _callSession = widget.callSession ?? CallSessionController.instance;
     WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
+    final sourceMedium = ContactMedium.parse(widget.sourceActivity?.medium);
+    _primaryMedium = widget.callStarted ? ContactMedium.llamada : sourceMedium;
+    _mediumResolved =
+        widget.callStarted ||
+        sourceMedium != null ||
+        widget.prospect.id == null;
+    _primaryMediumFromActivity = sourceMedium != null;
     _prospectsRepository = widget.prospectsRepository ?? ProspectsRepository();
     _ownsProspectsRepository = widget.prospectsRepository == null;
     _telephoneCallCompleted = widget.callStarted;
@@ -142,6 +297,21 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     }
     _loadEmails();
   }
+
+  void _resolvePrimaryMedium(ContactMedium? value) {
+    if (_primaryMediumFromActivity) return;
+    if (!mounted) return;
+    setState(() {
+      _primaryMedium = value;
+      _mediumResolved = true;
+    });
+  }
+
+  void _openProspectData() => setState(() {
+    final label = ProspectSection.data.label;
+    _selected.add(label);
+    _panelRevisions[label] = (_panelRevisions[label] ?? 0) + 1;
+  });
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -226,6 +396,86 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     );
     if (confirmed == true && mounted) await _sendEmail(template);
   }
+
+  Future<void> _openWhatsApp() async {
+    if (!PhoneNumber.isDialable(_prospect.phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'El prospecto no tiene un teléfono válido para WhatsApp.',
+          ),
+        ),
+      );
+      return;
+    }
+    final digits = PhoneNumber.digits(_prospect.phone);
+    try {
+      final opened = await launchUrl(
+        Uri.parse('https://wa.me/$digits'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            opened
+                ? 'WhatsApp abierto. Registra el resultado en el formulario de seguimiento.'
+                : 'No se pudo abrir WhatsApp.',
+          ),
+        ),
+      );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir WhatsApp.')),
+      );
+    }
+  }
+
+  Future<void> _openContactEmail() async {
+    if (!ContactMedium.correo.isAvailable(_prospect)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El prospecto no tiene un correo válido registrado.'),
+        ),
+      );
+      return;
+    }
+    try {
+      final opened = await launchUrl(
+        Uri(scheme: 'mailto', path: _prospect.email),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted || opened) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir la aplicación de correo.'),
+        ),
+      );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir la aplicación de correo.'),
+        ),
+      );
+    }
+  }
+
+  void _showFacebookUnavailable() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('El prospecto no tiene Facebook registrado.'),
+      ),
+    );
+  }
+
+  Future<void> _runMediumAction(ContactMedium medium) => switch (medium) {
+    ContactMedium.llamada => _startCall(),
+    ContactMedium.whatsapp => _openWhatsApp(),
+    ContactMedium.correo => _openContactEmail(),
+    ContactMedium.facebook => Future.sync(_showFacebookUnavailable),
+  };
 
   Future<void> _sendEmail(ProspectEmailTemplate template) async {
     if (_sendingEmail || _prospect.id == null) return;
@@ -475,8 +725,15 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                 child: AgendaActivityDetail(
                   activity: activity,
                   onClose: () => Navigator.pop(detailContext),
-                  onMessage: () {},
-                  onCall: () {},
+                  onMessage: () => _closeActivityAndRun(
+                    detailContext,
+                    ContactMedium.parse(activity.medium) ??
+                        ContactMedium.llamada,
+                  ),
+                  onCall: () => _closeActivityAndRun(
+                    detailContext,
+                    ContactMedium.llamada,
+                  ),
                   onOpenProspect: () => Navigator.pop(detailContext),
                   onEdit: () {},
                   onComplete: () {},
@@ -488,6 +745,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         ),
       ),
     );
+  }
+
+  void _closeActivityAndRun(BuildContext detailContext, ContactMedium medium) {
+    Navigator.pop(detailContext);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_runMediumAction(medium));
+    });
   }
 
   bool get _requiresFollowUp =>
@@ -551,7 +815,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                       child: Row(
                         children: [
                           _actionButton(
-                            'Enviar correo',
+                            'Correos prediseñados',
                             Iconsax.send_2_copy,
                             _sendingEmail ? () {} : _openEmailOptions,
                           ),
@@ -562,53 +826,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                             _contact,
                           ),
                           const SizedBox(width: 7),
-                          Expanded(
-                            flex: 2,
-                            child: SizedBox(
-                              height: 54,
-                              child: FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: palette.brandFill,
-                                  foregroundColor: palette.onBrand,
-                                  padding: EdgeInsets.zero,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                onPressed: _calling ? null : _startCall,
-                                child: Semantics(
-                                  label: 'Llamar a ${p.name}',
-                                  button: true,
-                                  enabled: !_calling,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _calling
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Iconsax.call_calling,
-                                              size: 25,
-                                            ),
-                                      const SizedBox(height: 2),
-                                      const Text(
-                                        'Llamar',
-                                        style: TextStyle(
-                                          fontFamily: 'SulphurPoint',
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                          _primaryAction(palette),
                           const SizedBox(width: 7),
                           _actionButton(
                             'Descartar prospecto',
@@ -686,6 +904,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       sourceActivity: widget.sourceActivity,
                                       loadActivities: widget.loadActivities,
                                       onOpenActivity: _openActivity,
+                                      onMediumChanged: _resolvePrimaryMedium,
                                       onSaved: (entry) {
                                         unawaited(
                                           NotificationService.instance

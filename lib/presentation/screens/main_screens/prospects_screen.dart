@@ -651,6 +651,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                       }).toList(),
                     ),
                   ),
+                  const SizedBox(height: 12),
                   if (activeFilters.isNotEmpty)
                     SingleChildScrollView(
                       key: const ValueKey('prospect-active-filters'),

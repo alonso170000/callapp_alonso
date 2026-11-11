@@ -61,6 +61,7 @@ void main() {
       lastContact: 'Hace 1 día',
       completedAt: DateTime(2026, 10, 20, 9),
       deleteUntil: DateTime(2026, 10, 20, 9, 5),
+      tipoProspecto: 'reactivacion',
     );
 
     await cache.replace(scope, [activity]);
@@ -82,6 +83,8 @@ void main() {
     expect(restored.lastContact, activity.lastContact);
     expect(restored.completedAt, activity.completedAt);
     expect(restored.deleteUntil, activity.deleteUntil);
+    expect(restored.tipoProspecto, 'reactivacion');
+    expect(restored.isReactivation, isTrue);
   });
 
   test('recalcula atrasado al leer según el reloj actual', () async {
@@ -151,5 +154,6 @@ extension on AgendaActivity {
     lastContact: lastContact,
     completedAt: completedAt,
     deleteUntil: deleteUntil,
+    tipoProspecto: tipoProspecto,
   );
 }

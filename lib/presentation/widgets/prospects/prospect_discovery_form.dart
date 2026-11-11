@@ -4,6 +4,8 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/selected_lot_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
@@ -41,6 +43,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String? _previousExperience;
   final Set<String> _decisionMakers = {};
   int? _selectedLotId;
+  int _selectedStageId = 0;
   int? _selectedDevelopmentId;
   int? _selectedCloserId;
   bool _knowsArea = false;
@@ -326,37 +329,6 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     ),
   );
 
-  Widget _readOnlyRow(String label, String value) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 4,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.discoveryFieldText,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 6,
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.discoveryFieldText,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
   Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 7),
@@ -503,6 +475,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         } else if (_selectedDevelopmentId != null &&
             !developments.any((item) => item['id'] == _selectedDevelopmentId)) {
           _selectedDevelopmentId = null;
+          _selectedStageId = 0;
           _selectedLotId = null;
         }
       });
@@ -526,7 +499,16 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     });
     try {
       final lots = await _repository.loadLots(developmentId);
-      if (mounted) setState(() => _lots = lots);
+      if (mounted) {
+        setState(() {
+          _lots = lots;
+          final selectedLot = _selectedLot;
+          final stages = LotCatalog.stageOptions(lots);
+          _selectedStageId = selectedLot == null
+              ? (stages.length == 1 ? stages.single.id : 0)
+              : LotCatalog.stageIdOf(selectedLot) ?? 0;
+        });
+      }
     } on ProspectsException catch (error) {
       if (mounted) setState(() => _lotsError = error.message);
     } finally {
@@ -546,38 +528,14 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     }
   }
 
-  Map<String, dynamic>? get _selectedLot {
-    for (final lot in _lots) {
-      if (lot['id'] == _selectedLotId) return lot;
-    }
-    return null;
-  }
+  Map<String, dynamic>? get _selectedLot =>
+      LotCatalog.findById(_lots, _selectedLotId);
 
-  String _lotLabel(Map<String, dynamic> lot) =>
-      'Lote ${lot['numero_lote'] ?? lot['id']}';
+  int? get _developmentDropdownId =>
+      _selectedDevelopmentId ??
+      (_developments.length == 1 ? _developments.single['id'] as int : null);
 
-  String _money(Object? value) {
-    final amount = double.tryParse('$value');
-    if (amount == null) return 'No disponible';
-    final fixed = amount.toStringAsFixed(2);
-    final parts = fixed.split('.');
-    final digits = parts.first;
-    final buffer = StringBuffer();
-    for (var index = 0; index < digits.length; index++) {
-      if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-      buffer.write(digits[index]);
-    }
-    return '\$ $buffer.${parts.last}';
-  }
-
-  String _dimensions(Object? value) {
-    final size = double.tryParse('$value');
-    if (size == null) return 'No disponible';
-    final text = size == size.roundToDouble()
-        ? size.toStringAsFixed(0)
-        : size.toStringAsFixed(2);
-    return '$text m²';
-  }
+  String _lotLabel(Map<String, dynamic> lot) => LotCatalog.lotLabel(lot);
 
   Future<void> _loadDiscovery() async {
     setState(() {
@@ -871,6 +829,10 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       _selectedDevelopmentId = _saved?['selectedDevelopmentId'] as int?;
       _hasSpecificLot = (_saved?['hasSpecificLot'] as bool?) ?? false;
       _selectedLotId = _saved?['selectedLotId'] as int?;
+      final restoredLot = _selectedLot;
+      _selectedStageId = restoredLot == null
+          ? 0
+          : LotCatalog.stageIdOf(restoredLot) ?? 0;
       _decisionMakers
         ..clear()
         ..addAll((_saved?['decisionMakers'] as List<String>?) ?? const []);
@@ -1135,14 +1097,14 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                   'Desarrollo de interés *',
                   DropdownButtonFormField<int>(
                     key: ValueKey(
-                      'desarrollo-$_selectedDevelopmentId-${_developments.length}',
+                      'desarrollo-$_developmentDropdownId-${_developments.length}',
                     ),
                     initialValue:
                         _developments.any(
                           (development) =>
-                              development['id'] == _selectedDevelopmentId,
+                              development['id'] == _developmentDropdownId,
                         )
-                        ? _selectedDevelopmentId
+                        ? _developmentDropdownId
                         : null,
                     isExpanded: true,
                     dropdownColor: AppColors.discoveryField,
@@ -1195,6 +1157,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         : (value) {
                             setState(() {
                               _selectedDevelopmentId = value;
+                              _selectedStageId = 0;
                               _selectedLotId = null;
                               _lots = const [];
                             });
@@ -1240,6 +1203,46 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         ),
                       ),
                     ),
+                  if (LotCatalog.stageOptions(_lots).isNotEmpty)
+                    _label(
+                      'Etapa',
+                      DropdownButtonFormField<int>(
+                        key: ValueKey(
+                          'etapa-$_selectedStageId-${_lots.length}',
+                        ),
+                        initialValue: _selectedStageId,
+                        isExpanded: true,
+                        dropdownColor: AppColors.discoveryField,
+                        style: const TextStyle(
+                          color: AppColors.discoveryFieldText,
+                          fontFamily: 'SulphurPoint',
+                          fontSize: 16,
+                        ),
+                        decoration: _decoration(),
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text('Todas las etapas'),
+                          ),
+                          ...LotCatalog.stageOptions(_lots).map(
+                            (stage) => DropdownMenuItem<int>(
+                              value: stage.id,
+                              child: Text(stage.label),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() {
+                          _selectedStageId = value ?? 0;
+                          if (_selectedLotId != null &&
+                              !LotCatalog.filterByStage(
+                                _lots,
+                                _selectedStageId,
+                              ).any((lot) => lot['id'] == _selectedLotId)) {
+                            _selectedLotId = null;
+                          }
+                        }),
+                      ),
+                    ),
                   _label(
                     'Seleccionar lote *',
                     DropdownButtonFormField<int>(
@@ -1277,7 +1280,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           color: AppColors.discoveryFieldHint,
                         ),
                       ),
-                      items: _lots
+                      items: LotCatalog.filterByStage(_lots, _selectedStageId)
                           .map(
                             (lot) => DropdownMenuItem<int>(
                               value: lot['id'] as int,
@@ -1293,31 +1296,13 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                     ),
                   ),
                   if (_selectedLot case final lot?)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.discoveryField,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        children: [
-                          _readOnlyRow(
-                            'Desarrollo',
-                            '${lot['desarrollo_nombre'] ?? _service.activeDevelopment?['nombre'] ?? 'No disponible'}',
-                          ),
-                          _readOnlyRow(
-                            'Número de lote',
-                            '${lot['numero_lote']}',
-                          ),
-                          _readOnlyRow(
-                            'Dimensiones',
-                            _dimensions(lot['dimensiones_m2']),
-                          ),
-                          _readOnlyRow('Precio actual', _money(lot['precio'])),
-                        ],
-                      ),
+                    SelectedLotCard(
+                      lot: lot,
+                      backgroundColor: AppColors.discoveryField,
+                      foregroundColor: AppColors.discoveryFieldText,
+                      developmentFallback:
+                          lot['desarrollo_nombre']?.toString() ??
+                          _service.activeDevelopment?['nombre']?.toString(),
                     ),
                 ],
                 _multiSelectChips(

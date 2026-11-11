@@ -4,6 +4,7 @@ import 'prospect_models.dart';
 import 'prospect_search.dart';
 
 enum ProspectFilterGroup {
+  prospectType,
   status,
   nextContact,
   priority,
@@ -26,6 +27,7 @@ class ProspectFilters {
     Set<int>? prospectIds,
     this.sourceLabel,
     this.status,
+    this.prospectType,
     this.nextContact,
     this.assignment,
     this.range,
@@ -37,6 +39,7 @@ class ProspectFilters {
        results = {...results ?? outcomes.toSet()};
 
   static const priorities = ['Caliente', 'Tibio', 'Frío', 'Sin calificar'];
+  static const prospectTypes = ['Regular', 'Reactivación'];
   static const statusOrder = [
     'Nuevo',
     'Negociación',
@@ -63,6 +66,7 @@ class ProspectFilters {
   final Set<int>? prospectIds;
   final String? sourceLabel;
   String? status;
+  String? prospectType;
   String? nextContact;
   String? assignment;
   DateTimeRange? range;
@@ -74,6 +78,7 @@ class ProspectFilters {
     prospectIds: prospectIds,
     sourceLabel: sourceLabel,
     status: status,
+    prospectType: prospectType,
     nextContact: nextContact,
     assignment: assignment,
     range: range,
@@ -85,6 +90,7 @@ class ProspectFilters {
   bool get active =>
       prospectIds != null ||
       status != null ||
+      prospectType != null ||
       nextContact != null ||
       assignment != null ||
       range != null ||
@@ -95,6 +101,7 @@ class ProspectFilters {
   bool get isSellerPreset =>
       prospectIds == null &&
       status == null &&
+      prospectType == null &&
       nextContact == null &&
       assignment == null &&
       range == null &&
@@ -104,6 +111,7 @@ class ProspectFilters {
   bool get isAllPreset =>
       prospectIds == null &&
       status == null &&
+      prospectType == null &&
       nextContact == null &&
       assignment == null &&
       range == null &&
@@ -112,6 +120,14 @@ class ProspectFilters {
 
   List<ActiveFilter> get summary {
     final filters = <ActiveFilter>[];
+    if (prospectType != null) {
+      filters.add(
+        ActiveFilter(
+          label: 'Tipo de prospecto: $prospectType',
+          group: ProspectFilterGroup.prospectType,
+        ),
+      );
+    }
     if (status != null) {
       filters.add(
         ActiveFilter(
@@ -178,6 +194,7 @@ class ProspectFilters {
     if (group == ProspectFilterGroup.selection) {
       return ProspectFilters(
         status: status,
+        prospectType: prospectType,
         nextContact: nextContact,
         assignment: assignment,
         range: range,
@@ -188,6 +205,8 @@ class ProspectFilters {
     }
     final cleared = copy();
     switch (group) {
+      case ProspectFilterGroup.prospectType:
+        cleared.prospectType = null;
       case ProspectFilterGroup.status:
         cleared.status = null;
       case ProspectFilterGroup.nextContact:
@@ -212,6 +231,11 @@ class ProspectFilters {
     if (status != null &&
         ProspectSearch.normalize(prospect.status) !=
             ProspectSearch.normalize(status!)) {
+      return false;
+    }
+    if (prospectType != null &&
+        ProspectSearch.normalize(prospect.prospectTypeLabel) !=
+            ProspectSearch.normalize(prospectType!)) {
       return false;
     }
     if ((!_sameSet(temperatures, priorities) &&

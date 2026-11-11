@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -331,31 +332,33 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: activity.tags.isEmpty
-                    ? const SizedBox.shrink()
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 3,
-                        ),
-                        color: ProspectTagColors.background(
-                          activity.tags.first,
-                        ),
-                        child: Text(
-                          activity.tags.first,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: ProspectTagColors.foreground(
-                              activity.tags.first,
-                            ),
-                            fontFamily: 'BebasNeue',
-                            fontSize: 16,
+              child: Wrap(
+                spacing: 5,
+                runSpacing: 5,
+                children: [
+                  if (activity.tags.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      color: ProspectTagColors.background(activity.tags.first),
+                      child: Text(
+                        activity.tags.first,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: ProspectTagColors.foreground(
+                            activity.tags.first,
                           ),
+                          fontFamily: 'BebasNeue',
+                          fontSize: 16,
                         ),
                       ),
+                    ),
+                  if (activity.isReactivation)
+                    const ReactivationTag(compact: true),
+                ],
               ),
             ),
             const SizedBox(width: 10),

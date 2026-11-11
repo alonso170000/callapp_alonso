@@ -474,6 +474,9 @@ class AgendaService {
         if (row['prioridad'] is String)
           (row['prioridad'] as String).replaceAll('frio', 'frío'),
       ],
+      tipoProspecto:
+          (row['prospecto_tipo'] ?? row['tipo_prospecto'])?.toString() ??
+          'regular',
     );
   }
 

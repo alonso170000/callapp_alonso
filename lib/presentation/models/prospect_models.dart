@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:callerapp_frontend/presentation/models/prospect_type.dart'
+    as prospect_type;
+
 class ProspectRecord {
   final int? id;
   final String? avatarUrl;
@@ -35,6 +38,7 @@ class ProspectRecord {
       interestLotId;
   final String interestDevelopment, interestLot;
   final List<String> qualification;
+  final String tipoProspecto;
 
   const ProspectRecord({
     this.id,
@@ -76,7 +80,12 @@ class ProspectRecord {
     this.interestLotId,
     this.interestLot = 'Sin lote seleccionado',
     this.qualification = const [],
+    this.tipoProspecto = 'regular',
   });
+
+  bool get isReactivation => prospect_type.isReactivationType(tipoProspecto);
+  String get prospectTypeLabel =>
+      prospect_type.prospectTypeLabel(tipoProspecto);
 
   String get note =>
       comments ??
@@ -109,6 +118,7 @@ class ProspectRecord {
     String? lastCallStatus,
     int? daysSinceContact,
     bool? discoveryComplete,
+    String? tipoProspecto,
   }) => ProspectRecord(
     id: id ?? this.id,
     avatarUrl: avatarUrl,
@@ -149,6 +159,7 @@ class ProspectRecord {
     interestLotId: interestLotId ?? this.interestLotId,
     interestLot: interestLot ?? this.interestLot,
     qualification: qualification ?? this.qualification,
+    tipoProspecto: tipoProspecto ?? this.tipoProspecto,
   );
 }
 

@@ -14,7 +14,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   sqfliteFfiInit();
 
-  test('crea el esquema versión 4 con todas las tablas', () async {
+  test('crea el esquema versión 5 con tipo de prospecto offline', () async {
     final database = AppDatabase(
       factory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
@@ -38,6 +38,16 @@ void main() {
       ]),
     );
     expect(await db.getVersion(), AppDatabase.schemaVersion);
+    expect(
+      (await db.rawQuery('PRAGMA table_info(cached_prospects)'))
+          .map((row) => row['name']),
+      contains('tipo_prospecto'),
+    );
+    expect(
+      (await db.rawQuery('PRAGMA table_info(cached_activities)'))
+          .map((row) => row['name']),
+      contains('prospecto_tipo'),
+    );
   });
 
   test('migra una base versión 2 conservando los datos existentes', () async {
@@ -97,6 +107,10 @@ void main() {
     final db = await database.database;
     expect(await db.getVersion(), AppDatabase.schemaVersion);
     expect((await db.query('cached_prospects')).single['name'], 'Ana');
+    expect(
+      (await db.query('cached_prospects')).single['tipo_prospecto'],
+      'regular',
+    );
     expect(
       (await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'cached_activities'",

@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_discovery_form.dart';
+import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,11 @@ class _RecordingProspectsService extends ProspectsService {
       'precio': 950000,
       'estatus': 'disponible',
       'desarrollo_nombre': 'Residencial Hada',
+      'numero_etapa': 2,
+      'tipo': 'Residencial',
+      'estado': 'Quintana Roo',
+      'municipio': 'Benito Juárez',
+      'ubicacion': 'Cancún',
     },
   ];
   List<Map<String, dynamic>> developments = [
@@ -104,7 +110,9 @@ void main() {
     final textField = find.byType(TextField).first;
     await tester.tap(textField);
     await tester.pump();
-    final editable = tester.widget<EditableText>(find.byType(EditableText).first);
+    final editable = tester.widget<EditableText>(
+      find.byType(EditableText).first,
+    );
     expect(editable.focusNode.hasFocus, isTrue);
 
     await tester.tap(find.byType(DropdownButtonFormField<String>).first);
@@ -163,6 +171,7 @@ void main() {
             child: ProspectDiscoveryForm(
               prospectId: 17,
               prospectsService: service,
+              repository: _CatalogRepository(service),
               onSaved: (_) {},
             ),
           ),
@@ -199,6 +208,7 @@ void main() {
             child: ProspectDiscoveryForm(
               prospectId: 17,
               prospectsService: service,
+              repository: _CatalogRepository(service),
               onSaved: (_) {},
             ),
           ),
@@ -242,6 +252,7 @@ void main() {
             child: ProspectDiscoveryForm(
               prospectId: 17,
               prospectsService: service,
+              repository: _CatalogRepository(service),
               onSaved: (_) {},
             ),
           ),
@@ -285,7 +296,13 @@ void main() {
     expect(find.text('Residencial Hada'), findsWidgets);
     expect(find.text('Dimensiones'), findsOneWidget);
     expect(find.text('120 m²'), findsOneWidget);
+    expect(find.text('Etapa 2'), findsWidgets);
+    expect(find.text('Tipo de lote'), findsOneWidget);
+    expect(find.text('Residencial'), findsOneWidget);
     expect(find.text(r'$ 950,000.00'), findsOneWidget);
+    expect(find.text('Quintana Roo'), findsWidgets);
+    expect(find.text('Benito Juárez'), findsOneWidget);
+    expect(find.text('Cancún'), findsWidgets);
   });
 
   testWidgets('proceso guarda participantes múltiples y el lote elegido', (
@@ -380,4 +397,18 @@ void main() {
       'cerrador_id': 8,
     });
   });
+}
+
+class _CatalogRepository extends ProspectsRepository {
+  _CatalogRepository(this.service) : super(service: service);
+
+  final _RecordingProspectsService service;
+
+  @override
+  Future<List<Map<String, dynamic>>> loadDevelopments() =>
+      service.availableDevelopments();
+
+  @override
+  Future<List<Map<String, dynamic>>> loadLots(int developmentId) =>
+      service.availableLots(developmentId);
 }

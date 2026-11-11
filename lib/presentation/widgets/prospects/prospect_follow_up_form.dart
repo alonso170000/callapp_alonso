@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
@@ -37,6 +38,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final ValueChanged<AgendaActivity>? onOpenActivity;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
+  final ValueChanged<ContactMedium?>? onMediumChanged;
   final bool initialContactSuccess;
   final bool readOnly;
   final bool callInProgress;
@@ -52,6 +54,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.loadActivities,
     this.onOpenActivity,
     this.onProspectUpdated,
+    this.onMediumChanged,
     this.initialContactSuccess = false,
     this.readOnly = false,
     this.callInProgress = false,
@@ -81,15 +84,17 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   bool _saving = false;
   bool _loadingContext = true;
   bool _completionAcknowledged = false;
+  bool _scheduleInitialized = false;
   String? _error;
   String? _contextError;
   List<AgendaActivity> _activeActivities = [];
   Map<String, dynamic>? _saved;
   String? _followUpOperationKey;
+  ContactMedium? _lastNotifiedMedium;
+  bool _hasNotifiedMedium = false;
 
   bool get _requiresCompletedCall =>
-      widget.sourceActivity?.isFollowUp == true &&
-      widget.sourceActivity?.medium?.trim().toLowerCase() == 'llamada' &&
+      _selectedMedium == ContactMedium.llamada &&
       !widget.telephoneCallCompleted;
 
   void _showCallRequiredNotice() => setState(() {
@@ -102,10 +107,11 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _service = widget.prospectsService ?? ProspectsService();
     _repository = widget.repository ?? ProspectsRepository(service: _service);
     _agendaService = AgendaService();
-    _method = widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp';
+    _method = _initialMethod();
     _success = widget.initialContactSuccess;
     if (widget.sourceActivity?.medium != null) {
       _method = _methodForActivity(widget.sourceActivity!.medium!);
+      _notifyMediumChanged(ContactMedium.parse(widget.sourceActivity!.medium));
     }
     final initial =
         widget.prospect.nextContact ??
@@ -126,6 +132,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         widget.sourceActivity?.medium == null) {
       _method = 'Llamada telefónica';
     }
+    if (widget.llamadaId != null) _method = 'Llamada telefónica';
+    _notifyCurrentMedium();
   }
 
   Future<void> _loadSavedFollowUp() async {
@@ -165,7 +173,10 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   Future<void> _loadActivityContext() async {
     if (widget.prospect.id == null) {
-      if (mounted) setState(() => _loadingContext = false);
+      if (mounted) {
+        setState(() => _loadingContext = false);
+        _notifyMediumChanged(null);
+      }
       return;
     }
     try {
@@ -186,8 +197,14 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         final followUp = _followUpToComplete;
         if (followUp?.medium != null) {
           _method = _methodForActivity(followUp!.medium!);
+        } else {
+          _initializeWithoutPendingActivity();
         }
       });
+      final medium = _followUpToComplete?.medium;
+      _notifyMediumChanged(
+        medium == null ? _selectedAvailableMedium : ContactMedium.parse(medium),
+      );
     } on AgendaException catch (error) {
       if (mounted) {
         if (widget.sourceActivity != null) {
@@ -201,8 +218,65 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           _contextError = error.message;
           _loadingContext = false;
         });
+        _notifyMediumChanged(null);
       }
     }
+  }
+
+  void _notifyMediumChanged(ContactMedium? medium) {
+    if (_hasNotifiedMedium && medium == _lastNotifiedMedium) return;
+    _hasNotifiedMedium = true;
+    _lastNotifiedMedium = medium;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onMediumChanged?.call(medium);
+    });
+  }
+
+  String _initialMethod() {
+    if (widget.llamadaId != null || widget.telephoneCallCompleted) {
+      return 'Llamada telefónica';
+    }
+    if (ContactMedium.llamada.isAvailable(widget.prospect)) {
+      return 'Llamada telefónica';
+    }
+    if (ContactMedium.correo.isAvailable(widget.prospect)) return 'Correo';
+    if (widget.prospect.phone.trim().isNotEmpty) return 'WhatsApp';
+    return 'Llamada telefónica';
+  }
+
+  ContactMedium? get _selectedMedium => switch (_method) {
+    'Llamada telefónica' => ContactMedium.llamada,
+    'WhatsApp' => ContactMedium.whatsapp,
+    'Facebook' => ContactMedium.facebook,
+    'Correo' => ContactMedium.correo,
+    _ => ContactMedium.parse(_method),
+  };
+
+  ContactMedium? get _selectedAvailableMedium {
+    if (widget.prospect.phone.trim().isEmpty &&
+        widget.prospect.email.trim().isEmpty) {
+      return null;
+    }
+    return _selectedMedium;
+  }
+
+  void _notifyCurrentMedium() {
+    if (widget.prospect.id == null || _contextError != null) {
+      _notifyMediumChanged(null);
+      return;
+    }
+    final fixed = ContactMedium.parse(_followUpToComplete?.medium);
+    _notifyMediumChanged(fixed ?? _selectedAvailableMedium);
+  }
+
+  void _initializeWithoutPendingActivity() {
+    _completionAcknowledged = true;
+    if (!_scheduleInitialized) {
+      _schedule = true;
+      _scheduleInitialized = true;
+    }
+    _activityMedium =
+        (_selectedAvailableMedium ?? ContactMedium.llamada).backendValue;
   }
 
   AgendaActivity? get _followUpToComplete {
@@ -229,17 +303,20 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _ => medium,
   };
 
-  void _cancel() => setState(() {
-    _status = _saved?['status'] ?? 'Nuevo';
-    _method =
-        _saved?['method'] ??
-        (widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp');
-    _priority = _saved?['priority'] ?? widget.prospect.temperature;
-    _notes.text = _saved?['notes'] ?? '';
-    _success = _saved?['success'] ?? false;
-    _schedule = _saved?['schedule'] ?? false;
-    _activityDraft = _saved?['activity'] as _FollowUpActivityDraft?;
-  });
+  void _cancel() {
+    setState(() {
+      _status = _saved?['status'] ?? 'Nuevo';
+      _method =
+          _saved?['method'] ??
+          (widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp');
+      _priority = _saved?['priority'] ?? widget.prospect.temperature;
+      _notes.text = _saved?['notes'] ?? '';
+      _success = _saved?['success'] ?? false;
+      _schedule = _saved?['schedule'] ?? (_followUpToComplete == null);
+      _activityDraft = _saved?['activity'] as _FollowUpActivityDraft?;
+    });
+    _notifyCurrentMedium();
+  }
 
   Future<void> _pickDate() async {
     final now = businessNow();
@@ -464,12 +541,6 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   Future<void> _saveFollowUp() async {
     if (_saving || _saved != null) return;
-    if (widget.telephoneCallCompleted && _notes.text.trim().isEmpty) {
-      setState(
-        () => _error = 'Escribe las notas de la interacción para guardar el seguimiento de la llamada.',
-      );
-      return;
-    }
     if (_loadingContext || _contextError != null) {
       setState(
         () => _error = 'No se pudo validar la actividad que será completada.',
@@ -487,6 +558,28 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         () => _error = 'Guarda primero los datos de la siguiente actividad.',
       );
       return;
+    }
+    if (_notes.text.trim().isEmpty) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Confirmar seguimiento'),
+          content: const Text(
+            'Notas de interaccion esta vacio ¿desea guardar el seguimiento?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('GUARDAR'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
     }
     if (widget.prospect.id == null) {
       _saved = {
@@ -616,7 +709,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           _select(
             'Medio de contacto',
             _activityMedium,
-            const ['llamada', 'whatsapp', 'facebook', 'correo'],
+            const ['telefono', 'whatsapp', 'facebook', 'correo'],
             (value) {
               _activityMedium = value;
               _activityDraft = null;
@@ -749,7 +842,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     }
     final activity = _followUpToComplete;
     final message = activity == null
-        ? 'No existe una actividad de seguimiento programada. Al guardar, el sistema creará una nueva actividad en estado Completado.'
+        ? 'Este prospecto no tiene una actividad pendiente. Al guardar se registrará el contacto; programa el siguiente para no dejarlo sin seguimiento.'
         : widget.sourceActivity?.id == activity.id
         ? 'Este seguimiento quedará vinculado a la actividad abierta desde Agenda y la marcará como Completada.'
         : 'Al guardar se completará el seguimiento programado para el ${_dateLabel(activity.date)} a las ${TimeOfDay.fromDateTime(activity.date).format(context)}.';
@@ -783,36 +876,37 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   icon: const Icon(Iconsax.document_text_copy),
                   label: const Text('VER ACTIVIDAD'),
                 ),
-              FilledButton.icon(
-                key: const ValueKey('acknowledge-follow-up-completion'),
-                onPressed: _completionAcknowledged
-                    ? null
-                    : () => setState(() {
-                        _completionAcknowledged = true;
-                        _error = null;
-                      }),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _completionAcknowledged
-                      ? const Color.fromARGB(255, 90, 125, 195)
-                      : const Color.fromARGB(255, 22, 163, 224),
-                ),
-                icon: Icon(
-                  _completionAcknowledged
-                      ? Iconsax.tick_circle
-                      : Icons.info_outline,
-                  color: _completionAcknowledged
-                      ? Color.fromARGB(255, 170, 237, 255)
-                      : Colors.white,
-                ),
-                label: Text(
-                  _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
-                  style: TextStyle(
+              if (activity != null)
+                FilledButton.icon(
+                  key: const ValueKey('acknowledge-follow-up-completion'),
+                  onPressed: _completionAcknowledged
+                      ? null
+                      : () => setState(() {
+                          _completionAcknowledged = true;
+                          _error = null;
+                        }),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _completionAcknowledged
+                        ? const Color.fromARGB(255, 90, 125, 195)
+                        : const Color.fromARGB(255, 22, 163, 224),
+                  ),
+                  icon: Icon(
+                    _completionAcknowledged
+                        ? Iconsax.tick_circle
+                        : Icons.info_outline,
                     color: _completionAcknowledged
                         ? Color.fromARGB(255, 170, 237, 255)
                         : Colors.white,
                   ),
+                  label: Text(
+                    _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
+                    style: TextStyle(
+                      color: _completionAcknowledged
+                          ? Color.fromARGB(255, 170, 237, 255)
+                          : Colors.white,
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -884,17 +978,35 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               _select(
                 '¿Cómo intentaste contactarlo?',
                 _method,
-                [
-                  if (widget.telephoneCallCompleted ||
-                      _method == 'Llamada telefónica')
-                    'Llamada telefónica',
-                  'WhatsApp',
-                  'Facebook',
-                  'Correo',
-                ],
-                (v) => _method = v,
-                enabled: _followUpToComplete?.medium == null,
+                ['Llamada telefónica', 'WhatsApp', 'Facebook', 'Correo'],
+                (v) {
+                  _method = v;
+                  _activityMedium =
+                      (_selectedMedium ?? ContactMedium.llamada).backendValue;
+                  _notifyCurrentMedium();
+                },
+                enabled:
+                    _followUpToComplete?.medium == null &&
+                    widget.llamadaId == null,
               ),
+              if (widget.prospect.phone.trim().isEmpty &&
+                  widget.prospect.email.trim().isEmpty)
+                Container(
+                  key: const ValueKey('follow-up-missing-contact-data'),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppPalette.of(context).noticeSurfaceFill,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Sin teléfono ni correo registrados',
+                    style: TextStyle(
+                      color: AppPalette.of(context).noticeSurfaceInk,
+                    ),
+                  ),
+                ),
               _select('Prioridad del prospecto', _priority, [
                 'Caliente',
                 'Tibio',

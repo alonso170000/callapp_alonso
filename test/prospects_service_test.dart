@@ -63,6 +63,7 @@ void main() {
                 'fecha_asignacion': '2026-10-09T12:00:00Z',
                 'ultima_llamada_at': '2026-10-09T13:00:00Z',
                 'ultima_llamada_exitosa': 1,
+                'tipo_prospecto': 'Reactivación',
               },
             ],
           }),
@@ -82,6 +83,7 @@ void main() {
     expect(record.nextContact, isNull);
     expect(record.assignedAt, DateTime(2026, 10, 9, 7));
     expect(record.lastContactResult, 'Contestó');
+    expect(record.isReactivation, isTrue);
   });
 
   test(
@@ -239,7 +241,7 @@ void main() {
         }
         expect(request.url.queryParameters['desarrollo_id'], '4');
         return http.Response(
-          '{"success":true,"data":[{"id":"7","numero_lote":"A-23","precio":"500000.00"}]}',
+          '{"success":true,"data":[{"id":"7","numero_lote":"23","precio":"500000.00","cluster_id":"2","numero_etapa":"3"}]}',
           200,
         );
       }),
@@ -251,7 +253,9 @@ void main() {
 
     expect(developments.single['id'], 4);
     expect(lots.single['id'], 7);
-    expect(lots.single['numero_lote'], 'A-23');
+    expect(lots.single['numero_lote'], 23);
+    expect(lots.single['cluster_id'], 2);
+    expect(lots.single['numero_etapa'], 3);
   });
 
   test(

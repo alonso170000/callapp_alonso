@@ -11,6 +11,7 @@ void main() {
     String result = 'Contestó',
     DateTime? next,
     DateTime? assigned,
+    String prospectType = 'regular',
   }) => ProspectRecord(
     name: name,
     phone: '',
@@ -22,6 +23,7 @@ void main() {
     nextContact: next,
     assignedAt: assigned,
     lastContactResult: result,
+    tipoProspecto: prospectType,
   );
 
   test('presets, summary and clearGroup preserve unrelated filters', () {
@@ -37,6 +39,7 @@ void main() {
 
     final filters = ProspectFilters(
       status: 'Nuevo',
+      prospectType: 'Reactivación',
       nextContact: 'Hoy',
       assignment: 'Últimos 7 días',
       temperatures: {'Caliente', 'Tibio'},
@@ -48,6 +51,7 @@ void main() {
       filters.summary.map((item) => item.label),
       containsAll([
         'Estatus: Nuevo',
+        'Tipo de prospecto: Reactivación',
         'Contacto: Hoy',
         'Prioridad: Caliente, Tibio',
         'Asignación: Últimos 7 días',
@@ -63,6 +67,30 @@ void main() {
     expect(cleared.assignment, isNull);
     expect(cleared.range, isNull);
     expect(cleared.status, 'Nuevo');
+    expect(cleared.prospectType, 'Reactivación');
+  });
+
+  test('filtra prospectos regulares y de reactivación', () {
+    final now = DateTime(2026, 10, 16, 12);
+    final regular = record();
+    final reactivated = record(prospectType: 'Reactivación');
+
+    expect(
+      ProspectFilters(prospectType: 'Regular').matches(regular, now),
+      isTrue,
+    );
+    expect(
+      ProspectFilters(prospectType: 'Regular').matches(reactivated, now),
+      isFalse,
+    );
+    expect(
+      ProspectFilters(prospectType: 'Reactivación').matches(reactivated, now),
+      isTrue,
+    );
+    expect(
+      ProspectFilters(prospectType: 'Reactivación').matches(regular, now),
+      isFalse,
+    );
   });
 
   test('matching is case and accent insensitive', () {

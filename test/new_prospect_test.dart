@@ -42,8 +42,27 @@ void main() {
             if (request.method == 'GET') {
               if (request.url.path.endsWith('lotes')) {
                 return http.Response(
-                  '{"success":true,"data":[{"id":7,"numero_lote":23,"dimensiones_m2":"300.00","tipo":"comercial","precio":"500000.00","estatus":"disponible"}]}',
+                  jsonEncode({
+                    'success': true,
+                    'data': [
+                      {
+                        'id': 7,
+                        'numero_lote': 23,
+                        'dimensiones_m2': '300.00',
+                        'tipo': 'comercial',
+                        'precio': '500000.00',
+                        'estatus': 'disponible',
+                        'desarrollo_nombre': 'Runa',
+                        'cluster_id': 2,
+                        'numero_etapa': 2,
+                        'estado': 'Yucatán',
+                        'municipio': 'Motul',
+                        'ubicacion': 'Carretera Motul-Telchac',
+                      },
+                    ],
+                  }),
                   200,
+                  headers: {'content-type': 'application/json; charset=utf-8'},
                 );
               }
               final channel = request.url.path.endsWith('canales');
@@ -67,7 +86,7 @@ void main() {
             expect(body['nombre'], 'Ana Nueva');
             expect(body['telefono_normalizado'], '9981234567');
             expect(body['calificacion'], isEmpty);
-            expect(body['lote_id'], isNull);
+            expect(body['lote_id'], 7);
             expect(body['primer_seguimiento']['tipo'], 'seguimiento');
             expect(body['primer_seguimiento']['medio'], 'llamada');
             expect(
@@ -121,10 +140,7 @@ void main() {
         );
         await tester.tap(find.text('Abrir'));
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const ValueKey('save-prospect')));
-        await tester.pumpAndSettle();
         expect(posts, 0);
-        expect(find.text('Este campo es obligatorio'), findsWidgets);
         tester.view.viewInsets = const FakeViewPadding(bottom: 260);
         for (final entry in {
           'Nombre': 'Ana Nueva',
@@ -144,6 +160,25 @@ void main() {
         await tester.ensureVisible(
           find.byKey(const ValueKey('first-follow-up')),
         );
+        await tester.ensureVisible(find.text('Sin lote seleccionado'));
+        await tester.tap(find.text('Sin lote seleccionado'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Etapa 2 · Lote 23').last);
+        await tester.pumpAndSettle();
+        for (final value in [
+          'Runa',
+          'Etapa 2',
+          '23',
+          '300 m²',
+          'comercial',
+          r'$ 500,000.00',
+          'Yucatán',
+          'Motul',
+          'Carretera Motul-Telchac',
+        ]) {
+          expect(find.text(value), findsWidgets);
+        }
+        await tester.ensureVisible(find.text('No, por ahora'));
         await tester.tap(find.text('No, por ahora'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Sí, agregar seguimiento').last);

@@ -217,6 +217,12 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _heading('Tipo de prospecto'),
+                      _options(
+                        ProspectFilters.prospectTypes,
+                        _draft.prospectType,
+                        (value) => setState(() => _draft.prospectType = value),
+                      ),
                       _heading('Próximo contacto'),
                       _options(
                         [

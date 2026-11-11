@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/selected_lot_card.dart';
 import 'package:callerapp_frontend/presentation/validators/profile_validators.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_type.dart';
 
 class ProspectDataForm extends StatefulWidget {
   final ProspectRecord prospect;
@@ -40,6 +44,9 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     text: widget.prospect.occupation,
   );
   late final _origin = TextEditingController(text: widget.prospect.origin);
+  late final _prospectType = TextEditingController(
+    text: prospectTypeLabel(widget.prospect.tipoProspecto),
+  );
   late final _comment = TextEditingController(
     text: widget.prospect.comments ?? '',
   );
@@ -51,9 +58,21 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   List<Map<String, dynamic>> _lots = const [];
   late int? _developmentId = widget.prospect.interestDevelopmentId;
   late int? _lotId = widget.prospect.interestLotId;
+  int _stageId = 0;
   bool _loading = false;
   bool _saving = false;
   String? _error;
+
+  Map<String, dynamic>? get _selectedLot => LotCatalog.findById(_lots, _lotId);
+
+  String? get _developmentName {
+    for (final development in _developments) {
+      if (development['id'] == _developmentId) {
+        return development['nombre']?.toString();
+      }
+    }
+    return widget.prospect.interestDevelopment;
+  }
 
   @override
   void initState() {
@@ -78,6 +97,11 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         setState(() {
           _developments = developments;
           _lots = lots;
+          final selectedLot = LotCatalog.findById(lots, _lotId);
+          final stages = LotCatalog.stageOptions(lots);
+          _stageId = selectedLot == null
+              ? (stages.length == 1 ? stages.single.id : 0)
+              : LotCatalog.stageIdOf(selectedLot) ?? 0;
         });
       }
     } on ProspectsException catch (error) {
@@ -95,6 +119,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _company,
     _occupation,
     _origin,
+    _prospectType,
     _comment,
   ];
 
@@ -233,6 +258,8 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     _developmentId =
         _savedDevelopmentId ?? widget.prospect.interestDevelopmentId;
     _lotId = _savedLotId ?? widget.prospect.interestLotId;
+    final selectedLot = LotCatalog.findById(_lots, _lotId);
+    _stageId = selectedLot == null ? 0 : LotCatalog.stageIdOf(selectedLot) ?? 0;
     _formKey.currentState?.reset();
   });
 
@@ -298,7 +325,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
             ? 'Sin lote seleccionado'
             : lot?['numero_lote'] == null
             ? widget.prospect.interestLot
-            : 'Lote ${lot!['numero_lote']}',
+            : LotCatalog.lotLabel(lot!),
       );
       final result =
           widget.repository == null && widget.prospectsService != null
@@ -390,6 +417,12 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 : null,
           ),
           _field(
+            'Tipo de prospecto',
+            _prospectType,
+            readOnly: true,
+            fieldKey: const Key('prospect_type_field'),
+          ),
+          _field(
             'Comentario',
             _comment,
             maxLines: 3,
@@ -406,34 +439,81 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
                 : (value) async {
                     setState(() {
                       _developmentId = value;
+                      _stageId = 0;
                       _lotId = null;
                       _lots = const [];
                     });
                     if (value != null) {
                       try {
                         final lots = await _repository.loadLots(value);
-                        if (mounted) setState(() => _lots = lots);
+                        if (mounted) {
+                          setState(() {
+                            _lots = lots;
+                            final stages = LotCatalog.stageOptions(lots);
+                            _stageId = stages.length == 1
+                                ? stages.single.id
+                                : 0;
+                          });
+                        }
                       } on ProspectsException catch (error) {
                         if (mounted) setState(() => _error = error.message);
                       }
                     }
                   },
           ),
+          if (LotCatalog.stageOptions(_lots).isNotEmpty)
+            _dropdown(
+              'Etapa',
+              _stageId,
+              [
+                {'id': 0, 'nombre': 'Todas las etapas'},
+                ...LotCatalog.stageOptions(_lots)
+                    .map((stage) => {'id': stage.id, 'nombre': stage.label}),
+              ],
+              (item) => item['nombre'] as String,
+              _saving
+                  ? null
+                  : (value) => setState(() {
+                      _stageId = value ?? 0;
+                      if (_lotId != null &&
+                          !LotCatalog.filterByStage(
+                            _lots,
+                            _stageId,
+                          ).any((lot) => lot['id'] == _lotId)) {
+                        _lotId = null;
+                      }
+                    }),
+            ),
           _dropdown(
             'Lote de interés',
             _lotId ?? 0,
             [
               {'id': 0, 'numero_lote': null},
-              ..._lots,
+              ...LotCatalog.filterByStage(_lots, _stageId),
             ],
             (item) => item['id'] == 0
                 ? 'Sin lote seleccionado'
-                : 'Lote ${item['numero_lote']}',
+                : LotCatalog.lotLabel(item),
             _saving
                 ? null
                 : (value) => setState(() => _lotId = value == 0 ? null : value),
             openFromFirstItem: true,
           ),
+          if (_lotId != null && _selectedLot == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'El lote guardado ya no está disponible. Selecciona otro.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          if (_selectedLot case final lot?)
+            SelectedLotCard(
+              lot: lot,
+              backgroundColor: AppColors.prospectDataField,
+              foregroundColor: AppColors.prospectFormFieldText,
+              developmentFallback: _developmentName,
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),

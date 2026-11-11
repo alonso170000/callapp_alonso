@@ -11,6 +11,57 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  testWidgets('muestra el tipo como campo informativo y no lo envía', (
+    tester,
+  ) async {
+    final auth = AuthService(
+      client: MockClient(
+        (_) async => http.Response(
+          '{"status":"success","token":"test","usuario":{"id":3},"desarrollo_activo":{"id":4}}',
+          200,
+        ),
+      ),
+    );
+    await auth.login('agente', 'password');
+    final service = _CapturingProspectsService(auth: auth);
+    final prospect = demoProspects.first.copyWith(
+      id: 10,
+      channelId: 9,
+      statusId: 1,
+      interestDevelopmentId: 4,
+      tipoProspecto: 'reactivacion',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectDataForm(
+              prospect: prospect,
+              onSaved: (_) {},
+              prospectsService: service,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editable = tester.widget<EditableText>(
+      find.descendant(
+        of: find.byKey(const Key('prospect_type_field')),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(editable.readOnly, isTrue);
+    expect(find.text('Reactivación'), findsOneWidget);
+
+    final save = find.widgetWithText(FilledButton, 'GUARDAR');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(service.updatedFields, isNot(contains('tipo_prospecto')));
+  });
+
   testWidgets(
     'guarda teléfono normalizado y notifica el prospecto actualizado',
     (tester) async {
@@ -81,7 +132,19 @@ void main() {
       {'id': 4, 'nombre': 'Runa'},
     ]);
     await cache.write(scope, 'lotes:4', const [
-      {'id': 7, 'numero_lote': 23},
+      {
+        'id': 7,
+        'numero_lote': 23,
+        'numero_etapa': 2,
+        'dimensiones_m2': 300,
+        'tipo': 'Residencial',
+        'precio': 500000,
+        'estatus': 'disponible',
+        'desarrollo_nombre': 'Runa',
+        'estado': 'Yucatán',
+        'municipio': 'Motul',
+        'ubicacion': 'Carretera Motul-Telchac',
+      },
     ]);
     final service = _OfflineInterestsService(auth: auth);
     final repository = ProspectsRepository(
@@ -120,9 +183,86 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Runa'), findsOneWidget);
-    expect(find.text('Lote 23'), findsOneWidget);
+    expect(find.text('Runa'), findsWidgets);
+    expect(find.text('Lote 23'), findsWidgets);
+    expect(find.text('Etapa 2'), findsWidgets);
+    expect(find.text('300 m²'), findsOneWidget);
+    expect(find.text('Residencial'), findsOneWidget);
+    expect(find.text(r'$ 500,000.00'), findsOneWidget);
+    expect(find.text('Yucatán'), findsOneWidget);
+    expect(find.text('Motul'), findsOneWidget);
+    expect(find.text('Carretera Motul-Telchac'), findsOneWidget);
     expect(find.text('Sin conexión'), findsNothing);
+  });
+
+  testWidgets('lote no disponible muestra advertencia sin ficha', (
+    tester,
+  ) async {
+    final auth = AuthService(
+      client: MockClient(
+        (_) async => http.Response(
+          '{"status":"success","token":"test","usuario":{"id":3},"desarrollo_activo":{"id":4}}',
+          200,
+        ),
+      ),
+    );
+    await auth.login('agente', 'password');
+    final cache = _MemoryCatalogCache();
+    const scope = LocalScope(userId: 3, developmentId: 4);
+    await cache.write(scope, 'desarrollos', const [
+      {'id': 4, 'nombre': 'Runa'},
+    ]);
+    await cache.write(scope, 'lotes:4', const [
+      {
+        'id': 7,
+        'numero_lote': 23,
+        'cluster_id': 2,
+        'numero_etapa': 2,
+        'estatus': 'vendido',
+      },
+    ]);
+    final service = _OfflineInterestsService(auth: auth);
+    final repository = ProspectsRepository(
+      auth: auth,
+      service: service,
+      catalogs: cache,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectDataForm(
+              prospect: const ProspectRecord(
+                id: 10,
+                name: 'Ana',
+                phone: '9980000000',
+                email: 'ana@example.com',
+                status: 'Nuevo',
+                temperature: 'Tibio',
+                avatarColor: Colors.teal,
+                statusColor: Colors.blue,
+                channelId: 9,
+                statusId: 1,
+                interestDevelopmentId: 4,
+                interestLotId: 7,
+              ),
+              onSaved: (_) {},
+              prospectsService: service,
+              repository: repository,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.text('El lote guardado ya no está disponible. Selecciona otro.'),
+      findsOneWidget,
+    );
+    expect(find.text('Precio actual'), findsNothing);
   });
 }
 

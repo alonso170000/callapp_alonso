@@ -270,6 +270,7 @@ class AgendaRepository {
   static Map<String, dynamic> _activityJson(AgendaActivity value) => {
     'id': value.id,
     'prospect_id': value.prospectId,
+    'prospecto_tipo': value.tipoProspecto,
     'type': value.type,
     'medium': value.medium,
     'title': value.title,
@@ -286,6 +287,7 @@ class AgendaRepository {
       AgendaActivity(
         id: value['id'] as int?,
         prospectId: value['prospect_id'] as int?,
+        tipoProspecto: value['prospecto_tipo'] as String? ?? 'regular',
         type: value['type'] as String?,
         medium: value['medium'] as String?,
         title: value['title'] as String,

@@ -36,7 +36,26 @@ void main() {
       ),
     );
     expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
-    await tester.tap(find.text('Cualquiera').first);
+    await tester.tap(find.text('Cualquiera').at(1));
+    await tester.pump();
+    expect(find.text('VER 6 RESULTADOS'), findsOneWidget);
+  });
+
+  testWidgets('tipo de prospecto actualiza el contador y se restablece', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      subject(
+        initial: ProspectFilters.forSeller(),
+        count: (filter) => filter.prospectType == 'Reactivación' ? 2 : 6,
+      ),
+    );
+    expect(find.text('Tipo de prospecto'), findsOneWidget);
+    await tester.tap(find.text('Reactivación'));
+    await tester.pump();
+    expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
+
+    await tester.tap(find.text('RESTABLECER'));
     await tester.pump();
     expect(find.text('VER 6 RESULTADOS'), findsOneWidget);
   });

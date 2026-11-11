@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
 
 class AgendaActivityTile extends StatelessWidget {
   final AgendaActivity activity;
@@ -125,30 +126,33 @@ class AgendaActivityTile extends StatelessWidget {
                         fontSize: 14,
                       ),
                     ),
-                    if (activity.tags.isNotEmpty) ...[
+                    if (activity.tags.isNotEmpty ||
+                        activity.isReactivation) ...[
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 5,
                         runSpacing: 5,
-                        children: activity.tags
-                            .map(
-                              (tag) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
-                                ),
-                                color: ProspectTagColors.background(tag),
-                                child: Text(
-                                  tag,
-                                  style: TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 16,
-                                    color: ProspectTagColors.foreground(tag),
-                                  ),
+                        children: [
+                          ...activity.tags.map(
+                            (tag) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              color: ProspectTagColors.background(tag),
+                              child: Text(
+                                tag,
+                                style: TextStyle(
+                                  fontFamily: 'BebasNeue',
+                                  fontSize: 16,
+                                  color: ProspectTagColors.foreground(tag),
                                 ),
                               ),
-                            )
-                            .toList(),
+                            ),
+                          ),
+                          if (activity.isReactivation)
+                            const ReactivationTag(compact: true),
+                        ],
                       ),
                     ],
                   ],
