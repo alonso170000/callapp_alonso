@@ -46,9 +46,11 @@ class HomeDashboardData {
   int get completed =>
       followUpsToday.where((a) => a.status == AgendaStatus.completed).length;
   int get pending => followUpsToday.where(isOpen).length;
-  List<AgendaActivity> get overdueCalls =>
+  List<AgendaActivity> get overdueFollowUps =>
       activities
-          .where((a) => isCall(a) && isOpen(a) && a.date.isBefore(cutoff))
+          .where(
+            (a) => isTrackedFollowUp(a) && isOpen(a) && a.date.isBefore(cutoff),
+          )
           .toList()
         ..sort((a, b) => a.date.compareTo(b.date));
   List<ProspectRecord> get newProspects =>

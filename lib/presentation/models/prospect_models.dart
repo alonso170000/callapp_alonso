@@ -39,6 +39,8 @@ class ProspectRecord {
   final String interestDevelopment, interestLot;
   final List<String> qualification;
   final String tipoProspecto;
+  final bool isClient;
+  final int? clientId;
 
   const ProspectRecord({
     this.id,
@@ -81,6 +83,8 @@ class ProspectRecord {
     this.interestLot = 'Sin lote seleccionado',
     this.qualification = const [],
     this.tipoProspecto = 'regular',
+    this.isClient = false,
+    this.clientId,
   });
 
   bool get isReactivation => prospect_type.isReactivationType(tipoProspecto);
@@ -119,6 +123,8 @@ class ProspectRecord {
     int? daysSinceContact,
     bool? discoveryComplete,
     String? tipoProspecto,
+    bool? isClient,
+    int? clientId,
   }) => ProspectRecord(
     id: id ?? this.id,
     avatarUrl: avatarUrl,
@@ -160,6 +166,8 @@ class ProspectRecord {
     interestLot: interestLot ?? this.interestLot,
     qualification: qualification ?? this.qualification,
     tipoProspecto: tipoProspecto ?? this.tipoProspecto,
+    isClient: isClient ?? this.isClient,
+    clientId: clientId ?? this.clientId,
   );
 }
 

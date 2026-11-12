@@ -126,7 +126,7 @@ class _UserAvatar extends StatelessWidget {
                     border: Border.fromBorderSide(
                       BorderSide(
                         color: Theme.of(context).colorScheme.surface,
-                        width: 3,
+                        width: 2,
                       ),
                     ),
                   ),

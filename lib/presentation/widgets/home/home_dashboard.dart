@@ -459,7 +459,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _activitySection(
                     'Seguimientos atrasados',
                     AppColors.homeRedSection,
-                    data.overdueCalls,
+                    data.overdueFollowUps,
                     data,
                   ),
                 ],

@@ -42,7 +42,6 @@ class AgendaProspectSelector<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     return FormField<T>(
       initialValue: value,
       validator: validator,
@@ -190,7 +189,10 @@ class _ProspectOptionsSheetState<T> extends State<_ProspectOptionsSheet<T>> {
                         final option = visible[index];
                         final selected = option.value == widget.selected;
                         return ListTile(
-                          title: Text(option.label, style: TextStyle(fontSize: 16)),
+                          title: Text(
+                            option.label,
+                            style: TextStyle(fontSize: 16),
+                          ),
                           trailing: selected
                               ? Icon(
                                   Icons.check_rounded,

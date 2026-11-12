@@ -198,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         'agenda.delete' => 'ELIMINAR ACTIVIDAD',
         'prospect.create' => 'CREAR PROSPECTO',
         'prospect.update' => 'EDITAR PROSPECTO',
+        'prospect.convert' => 'CONVERTIR EN CLIENTE',
         'prospect.follow_up' => 'REGISTRAR SEGUIMIENTO',
         'prospect.discovery' => 'GUARDAR DISCOVERY',
         _ => 'CAMBIO PENDIENTE',

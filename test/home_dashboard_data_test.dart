@@ -73,16 +73,21 @@ void main() {
           activity(16, AgendaStatus.pending, medium: 'whatsapp'),
           activity(17, AgendaStatus.pending, prospect: null),
           activity(8, AgendaStatus.completed, medium: 'whatsapp'),
+          activity(7, AgendaStatus.overdue, medium: 'whatsapp'),
           activity(14, AgendaStatus.pending, medium: 'facebook'),
-          activity(13, AgendaStatus.overdue, medium: 'correo'),
+          activity(11, AgendaStatus.overdue, medium: 'correo'),
           activity(12, AgendaStatus.pending, medium: 'visita'),
         ],
         now,
       );
       expect(data.completed, 2);
-      expect(data.pending, 6);
-      expect(data.followUpsToday.length, 9);
-      expect(data.overdueCalls.length, 1);
+      expect(data.pending, 7);
+      expect(data.followUpsToday.length, 10);
+      expect(data.overdueFollowUps.map((activity) => activity.medium), [
+        'whatsapp',
+        'llamada',
+        'correo',
+      ]);
       expect(data.todayProspects.length, 1);
       expect(data.newProspects.single.id, 7);
       expect(data.week[1].calls, 4);

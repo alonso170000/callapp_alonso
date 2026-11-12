@@ -341,6 +341,11 @@ class OutboxService extends ChangeNotifier {
           Map<String, dynamic>.from(operation.payload['fields'] as Map),
           operationKey: operation.operationKey,
         );
+      case 'prospect.convert':
+        await _prospects.convertToClient(
+          id!,
+          operationKey: operation.operationKey,
+        );
       case 'prospect.follow_up':
         await _prospects.createFollowUp(
           id!,

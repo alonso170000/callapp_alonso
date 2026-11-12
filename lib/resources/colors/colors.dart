@@ -63,6 +63,11 @@ class AppColors {
   static const Color prospectStatusOverdue = Color(0xFFFFA3A6);
   static const Color prospectTagReactivation = Color(0xFF2ebab3);
   static const Color prospectTagReactivationInk = Color(0xFFFFFFFF);
+  static const Color prospectTagClient = Color(0xFFFFD86B);
+  static const Color prospectTagClientInk = Color(0xFF332600);
+  static const Color prospectClientAvatarBorder = Color(0xFFFFD86B);
+  static const Color prospectActionCall = Color(0xFFFFE18A);
+  static const Color prospectActionMessage = Color(0xFF64FF98);
 
   // Paleta compartida por la bandeja de notificaciones.
   static const Color notificationFollowUp = Color(0xFFE34BB4);

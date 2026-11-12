@@ -259,6 +259,19 @@ void main() {
       );
       expect(method.initialValue, 'WhatsApp');
       expect(method.onChanged, isNull);
+      await tester.tap(
+        find.bySemanticsLabel('¿Programar siguiente contacto?').last,
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('follow-up-activity-form')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(
+        find.bySemanticsLabel('¿Programar siguiente contacto?').last,
+      );
+      await tester.pump();
       final other = find.byKey(const ValueKey('other-active-activity-10'));
       await tester.ensureVisible(other);
       await tester.tap(other);

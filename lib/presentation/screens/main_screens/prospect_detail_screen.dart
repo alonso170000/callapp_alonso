@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activity_dialog.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_discovery_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_data_form.dart';
@@ -19,12 +20,15 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_history_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_contact_sheet.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/convert_prospect_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
+import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
+import 'package:callerapp_frontend/services/contact_launcher.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
@@ -33,7 +37,6 @@ import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ProspectDetailArguments {
   const ProspectDetailArguments({
@@ -61,6 +64,7 @@ class ProspectDetailScreen extends StatefulWidget {
   final int? callId;
   final Future<void> Function(ProspectRecord)? showCallReminder;
   final ProspectsRepository? prospectsRepository;
+  final AgendaRepository? agendaRepository;
   const ProspectDetailScreen({
     super.key,
     required this.prospect,
@@ -73,6 +77,7 @@ class ProspectDetailScreen extends StatefulWidget {
     this.callId,
     this.showCallReminder,
     this.prospectsRepository,
+    this.agendaRepository,
   });
   @override
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
@@ -92,9 +97,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _primaryMediumFromActivity = false;
   late final ProspectsRepository _prospectsRepository;
   late final bool _ownsProspectsRepository;
+  late final AgendaRepository _agendaRepository;
+  late final bool _ownsAgendaRepository;
+  AgendaActivity? _sourceActivity;
+  int _activityContextRevision = 0;
+  final _dirtyForms = <ProspectSection>{};
+  bool _allowDirtyPop = false;
   List<ProspectEmailHistoryEntry> _emails = const [];
   String? _emailError;
   bool _sendingEmail = false;
+  bool _convertingClient = false;
   bool _telephoneCallCompleted = false;
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
@@ -104,10 +116,32 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   int? _lastCallId;
   bool _openingCallResult = false;
   bool get _viewingCompletedFollowUp =>
-      widget.sourceActivity?.isFollowUp == true &&
-      widget.sourceActivity?.status == AgendaStatus.completed;
+      _sourceActivity?.isFollowUp == true &&
+      _sourceActivity?.status == AgendaStatus.completed;
   bool get _formsReadOnly => _viewingCompletedFollowUp || _followUpSaved;
-  Widget _actionButton(String label, IconData icon, VoidCallback onPressed) {
+  bool get _hasDirtyForms => _dirtyForms.isNotEmpty;
+  String get _dirtyFormLabels => ProspectSection.values
+      .where(_dirtyForms.contains)
+      .map((section) => section.label)
+      .join(', ');
+
+  void _setFormDirty(ProspectSection section, bool dirty) {
+    if (!mounted) return;
+    setState(() {
+      if (dirty) {
+        _dirtyForms.add(section);
+      } else {
+        _dirtyForms.remove(section);
+      }
+    });
+  }
+
+  Widget _actionButton(
+    String label,
+    IconData icon,
+    VoidCallback? onPressed, {
+    bool busy = false,
+  }) {
     final palette = AppPalette.of(context);
     return Expanded(
       child: SizedBox(
@@ -122,7 +156,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
             ),
           ),
           onPressed: onPressed,
-          icon: Icon(icon, size: 30),
+          icon: busy
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(icon, size: 30),
         ),
       ),
     );
@@ -278,7 +318,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _callSession = widget.callSession ?? CallSessionController.instance;
     WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
-    final sourceMedium = ContactMedium.parse(widget.sourceActivity?.medium);
+    _sourceActivity = widget.sourceActivity;
+    final sourceMedium = ContactMedium.parse(_sourceActivity?.medium);
     _primaryMedium = widget.callStarted ? ContactMedium.llamada : sourceMedium;
     _mediumResolved =
         widget.callStarted ||
@@ -287,6 +328,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _primaryMediumFromActivity = sourceMedium != null;
     _prospectsRepository = widget.prospectsRepository ?? ProspectsRepository();
     _ownsProspectsRepository = widget.prospectsRepository == null;
+    _agendaRepository = widget.agendaRepository ?? AgendaRepository();
+    _ownsAgendaRepository = widget.agendaRepository == null;
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
     _callRegistered = widget.callStarted;
@@ -408,28 +451,17 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final digits = PhoneNumber.digits(_prospect.phone);
-    try {
-      final opened = await launchUrl(
-        Uri.parse('https://wa.me/$digits'),
-        mode: LaunchMode.externalApplication,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            opened
-                ? 'WhatsApp abierto. Registra el resultado en el formulario de seguimiento.'
-                : 'No se pudo abrir WhatsApp.',
-          ),
+    final opened = await const ContactLauncher().openWhatsApp(_prospect);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          opened
+              ? 'WhatsApp abierto. Registra el resultado en el formulario de seguimiento.'
+              : 'No se pudo abrir WhatsApp.',
         ),
-      );
-    } on Object {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp.')),
-      );
-    }
+      ),
+    );
   }
 
   Future<void> _openContactEmail() async {
@@ -441,25 +473,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    try {
-      final opened = await launchUrl(
-        Uri(scheme: 'mailto', path: _prospect.email),
-        mode: LaunchMode.externalApplication,
-      );
-      if (!mounted || opened) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo abrir la aplicación de correo.'),
-        ),
-      );
-    } on Object {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo abrir la aplicación de correo.'),
-        ),
-      );
-    }
+    final opened = await const ContactLauncher().openEmail(_prospect);
+    if (!mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se pudo abrir la aplicación de correo.'),
+      ),
+    );
   }
 
   void _showFacebookUnavailable() {
@@ -530,24 +550,41 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _callSession.removeListener(_callSessionChanged);
     _emailService.dispose();
     if (_ownsProspectsRepository) _prospectsRepository.dispose();
+    if (_ownsAgendaRepository) _agendaRepository.dispose();
     super.dispose();
   }
 
-  Future<void> _copyPhone(BuildContext sheetContext) async {
-    await Clipboard.setData(ClipboardData(text: _prospect.phone));
-    if (sheetContext.mounted) Navigator.pop(sheetContext);
+  Future<void> _convertToClient() async {
+    if (_convertingClient) return;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => ConvertProspectSheet(prospect: _prospect),
+    );
+    if (_prospect.isClient || confirmed != true || !mounted) return;
+    setState(() => _convertingClient = true);
+    try {
+      final result = await _prospectsRepository.convertToClient(_prospect);
+      if (!mounted) return;
+      setState(() => _prospect = result.prospect ?? _prospect);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isPending
+                ? 'Conversión guardada. Pendiente de sincronizar.'
+                : 'Prospecto convertido en cliente.',
+          ),
+        ),
+      );
+    } on ProspectsException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _convertingClient = false);
+    }
   }
-
-  Future<void> _contact() => showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => ProspectContactSheet(
-      name: _prospect.name,
-      phone: _prospect.phone,
-      email: _prospect.email,
-      onCopyPhone: () => _copyPhone(sheetContext),
-    ),
-  );
 
   Future<String?> _openDialer() async {
     try {
@@ -618,7 +655,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     await _callSession.start(
       prospect: _prospect,
       origin: 'detalle',
-      sourceActivityId: widget.sourceActivity?.id,
+      sourceActivityId: _sourceActivity?.id,
       startedAt: startedAt,
     );
     unawaited(
@@ -689,12 +726,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       child: Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: ProspectDetailPanel(
-          key: ValueKey('${section.label}-$revision'),
+          key: ValueKey(section.label),
           title: title ?? section.title,
           color: section.fill(palette),
           foreground: section.ink(palette),
           initiallyExpanded:
               section == ProspectSection.followUp || revision > 0,
+          expansionRevision: revision,
           child: child,
         ),
       ),
@@ -706,6 +744,96 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _selected.add(name);
     _panelRevisions[name] = (_panelRevisions[name] ?? 0) + 1;
   });
+
+  Future<void> _editOpenedActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    if (activity.id == null ||
+        (activity.status != AgendaStatus.pending &&
+            activity.status != AgendaStatus.overdue)) {
+      ScaffoldMessenger.of(detailContext).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Solo se pueden editar actividades pendientes o atrasadas.',
+          ),
+        ),
+      );
+      return;
+    }
+    final scheduled = await showModalBottomSheet<DateTime>(
+      context: detailContext,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(detailContext).colorScheme.surface,
+      builder: (_) => NewAgendaActivityDialog(
+        initialDate: activity.date,
+        activity: activity,
+        agendaRepository: _agendaRepository,
+      ),
+    );
+    if (scheduled == null || !mounted || !detailContext.mounted) return;
+    Navigator.pop(detailContext);
+    setState(() => _activityContextRevision++);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Actividad actualizada.')));
+  }
+
+  Future<void> _cancelOpenedActivity(
+    AgendaActivity activity,
+    BuildContext detailContext,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: detailContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancelar actividad'),
+        content: const Text(
+          '¿Seguro que deseas cancelar esta actividad? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('VOLVER'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm-cancel-opened-activity'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('SÍ, CANCELAR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !detailContext.mounted) return;
+    try {
+      final result = await _agendaRepository.cancel(activity);
+      if (!mounted || !detailContext.mounted) return;
+      Navigator.pop(detailContext);
+      setState(() {
+        if (_sourceActivity?.id == activity.id) {
+          _sourceActivity = null;
+          _primaryMediumFromActivity = false;
+          _primaryMedium = null;
+          _mediumResolved = false;
+        }
+        _activityContextRevision++;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isPending
+                ? 'Actividad cancelada. Pendiente de sincronizar.'
+                : 'Actividad cancelada.',
+          ),
+        ),
+      );
+    } on AgendaException catch (error) {
+      if (detailContext.mounted) {
+        ScaffoldMessenger.of(detailContext)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
 
   void _openActivity(AgendaActivity activity) {
     Navigator.of(context).push<void>(
@@ -734,10 +862,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                     detailContext,
                     ContactMedium.llamada,
                   ),
+                  onContact: (medium) =>
+                      _closeActivityAndRun(detailContext, medium),
                   onOpenProspect: () => Navigator.pop(detailContext),
-                  onEdit: () {},
+                  onEdit: () => _editOpenedActivity(activity, detailContext),
                   onComplete: () {},
-                  onReschedule: () {},
+                  onReschedule: () =>
+                      _cancelOpenedActivity(activity, detailContext),
                 ),
               ),
             ),
@@ -758,23 +889,89 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       _telephoneCallCompleted && _callRegistered && !_viewingCompletedFollowUp;
 
   Future<void> _handlePendingCallExit(bool didPop, Object? _) async {
-    if (didPop || !_requiresFollowUp) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Seguimiento obligatorio'),
-        content: const Text(
-          'Después de una llamada debes completar y guardar el formulario de seguimiento antes de salir.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('LLENAR SEGUIMIENTO'),
+    if (didPop) return;
+    if (_requiresFollowUp) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Seguimiento obligatorio'),
+          content: const Text(
+            'Después de una llamada debes completar y guardar el formulario de seguimiento antes de salir.',
           ),
-        ],
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('LLENAR SEGUIMIENTO'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) {
+        setState(() => _selected.add(ProspectSection.followUp.label));
+      }
+      return;
+    }
+    if (!_hasDirtyForms) return;
+    final leave = await showModalBottomSheet<bool>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Cambios pendientes',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'SulphurPoint',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Tienes cambios sin guardar en: $_dirtyFormLabels.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '¿Deseas salir y descartarlos?',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(sheetContext, false),
+                      child: const Text('SEGUIR EDITANDO'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      key: const ValueKey('discard-pending-form-changes'),
+                      onPressed: () => Navigator.pop(sheetContext, true),
+                      child: const Text('SALIR SIN GUARDAR'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
-    if (mounted) setState(() => _selected.add(ProspectSection.followUp.label));
+    if (leave == true && mounted) {
+      setState(() => _allowDirtyPop = true);
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -797,7 +994,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         ),
       ),
       child: PopScope(
-        canPop: !_requiresFollowUp,
+        canPop: _allowDirtyPop || (!_requiresFollowUp && !_hasDirtyForms),
         onPopInvokedWithResult: _handlePendingCallExit,
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
@@ -821,9 +1018,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                           ),
                           const SizedBox(width: 7),
                           _actionButton(
-                            'Datos de contacto',
+                            _prospect.isClient
+                                ? 'Este prospecto ya es cliente'
+                                : 'Convertir en cliente',
                             Iconsax.profile_tick_copy,
-                            _contact,
+                            _convertingClient ? null : _convertToClient,
+                            busy: _convertingClient,
                           ),
                           const SizedBox(width: 7),
                           _primaryAction(palette),
@@ -892,7 +1092,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                     ProspectSection.followUp,
                                     ProspectFollowUpForm(
                                       key: ValueKey(
-                                        'follow-up-${p.id}-${widget.sourceActivity?.id}',
+                                        'follow-up-${p.id}-${_sourceActivity?.id}-$_activityContextRevision',
                                       ),
                                       prospect: p,
                                       telephoneCallCompleted:
@@ -901,10 +1101,14 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       llamadaId: _lastCallId,
                                       initialContactSuccess:
                                           _telephoneCallSuccessful,
-                                      sourceActivity: widget.sourceActivity,
+                                      sourceActivity: _sourceActivity,
                                       loadActivities: widget.loadActivities,
                                       onOpenActivity: _openActivity,
                                       onMediumChanged: _resolvePrimaryMedium,
+                                      onDirtyChanged: (dirty) => _setFormDirty(
+                                        ProspectSection.followUp,
+                                        dirty,
+                                      ),
                                       onSaved: (entry) {
                                         unawaited(
                                           NotificationService.instance
@@ -915,7 +1119,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                           _telephoneCallCompleted = false;
                                           _callRegistered = true;
                                           _followUpSaved =
-                                              widget.sourceActivity != null;
+                                              _sourceActivity != null;
                                         });
                                         _commentsKey.currentState?.refresh();
                                       },
@@ -933,6 +1137,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       prospectId: p.id,
                                       prospect: p,
                                       readOnly: _formsReadOnly,
+                                      onDirtyChanged: (dirty) => _setFormDirty(
+                                        ProspectSection.discovery,
+                                        dirty,
+                                      ),
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),
                                       ),
@@ -970,6 +1178,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       onProspectUpdated: (updated) =>
                                           setState(() => _prospect = updated),
                                       readOnly: _formsReadOnly,
+                                      onDirtyChanged: (dirty) => _setFormDirty(
+                                        ProspectSection.data,
+                                        dirty,
+                                      ),
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),
                                       ),

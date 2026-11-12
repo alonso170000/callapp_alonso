@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final instance = AppDatabase();
 
-  static const schemaVersion = 5;
+  static const schemaVersion = 6;
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
   static const catalogsResource = 'catalogs';
@@ -80,6 +80,7 @@ class AppDatabase {
           }
           if (oldVersion < 4) await _createPendingOperationsTable(database);
           if (oldVersion < 5) await _addProspectTypeColumns(database);
+          if (oldVersion < 6) await _addProspectClientColumns(database);
         },
       ),
     );
@@ -128,6 +129,8 @@ class AppDatabase {
         interest_lot TEXT NOT NULL,
         qualification_json TEXT NOT NULL DEFAULT '[]',
         tipo_prospecto TEXT NOT NULL DEFAULT 'regular',
+        is_client INTEGER NOT NULL DEFAULT 0,
+        client_id INTEGER,
         PRIMARY KEY (user_id, development_id, prospect_id)
       )
     ''');
@@ -143,6 +146,21 @@ class AppDatabase {
       CREATE INDEX IF NOT EXISTS idx_cached_prospects_scope_next_contact
       ON cached_prospects (user_id, development_id, next_contact_at_ms)
     ''');
+  }
+
+  static Future<void> _addProspectClientColumns(Database database) async {
+    await _addColumnIfMissing(
+      database,
+      'cached_prospects',
+      'is_client',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _addColumnIfMissing(
+      database,
+      'cached_prospects',
+      'client_id',
+      'INTEGER',
+    );
   }
 
   static Future<void> _createMetadataTable(Database database) async {

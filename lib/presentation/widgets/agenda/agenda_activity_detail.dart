@@ -12,12 +12,15 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comme
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_action.dart';
 
 class AgendaActivityDetail extends StatefulWidget {
   final AgendaActivity activity;
   final VoidCallback onClose;
   final VoidCallback onMessage;
   final VoidCallback onCall;
+  final ValueChanged<ContactMedium>? onContact;
   final VoidCallback onOpenProspect;
   final VoidCallback onEdit;
   final VoidCallback onComplete;
@@ -31,6 +34,7 @@ class AgendaActivityDetail extends StatefulWidget {
     required this.onClose,
     required this.onMessage,
     required this.onCall,
+    this.onContact,
     required this.onOpenProspect,
     required this.onEdit,
     required this.onComplete,
@@ -46,6 +50,7 @@ class AgendaActivityDetail extends StatefulWidget {
 class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   final _commentsKey = GlobalKey<ProspectCommentsPanelState>();
   String? _avatarUrl;
+  ProspectRecord? _prospect;
   bool _avatarLookupStarted = false;
   Future<void> _loadAvatar() async {
     if (_avatarLookupStarted || activity.prospectId == null) return;
@@ -58,8 +63,11 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           : (service = ProspectsService()).fetch());
       if (!mounted) return;
       final matches = records.where((p) => p.id == activity.prospectId);
-      if (matches.isNotEmpty && matches.first.avatarUrl != null) {
-        setState(() => _avatarUrl = matches.first.avatarUrl);
+      if (matches.isNotEmpty) {
+        setState(() {
+          _prospect = matches.first;
+          _avatarUrl = matches.first.avatarUrl;
+        });
       }
     } catch (_) {
       // Keep the placeholder when the prospect cannot be retrieved.
@@ -104,7 +112,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   void initState() {
     super.initState();
     _avatarUrl = activity.prospectAvatarUrl;
-    if (_avatarUrl == null) _loadAvatar();
+    _loadAvatar();
     if (_canDelete) {
       _deleteTimer = Timer(
         activity.deleteUntil!.difference(DateTime.now()),
@@ -158,23 +166,55 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     return '${hour.toString().padLeft(2, '0')}:$minute ${activity.date.hour < 12 ? 'AM' : 'PM'}';
   }
 
-  Widget _contactAction(
-    String tooltip,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) => IconButton(
-    tooltip: tooltip,
-    onPressed: onPressed,
-    style: IconButton.styleFrom(
-      backgroundColor: color,
-      foregroundColor: AppColors.primaryColor,
-      minimumSize: const Size(38, 38),
-      padding: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-    icon: Icon(icon, size: 20),
-  );
+  ProspectAction get _prospectAction {
+    final prospect = _prospect;
+    if (prospect != null) {
+      return ProspectAction.resolve(prospect: prospect, activities: [activity]);
+    }
+    return ProspectAction(
+      medium: ContactMedium.parse(activity.medium) ?? ContactMedium.llamada,
+      activity: activity.isFollowUp ? activity : null,
+    );
+  }
+
+  Widget _contactAction() {
+    final action = _prospectAction;
+    final medium = action.medium;
+    final available = _prospect != null && medium.isAvailable(_prospect!);
+    final suffix = action.hasActivity
+        ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
+        : '';
+    final icon = switch (medium) {
+      ContactMedium.llamada => Iconsax.call_copy,
+      ContactMedium.whatsapp || ContactMedium.facebook => Iconsax.message_copy,
+      ContactMedium.correo => Iconsax.send_2_copy,
+    };
+    return IconButton(
+      tooltip: '${medium.actionLabel} a ${activity.prospect}$suffix',
+      onPressed: available
+          ? () {
+              final callback = widget.onContact;
+              if (callback != null) {
+                callback(medium);
+              } else if (medium == ContactMedium.llamada) {
+                onCall();
+              } else {
+                onMessage();
+              }
+            }
+          : null,
+      style: IconButton.styleFrom(
+        backgroundColor: medium == ContactMedium.llamada
+            ? AppColors.prospectActionCall
+            : AppColors.prospectActionMessage,
+        foregroundColor: AppColors.primaryColor,
+        minimumSize: const Size(38, 38),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      icon: Icon(icon, size: 20),
+    );
+  }
 
   Widget _sectionTitle(String title) => Align(
     alignment: Alignment.centerLeft,
@@ -312,19 +352,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 ],
               ),
             ),
-            _contactAction(
-              'Enviar mensaje',
-              Iconsax.message_copy,
-              AppColors.homeGreenCard,
-              onMessage,
-            ),
-            const SizedBox(width: 2),
-            _contactAction(
-              'Llamar al prospecto',
-              Iconsax.call_calling_copy,
-              AppColors.homeWarmText,
-              onCall,
-            ),
+            _contactAction(),
           ],
         ),
         const SizedBox(height: 12),

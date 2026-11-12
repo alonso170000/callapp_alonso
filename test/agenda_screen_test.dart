@@ -360,7 +360,7 @@ void main() {
       );
       expect(
         actionBox('Ver prospecto').right,
-        closeTo(actionBox('Llamar al prospecto').right, 2.1),
+        closeTo(actionBox('Llamar a ALAN DORANTES').right, 2.1),
       );
       expect(find.text('DESCRIPCIÓN DE LA ACTIVIDAD'), findsOneWidget);
       final complete = find.text('COMPLETAR ACTIVIDAD');

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_tag.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 /// Secciones plegables del detalle del prospecto: etiqueta del chip, título
@@ -179,19 +182,28 @@ class ProspectDetailHeader extends StatelessWidget {
                           fontSize: 20,
                         ),
                       ),
-                      Text(
-                        prospect.status.toUpperCase(),
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          color: palette.headerForeground,
-                          fontSize: 12,
-                        ),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          ProspectStatusTag(status: prospect.status),
+                          if (prospect.isClient)
+                            ProspectTag(
+                              label: 'CLIENTE',
+                              background: ProspectTagColors.client,
+                              foreground: ProspectTagColors.clientForeground,
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                ProspectAvatarBadge(prospect: prospect),
+                ProspectAvatarBadge(
+                  prospect: prospect,
+                  borderColor: prospect.isClient
+                      ? AppColors.prospectClientAvatarBorder
+                      : null,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -311,6 +323,7 @@ class ProspectDetailPanel extends StatefulWidget {
   final Widget child;
   final bool initiallyExpanded;
   final bool nested;
+  final int expansionRevision;
   const ProspectDetailPanel({
     super.key,
     required this.title,
@@ -319,6 +332,7 @@ class ProspectDetailPanel extends StatefulWidget {
     required this.child,
     this.initiallyExpanded = false,
     this.nested = false,
+    this.expansionRevision = 0,
   });
   @override
   State<ProspectDetailPanel> createState() => _ProspectDetailPanelState();
@@ -326,6 +340,15 @@ class ProspectDetailPanel extends StatefulWidget {
 
 class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
   late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  void didUpdateWidget(covariant ProspectDetailPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expansionRevision != widget.expansionRevision) {
+      _expanded = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);

@@ -18,6 +18,7 @@ class ProspectDataForm extends StatefulWidget {
   final ProspectsRepository? repository;
   final bool readOnly;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
+  final ValueChanged<bool>? onDirtyChanged;
 
   const ProspectDataForm({
     super.key,
@@ -27,6 +28,7 @@ class ProspectDataForm extends StatefulWidget {
     this.repository,
     this.readOnly = false,
     this.onProspectUpdated,
+    this.onDirtyChanged,
   });
 
   @override
@@ -62,6 +64,19 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   bool _loading = false;
   bool _saving = false;
   String? _error;
+  final Set<String> _dirtyControls = {};
+
+  void _markDirty(String control) {
+    if (widget.readOnly || _dirtyControls.contains(control)) return;
+    setState(() => _dirtyControls.add(control));
+    widget.onDirtyChanged?.call(true);
+  }
+
+  void _clearDirty() {
+    if (_dirtyControls.isEmpty) return;
+    setState(_dirtyControls.clear);
+    widget.onDirtyChanged?.call(false);
+  }
 
   Map<String, dynamic>? get _selectedLot => LotCatalog.findById(_lots, _lotId);
 
@@ -133,14 +148,28 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
     super.dispose();
   }
 
-  InputDecoration _decoration() => InputDecoration(
+  InputDecoration _decoration([bool changed = false]) => InputDecoration(
     filled: true,
-    fillColor: const Color(0xFFAD393E),
+    fillColor: changed
+        ? Color.alphaBlend(
+            AppPalette.of(context).headerBadgeForeground.withValues(alpha: .2),
+            AppColors.prospectDataField,
+          )
+        : AppColors.prospectDataField,
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: changed
+          ? BorderSide(
+              color: AppPalette.of(context).headerBadgeForeground,
+              width: 2,
+            )
+          : BorderSide.none,
     ),
     errorStyle: TextStyle(color: AppPalette.of(context).fieldErrorInk),
   );
@@ -170,6 +199,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         TextFormField(
           key: fieldKey,
           controller: controller,
+          onChanged: (_) => _markDirty(label),
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
@@ -177,7 +207,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           readOnly: readOnly || widget.readOnly,
           maxLines: maxLines,
           style: const TextStyle(color: Colors.white, fontSize: 18),
-          decoration: _decoration(),
+          decoration: _decoration(_dirtyControls.contains(label)),
         ),
       ],
     ),
@@ -210,7 +240,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
               ? value
               : null,
           isExpanded: true,
-          decoration: _decoration(),
+          decoration: _decoration(_dirtyControls.contains(label)),
           dropdownColor: const Color(0xFFAD393E),
           style: const TextStyle(color: Colors.white, fontSize: 18),
           hint: openFromFirstItem && items.any((item) => item['id'] == value)
@@ -240,28 +270,38 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
               )
               .toList(),
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-          onChanged: widget.readOnly ? null : changed,
+          onChanged: widget.readOnly || changed == null
+              ? null
+              : (value) {
+                  _markDirty(label);
+                  changed(value);
+                },
         ),
       ],
     ),
   );
 
-  void _cancel() => setState(() {
-    _name.text = _saved?['name'] ?? widget.prospect.name;
-    _city.text = _saved?['city'] ?? widget.prospect.city;
-    _phone.text = _saved?['phone'] ?? widget.prospect.phone;
-    _email.text = _saved?['email'] ?? widget.prospect.email;
-    _company.text = _saved?['company'] ?? widget.prospect.company;
-    _occupation.text = _saved?['occupation'] ?? widget.prospect.occupation;
-    _origin.text = _saved?['origin'] ?? widget.prospect.origin;
-    _comment.text = _saved?['comment'] ?? widget.prospect.comments ?? '';
-    _developmentId =
-        _savedDevelopmentId ?? widget.prospect.interestDevelopmentId;
-    _lotId = _savedLotId ?? widget.prospect.interestLotId;
-    final selectedLot = LotCatalog.findById(_lots, _lotId);
-    _stageId = selectedLot == null ? 0 : LotCatalog.stageIdOf(selectedLot) ?? 0;
-    _formKey.currentState?.reset();
-  });
+  void _cancel() {
+    setState(() {
+      _name.text = _saved?['name'] ?? widget.prospect.name;
+      _city.text = _saved?['city'] ?? widget.prospect.city;
+      _phone.text = _saved?['phone'] ?? widget.prospect.phone;
+      _email.text = _saved?['email'] ?? widget.prospect.email;
+      _company.text = _saved?['company'] ?? widget.prospect.company;
+      _occupation.text = _saved?['occupation'] ?? widget.prospect.occupation;
+      _origin.text = _saved?['origin'] ?? widget.prospect.origin;
+      _comment.text = _saved?['comment'] ?? widget.prospect.comments ?? '';
+      _developmentId =
+          _savedDevelopmentId ?? widget.prospect.interestDevelopmentId;
+      _lotId = _savedLotId ?? widget.prospect.interestLotId;
+      final selectedLot = LotCatalog.findById(_lots, _lotId);
+      _stageId = selectedLot == null
+          ? 0
+          : LotCatalog.stageIdOf(selectedLot) ?? 0;
+      _formKey.currentState?.reset();
+    });
+    _clearDirty();
+  }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -353,6 +393,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
       if (!mounted) return;
       widget.onProspectUpdated?.call(result?.prospect ?? optimistic);
       widget.onSaved('Prospecto · Datos actualizados');
+      _clearDirty();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

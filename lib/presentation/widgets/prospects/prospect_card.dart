@@ -1,27 +1,31 @@
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
-import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_action.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_tag.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 
 class ProspectCard extends StatelessWidget {
   final ProspectRecord prospect;
   final VoidCallback? onTap;
-  final Future<void> Function(bool message)? onContact;
+  final ProspectAction action;
+  final Future<void> Function(ContactMedium medium)? onContact;
   const ProspectCard({
     super.key,
     required this.prospect,
+    this.action = const ProspectAction(medium: ContactMedium.llamada),
     this.onTap,
     this.onContact,
   });
 
-  Future<void> _contact(BuildContext context, bool message) async {
+  Future<void> _contact(BuildContext context, ContactMedium medium) async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -42,7 +46,9 @@ class ProspectCard extends StatelessWidget {
                 ),
               ),
               Text(
-                message ? 'Datos para enviar un mensaje' : 'Datos para llamar',
+                medium == ContactMedium.llamada
+                    ? 'Datos para llamar'
+                    : 'Datos para ${medium.actionLabel.toLowerCase()}',
                 style: const TextStyle(
                   fontFamily: 'SulphurPoint',
                   fontSize: 18,
@@ -50,7 +56,8 @@ class ProspectCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               SelectableText(prospect.phone),
-              if (message) SelectableText(prospect.email),
+              if (medium == ContactMedium.correo)
+                SelectableText(prospect.email),
               const SizedBox(height: 12),
               Text(
                 prospect.id == null
@@ -110,7 +117,12 @@ class ProspectCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                ProspectAvatarBadge(prospect: prospect),
+                ProspectAvatarBadge(
+                  prospect: prospect,
+                  borderColor: prospect.isClient
+                      ? AppColors.prospectClientAvatarBorder
+                      : null,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Column(
@@ -146,19 +158,7 @@ class ProspectCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                _action(
-                  context,
-                  message: true,
-                  color: const Color(0xFF64FF98),
-                  icon: Iconsax.message_copy,
-                ),
-                const SizedBox(width: 0),
-                _action(
-                  context,
-                  message: false,
-                  color: const Color(0xFFFFE18A),
-                  icon: Iconsax.call_copy,
-                ),
+                _action(context),
               ],
             ),
             const SizedBox(height: 8),
@@ -178,18 +178,19 @@ class ProspectCard extends StatelessWidget {
               spacing: 4,
               runSpacing: 4,
               children: [
-                _tag(
-                  prospect.status == 'Atrasados'
-                      ? 'ATRASADO'
-                      : prospect.status.toUpperCase(),
-                  ProspectTagColors.status(prospect.status),
-                ),
+                ProspectStatusTag(status: prospect.status),
                 _tag(
                   prospect.temperature.toUpperCase(),
                   temperatureColor,
                   foreground: Colors.white,
                 ),
                 if (prospect.isReactivation) const ReactivationTag(),
+                if (prospect.isClient)
+                  ProspectTag(
+                    label: 'CLIENTE',
+                    background: ProspectTagColors.client,
+                    foreground: ProspectTagColors.clientForeground,
+                  ),
                 if (date != null)
                   _tag(
                     '${two(date.day)}-${two(date.month)}-${date.year}',
@@ -208,38 +209,39 @@ class ProspectCard extends StatelessWidget {
     );
   }
 
-  Widget _action(
-    BuildContext context, {
-    required bool message,
-    required Color color,
-    required IconData icon,
-  }) {
+  Widget _action(BuildContext context) {
+    final medium = action.medium;
+    final suffix = action.hasActivity
+        ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
+        : '';
+    final icon = switch (medium) {
+      ContactMedium.llamada => Iconsax.call_copy,
+      ContactMedium.whatsapp || ContactMedium.facebook => Iconsax.message_copy,
+      ContactMedium.correo => Iconsax.send_2_copy,
+    };
     return IconButton(
-      tooltip: message
-          ? 'Mensaje a ${prospect.name}'
-          : 'Llamar a ${prospect.name}',
-      onPressed:
-          (message
-              ? prospect.phone.isEmpty && prospect.email.isEmpty
-              : !PhoneNumber.isDialable(prospect.phone))
+      tooltip: '${medium.actionLabel} a ${prospect.name}$suffix',
+      onPressed: !medium.isAvailable(prospect)
           ? null
           : () async {
               final action = onContact;
               if (action != null) {
-                await action(message);
+                await action(medium);
               } else {
-                await _contact(context, message);
+                await _contact(context, medium);
               }
             },
       style: IconButton.styleFrom(
-        backgroundColor: color,
+        backgroundColor: medium == ContactMedium.llamada
+            ? AppColors.prospectActionCall
+            : AppColors.prospectActionMessage,
         foregroundColor: AppColors.textDarkColor,
-        minimumSize: const Size(34, 34),
-        maximumSize: const Size(34, 34),
+        minimumSize: const Size(40, 40),
+        maximumSize: const Size(40, 40),
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
       ),
-      icon: Icon(icon, size: 19),
+      icon: Icon(icon, size: 22),
     );
   }
 

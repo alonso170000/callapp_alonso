@@ -20,6 +20,8 @@ import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_de
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
+import 'package:callerapp_frontend/services/contact_launcher.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -342,6 +344,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     detailContext,
                   ),
                   onCall: () => _callActivity(activity, detailContext),
+                  onContact: (medium) =>
+                      _contactActivity(activity, medium, detailContext),
                   onOpenProspect: () => _openProspect(activity, detailContext),
                   onDelete: () => _deleteActivity(activity, detailContext),
                   onEdit: () => _editActivity(activity, detailContext),
@@ -548,6 +552,73 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
     } finally {
       _calling = false;
+    }
+  }
+
+  Future<void> _contactActivity(
+    AgendaActivity activity,
+    ContactMedium medium,
+    BuildContext detailContext,
+  ) async {
+    if (medium == ContactMedium.llamada) {
+      await _callActivity(activity, detailContext);
+      return;
+    }
+    if (medium == ContactMedium.facebook) {
+      _showActionMessage(
+        'Facebook no está disponible para este prospecto.',
+        detailContext,
+      );
+      return;
+    }
+    if (activity.prospectId == null) {
+      _showActionMessage(
+        'Esta actividad no tiene un prospecto asociado.',
+        detailContext,
+      );
+      return;
+    }
+    try {
+      final prospects = await _cachedProspects();
+      final matches = prospects.where(
+        (value) => value.id == activity.prospectId,
+      );
+      if (!detailContext.mounted) return;
+      if (matches.isEmpty) {
+        _showActionMessage(
+          'El prospecto ya no está disponible en tu sesión.',
+          detailContext,
+        );
+        return;
+      }
+      final prospect = matches.first;
+      final opened = medium == ContactMedium.whatsapp
+          ? await const ContactLauncher().openWhatsApp(prospect)
+          : await const ContactLauncher().openEmail(prospect);
+      if (!detailContext.mounted) return;
+      if (!opened) {
+        _showActionMessage(
+          medium == ContactMedium.whatsapp
+              ? 'No se pudo abrir WhatsApp.'
+              : 'No se pudo abrir la aplicación de correo.',
+          detailContext,
+        );
+        return;
+      }
+      Navigator.pop(detailContext);
+      if (!mounted) return;
+      await context.push(
+        '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
+        extra: ProspectDetailArguments(
+          prospect: prospect,
+          sourceActivity: activity,
+        ),
+      );
+      if (mounted) await _load();
+    } on ProspectsException catch (error) {
+      if (detailContext.mounted) {
+        _showActionMessage(error.message, detailContext);
+      }
     }
   }
 

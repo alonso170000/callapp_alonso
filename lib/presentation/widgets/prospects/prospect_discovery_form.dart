@@ -18,6 +18,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
   final ProspectsService? prospectsService;
   final ProspectsRepository? repository;
   final bool readOnly;
+  final ValueChanged<bool>? onDirtyChanged;
 
   const ProspectDiscoveryForm({
     super.key,
@@ -27,6 +28,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
     this.prospectsService,
     this.repository,
     this.readOnly = false,
+    this.onDirtyChanged,
   });
 
   @override
@@ -78,6 +80,19 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String? _savingSection;
   String? _serviceError;
   String? _lotsError;
+  final Set<String> _dirtyControls = {};
+
+  void _markDirty(String control) {
+    if (widget.readOnly || _dirtyControls.contains(control)) return;
+    setState(() => _dirtyControls.add(control));
+    widget.onDirtyChanged?.call(true);
+  }
+
+  void _clearDirty() {
+    if (_dirtyControls.isEmpty) return;
+    setState(_dirtyControls.clear);
+    widget.onDirtyChanged?.call(false);
+  }
 
   static const _locationOptions = ['Quintana Roo', 'Yucatán'];
   static const _keyFactorOptions = [
@@ -183,14 +198,25 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     super.dispose();
   }
 
-  InputDecoration _decoration() => InputDecoration(
+  InputDecoration _decoration([bool changed = false]) => InputDecoration(
     filled: true,
-    fillColor: AppColors.discoveryField,
+    fillColor: changed
+        ? Color.alphaBlend(
+            AppPalette.of(context).headerBadgeForeground.withValues(alpha: .2),
+            AppColors.discoveryField,
+          )
+        : AppColors.discoveryField,
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: changed
+          ? BorderSide(color: AppPalette.of(context).contrasteCampos, width: 2)
+          : BorderSide.none,
     ),
   );
 
@@ -234,7 +260,8 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         fontFamily: 'SulphurPoint',
         fontSize: 16,
       ),
-      decoration: _decoration().copyWith(errorText: errorText),
+      decoration: _decoration(_dirtyControls.contains(label))
+          .copyWith(errorText: errorText),
       hint: const Text(
         'Seleccione una opción',
         style: TextStyle(color: AppColors.discoveryFieldHint),
@@ -243,7 +270,10 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           .map((item) => DropdownMenuItem(value: item, child: Text(item)))
           .toList(),
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      onChanged: (item) => setState(() => change(item!)),
+      onChanged: (item) {
+        _markDirty(label);
+        setState(() => change(item!));
+      },
     ),
   );
 
@@ -272,7 +302,12 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 checkmarkColor: AppColors.discoveryFieldText,
                 selectedColor: AppColors.discoveryFieldSelected,
                 backgroundColor: AppColors.discoveryField,
-                side: BorderSide.none,
+                side: _dirtyControls.contains(label)
+                    ? BorderSide(
+                        color: AppPalette.of(context).contrasteCampos,
+                        width: 2,
+                      )
+                    : BorderSide.none,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: EdgeInsets.zero,
                 labelPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -282,10 +317,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                 ),
                 onSelected: _savingSection != null
                     ? null
-                    : (value) => setState(() {
-                        value ? selected.add(option) : selected.remove(option);
-                        if (option == 'Otro' && !value) _otherFactor.clear();
-                      }),
+                    : (value) {
+                        _markDirty(label);
+                        setState(() {
+                          value
+                              ? selected.add(option)
+                              : selected.remove(option);
+                          if (option == 'Otro' && !value) _otherFactor.clear();
+                        });
+                      },
               );
             }).toList(),
           ),
@@ -315,13 +355,14 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     label,
     TextField(
       controller: controller,
+      onChanged: (_) => _markDirty(label),
       onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       minLines: 1,
       maxLines: 3,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       style: const TextStyle(color: AppColors.discoveryFieldText),
-      decoration: _decoration().copyWith(
+      decoration: _decoration(_dirtyControls.contains(label)).copyWith(
         prefixText: prefixText,
         prefixStyle: const TextStyle(color: AppColors.discoveryFieldText),
         errorText: errorText,
@@ -347,7 +388,12 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
               toggled: value,
               label: label,
               child: InkWell(
-                onTap: _savingSection == null ? () => onChanged(!value) : null,
+                onTap: _savingSection == null
+                    ? () {
+                        _markDirty(label);
+                        onChanged(!value);
+                      }
+                    : null,
                 borderRadius: BorderRadius.circular(7),
                 child: Container(
                   width: 62,
@@ -361,6 +407,12 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         ? AppColors.discoverySave
                         : AppColors.discoveryCancel,
                     borderRadius: BorderRadius.circular(7),
+                    border: _dirtyControls.contains(label)
+                        ? Border.all(
+                            color: AppPalette.of(context).contrasteCampos,
+                            width: 2,
+                          )
+                        : null,
                   ),
                   child: Container(
                     width: 27,
@@ -394,7 +446,12 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                   backgroundColor: AppColors.discoveryCancel,
                   foregroundColor: Colors.white,
                 ),
-                onPressed: _savingSection == null ? cancel : null,
+                onPressed: _savingSection == null
+                    ? () {
+                        cancel();
+                        _clearDirty();
+                      }
+                    : null,
                 child: const Text('CANCELAR'),
               ),
             ),
@@ -418,22 +475,26 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
         );
 
   void _notify(String section) {
+    _clearDirty();
     widget.onSaved('Discovery · $section');
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('$section guardado en esta vista.')));
   }
 
-  void _restoreNeed() => setState(() {
-    _property = _saved?['property'] as String?;
-    _locations
-      ..clear()
-      ..addAll((_saved?['locations'] as List<String>?) ?? const []);
-    _purpose = _saved?['purpose'] as String?;
-    _knowsArea = (_saved?['knowsArea'] as bool?) ?? false;
-    _areaNotes.text = (_saved?['areaNotes'] as String?) ?? '';
-    _showNeedErrors = false;
-  });
+  void _restoreNeed() {
+    setState(() {
+      _property = _saved?['property'] as String?;
+      _locations
+        ..clear()
+        ..addAll((_saved?['locations'] as List<String>?) ?? const []);
+      _purpose = _saved?['purpose'] as String?;
+      _knowsArea = (_saved?['knowsArea'] as bool?) ?? false;
+      _areaNotes.text = (_saved?['areaNotes'] as String?) ?? '';
+      _showNeedErrors = false;
+    });
+    _clearDirty();
+  }
 
   List<String> _listValue(Object? value) {
     final decoded = value is String
@@ -1117,19 +1178,23 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                       fontFamily: 'SulphurPoint',
                       fontSize: 16,
                     ),
-                    decoration: _decoration().copyWith(
-                      errorText:
-                          _showProcessErrors && _selectedDevelopmentId == null
-                          ? 'Seleccione un desarrollo.'
-                          : null,
-                      suffixIcon: _developments.length == 1
-                          ? const Icon(
-                              Icons.lock_outline,
-                              color: AppColors.discoveryFieldText,
-                              size: 18,
-                            )
-                          : null,
-                    ),
+                    decoration:
+                        _decoration(
+                          _dirtyControls.contains('Desarrollo de interés *'),
+                        ).copyWith(
+                          errorText:
+                              _showProcessErrors &&
+                                  _selectedDevelopmentId == null
+                              ? 'Seleccione un desarrollo.'
+                              : null,
+                          suffixIcon: _developments.length == 1
+                              ? const Icon(
+                                  Icons.lock_outline,
+                                  color: AppColors.discoveryFieldText,
+                                  size: 18,
+                                )
+                              : null,
+                        ),
                     hint: Text(
                       _developmentsLoading
                           ? 'Cargando desarrollos...'
@@ -1155,6 +1220,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                     onChanged: _developmentsLoading || _developments.length <= 1
                         ? null
                         : (value) {
+                            _markDirty('Desarrollo de interés *');
                             setState(() {
                               _selectedDevelopmentId = value;
                               _selectedStageId = 0;
@@ -1218,7 +1284,9 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           fontFamily: 'SulphurPoint',
                           fontSize: 16,
                         ),
-                        decoration: _decoration(),
+                        decoration: _decoration(
+                          _dirtyControls.contains('Etapa'),
+                        ),
                         items: [
                           const DropdownMenuItem<int>(
                             value: 0,
@@ -1231,16 +1299,19 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                             ),
                           ),
                         ],
-                        onChanged: (value) => setState(() {
-                          _selectedStageId = value ?? 0;
-                          if (_selectedLotId != null &&
-                              !LotCatalog.filterByStage(
-                                _lots,
-                                _selectedStageId,
-                              ).any((lot) => lot['id'] == _selectedLotId)) {
-                            _selectedLotId = null;
-                          }
-                        }),
+                        onChanged: (value) {
+                          _markDirty('Etapa');
+                          setState(() {
+                            _selectedStageId = value ?? 0;
+                            if (_selectedLotId != null &&
+                                !LotCatalog.filterByStage(
+                                  _lots,
+                                  _selectedStageId,
+                                ).any((lot) => lot['id'] == _selectedLotId)) {
+                              _selectedLotId = null;
+                            }
+                          });
+                        },
                       ),
                     ),
                   _label(
@@ -1262,14 +1333,17 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         fontFamily: 'SulphurPoint',
                         fontSize: 16,
                       ),
-                      decoration: _decoration().copyWith(
-                        errorText:
-                            _showProcessErrors &&
-                                _hasSpecificLot &&
-                                _selectedLot == null
-                            ? 'Seleccione el lote de interés.'
-                            : null,
-                      ),
+                      decoration:
+                          _decoration(
+                            _dirtyControls.contains('Seleccionar lote *'),
+                          ).copyWith(
+                            errorText:
+                                _showProcessErrors &&
+                                    _hasSpecificLot &&
+                                    _selectedLot == null
+                                ? 'Seleccione el lote de interés.'
+                                : null,
+                          ),
                       hint: Text(
                         _selectedLot != null
                             ? _lotLabel(_selectedLot!)
@@ -1292,7 +1366,10 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           FocusManager.instance.primaryFocus?.unfocus(),
                       onChanged: _lots.isEmpty
                           ? null
-                          : (value) => setState(() => _selectedLotId = value),
+                          : (value) {
+                              _markDirty('Seleccionar lote *');
+                              setState(() => _selectedLotId = value);
+                            },
                     ),
                   ),
                   if (_selectedLot case final lot?)
@@ -1378,11 +1455,15 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                         fontFamily: 'SulphurPoint',
                         fontSize: 16,
                       ),
-                      decoration: _decoration().copyWith(
-                        errorText: _showCloserError && _selectedCloserId == null
-                            ? 'Seleccione un cerrador.'
-                            : null,
-                      ),
+                      decoration:
+                          _decoration(
+                            _dirtyControls.contains('Nombre del cerrador'),
+                          ).copyWith(
+                            errorText:
+                                _showCloserError && _selectedCloserId == null
+                                ? 'Seleccione un cerrador.'
+                                : null,
+                          ),
                       hint: Text(
                         _closersLoading
                             ? 'Cargando cerradores...'
@@ -1405,8 +1486,10 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
                           FocusManager.instance.primaryFocus?.unfocus(),
                       onChanged: _closersLoading || _closers.isEmpty
                           ? null
-                          : (value) =>
-                                setState(() => _selectedCloserId = value),
+                          : (value) {
+                              _markDirty('Nombre del cerrador');
+                              setState(() => _selectedCloserId = value);
+                            },
                     ),
                   ),
                 _buttons(

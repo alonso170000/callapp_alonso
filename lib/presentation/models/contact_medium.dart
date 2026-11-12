@@ -33,6 +33,13 @@ enum ContactMedium {
     correo => 'Enviar correo',
   };
 
+  String get channelLabel => switch (this) {
+    llamada => 'llamada',
+    whatsapp => 'WhatsApp',
+    facebook => 'Facebook',
+    correo => 'correo',
+  };
+
   String get backendValue => switch (this) {
     llamada => 'telefono',
     whatsapp => 'whatsapp',

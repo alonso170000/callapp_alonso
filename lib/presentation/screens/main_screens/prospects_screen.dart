@@ -1,4 +1,7 @@
 import 'package:callerapp_frontend/services/auth_service.dart';
+
+import 'dart:async';
+
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/repositories/agenda_repository.dart';
@@ -12,6 +15,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_search.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_action.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
@@ -21,6 +26,7 @@ import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
+import 'package:callerapp_frontend/services/contact_launcher.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -45,6 +51,7 @@ class ProspectsScreen extends StatefulWidget {
   final ValueChanged<AgendaActivity>? onNotificationActivity;
   final PhoneCallService? phoneCallService;
   final DateTime Function()? now;
+  final AgendaRepository? agendaRepository;
   const ProspectsScreen({
     super.key,
     this.controller,
@@ -52,6 +59,7 @@ class ProspectsScreen extends StatefulWidget {
     this.onNotificationActivity,
     this.phoneCallService,
     this.now,
+    this.agendaRepository,
   });
 
   @override
@@ -61,7 +69,11 @@ class ProspectsScreen extends StatefulWidget {
 class _ProspectsScreenState extends State<ProspectsScreen> {
   final _records = <ProspectRecord>[];
   final _repository = ProspectsRepository();
-  final _agendaRepository = AgendaRepository();
+  late final AgendaRepository _agendaRepository;
+  bool _ownsAgendaRepository = false;
+  List<AgendaActivity> _activities = const [];
+  bool _agendaVerified = false;
+  int _agendaRequest = 0;
   bool _loading = false;
   String? _error;
   int _request = 0;
@@ -69,6 +81,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   final _callSession = CallSessionController.instance;
 
   Future<void> _load() async {
+    unawaited(_loadAgenda());
     final request = ++_request;
     setState(() {
       _loading = true;
@@ -125,9 +138,36 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     }
   }
 
+  Future<void> _loadAgenda() async {
+    final request = ++_agendaRequest;
+    try {
+      final cached = await _agendaRepository.readCache();
+      if (!mounted || request != _agendaRequest) return;
+      if (cached.isNotEmpty) {
+        setState(() {
+          _activities = cached;
+          _agendaVerified = true;
+        });
+      }
+    } catch (_) {}
+    try {
+      final remote = await _agendaRepository.refresh();
+      if (!mounted || request != _agendaRequest) return;
+      setState(() {
+        _activities = remote;
+        _agendaVerified = true;
+      });
+    } catch (_) {
+      if (!mounted || request != _agendaRequest) return;
+      setState(() => _agendaVerified = false);
+    }
+  }
+
   void _sessionChanged() {
     ++_request;
     _records.clear();
+    _activities = const [];
+    _agendaVerified = false;
     _search.clear();
     _advanced = ProspectFilters.forSeller();
     _load();
@@ -136,6 +176,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   @override
   void initState() {
     super.initState();
+    _agendaRepository = widget.agendaRepository ?? AgendaRepository();
+    _ownsAgendaRepository = widget.agendaRepository == null;
     widget.controller?._open = _addProspect;
     widget.controller?._show = _showFromHome;
     widget.controller?._openProspect = _openProspectById;
@@ -253,46 +295,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
     _repository.dispose();
-    _agendaRepository.dispose();
+    if (_ownsAgendaRepository) _agendaRepository.dispose();
     super.dispose();
-  }
-
-  Future<_ActivitiesResult> _activitiesFor(ProspectRecord prospect) async {
-    List<AgendaActivity> cached = const [];
-    try {
-      cached = await _agendaRepository.readCache();
-    } on Object {
-      // Si la caché no está disponible, se intenta consultar la agenda remota.
-    }
-    try {
-      return _ActivitiesResult(
-        await _agendaRepository.refresh(),
-        verified: true,
-      );
-    } on Object {
-      return _ActivitiesResult(cached, verified: cached.isNotEmpty);
-    }
-  }
-
-  AgendaActivity? _scheduledContactActivity(
-    List<AgendaActivity> activities,
-    ProspectRecord prospect, {
-    required bool message,
-  }) {
-    final expectedMedium = message ? 'whatsapp' : 'llamada';
-    final matches =
-        activities
-            .where(
-              (activity) =>
-                  activity.prospectId == prospect.id &&
-                  (activity.status == AgendaStatus.pending ||
-                      activity.status == AgendaStatus.overdue) &&
-                  activity.isFollowUp &&
-                  activity.medium?.trim().toLowerCase() == expectedMedium,
-            )
-            .toList()
-          ..sort((a, b) => a.date.compareTo(b.date));
-    return matches.isEmpty ? null : matches.first;
   }
 
   String _activityDateLabel(BuildContext context, AgendaActivity activity) {
@@ -302,39 +306,43 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     return '$day/$month/${date.year} a las ${TimeOfDay.fromDateTime(date).format(context)}';
   }
 
-  Future<void> _contactProspect(ProspectRecord prospect, bool message) async {
-    final result = await _activitiesFor(prospect);
-    final activity = _scheduledContactActivity(
-      result.activities,
-      prospect,
-      message: message,
-    );
-    if (!mounted) return;
-    final channel = message ? 'WhatsApp' : 'llamada';
+  Future<void> _contactProspect(
+    ProspectRecord prospect,
+    ProspectAction action,
+  ) async {
+    final activity = action.activity;
+    final medium = action.medium;
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) {
-        final hasActivity = activity != null;
         final other =
-            result.activities
+            _activities
                 .where(
                   (value) =>
                       value.prospectId == prospect.id &&
+                      value.isFollowUp &&
                       (value.status == AgendaStatus.pending ||
-                          value.status == AgendaStatus.overdue),
+                          value.status == AgendaStatus.overdue) &&
+                      value.id != activity?.id,
                 )
                 .toList()
               ..sort((a, b) => a.date.compareTo(b.date));
         final otherActivity = other.isEmpty ? null : other.first;
-        final question = hasActivity
-            ? 'Hay una actividad de tipo $channel ${activity.status == AgendaStatus.overdue ? 'atrasada' : 'agendada'} con este prospecto el ${_activityDateLabel(sheetContext, activity)}. ¿Quieres ${message ? 'enviar el mensaje y completar la actividad' : 'hacer el seguimiento y completar la actividad'}?'
+        final verb = switch (medium) {
+          ContactMedium.llamada => 'hacer la llamada',
+          ContactMedium.whatsapp => 'enviar el mensaje',
+          ContactMedium.correo => 'enviar el correo',
+          ContactMedium.facebook => 'abrir Facebook',
+        };
+        final question = activity != null
+            ? 'Hay un seguimiento por ${medium.channelLabel} ${activity.status == AgendaStatus.overdue ? 'atrasado' : 'agendado'} con este prospecto el ${_activityDateLabel(sheetContext, activity)}. ¿Quieres $verb y registrar el seguimiento?'
             : otherActivity != null
-            ? 'Este prospecto no tiene una actividad de tipo $channel, pero tiene ${otherActivity.title.toLowerCase()} ${otherActivity.status == AgendaStatus.overdue ? 'atrasada' : 'agendada'} el ${_activityDateLabel(sheetContext, otherActivity)}.'
-            : result.verified
-            ? 'Este prospecto no tiene actividades pendientes. ¿Quieres ${message ? 'enviar el mensaje' : 'hacer la llamada y registrar un seguimiento'}?'
-            : 'No se pudo verificar la agenda de este prospecto. ¿Quieres ${message ? 'enviar el mensaje' : 'hacer la llamada y registrar un seguimiento'}?';
+            ? 'Este prospecto no tiene un seguimiento por ${medium.channelLabel}, pero tiene ${otherActivity.title.toLowerCase()} ${otherActivity.status == AgendaStatus.overdue ? 'atrasado' : 'agendado'} el ${_activityDateLabel(sheetContext, otherActivity)}. ¿Quieres $verb?'
+            : _agendaVerified
+            ? 'Este prospecto no tiene seguimientos pendientes. ¿Quieres $verb?'
+            : 'No se pudo verificar la agenda de este prospecto. ¿Quieres $verb?';
         return SafeArea(
           child: SingleChildScrollView(
             child: Padding(
@@ -354,10 +362,15 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   const SizedBox(height: 8),
                   Text(question),
                   const SizedBox(height: 20),
-                  if (message)
+                  if (medium != ContactMedium.llamada)
                     FilledButton(
                       onPressed: () => Navigator.pop(sheetContext, true),
-                      child: const Text('ENTENDIDO'),
+                      child: Text(switch (medium) {
+                        ContactMedium.whatsapp => 'ABRIR WHATSAPP',
+                        ContactMedium.correo => 'ABRIR CORREO',
+                        ContactMedium.facebook => 'ENTENDIDO',
+                        ContactMedium.llamada => 'SÍ, LLAMAR',
+                      }),
                     )
                   else
                     Row(
@@ -365,14 +378,14 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(sheetContext, false),
-                            child: Text(message ? 'NO ENVIAR' : 'NO LLAMAR'),
+                            child: const Text('NO LLAMAR'),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: FilledButton(
                             onPressed: () => Navigator.pop(sheetContext, true),
-                            child: Text(message ? 'SÍ, ENVIAR' : 'SÍ, LLAMAR'),
+                            child: const Text('SÍ, LLAMAR'),
                           ),
                         ),
                       ],
@@ -385,16 +398,49 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       },
     );
     if (!mounted || confirmed != true) return;
-    if (message) {
+    if (medium == ContactMedium.facebook) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('WhatsApp estará disponible próximamente.'),
+          content: Text('Facebook no está disponible para este prospecto.'),
         ),
       );
       return;
     }
-    final successful = await _runCall(prospect);
+    if (medium == ContactMedium.whatsapp) {
+      final opened = await const ContactLauncher().openWhatsApp(prospect);
+      if (!mounted) return;
+      if (!opened) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir WhatsApp.')),
+        );
+        return;
+      }
+      await _openProspectDetail(prospect, activity);
+      return;
+    }
+    if (medium == ContactMedium.correo) {
+      final opened = await const ContactLauncher().openEmail(prospect);
+      if (!mounted) return;
+      if (!opened) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir la aplicación de correo.'),
+          ),
+        );
+        return;
+      }
+      await _openProspectDetail(prospect, activity);
+      return;
+    }
+    final successful = await _runCall(prospect, activity: activity);
     if (!mounted || successful == null) return;
+    await _openProspectDetail(prospect, activity);
+  }
+
+  Future<void> _openProspectDetail(
+    ProspectRecord prospect,
+    AgendaActivity? activity,
+  ) async {
     await context.push(
       '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
       extra: ProspectDetailArguments(
@@ -407,7 +453,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     if (mounted) await _load();
   }
 
-  Future<bool?> _runCall(ProspectRecord prospect) async {
+  Future<bool?> _runCall(
+    ProspectRecord prospect, {
+    AgendaActivity? activity,
+  }) async {
     if (_calling) return null;
     if (_callSession.activeCall != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -467,6 +516,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     await _callSession.start(
       prospect: prospect,
       origin: 'tarjeta',
+      sourceActivityId: activity?.id,
       startedAt: startedAt,
     );
     return false;
@@ -887,32 +937,32 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 118),
             sliver: SliverList.builder(
               itemCount: prospects.length,
-              itemBuilder: (_, index) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ProspectCard(
-                  prospect: prospects[index],
-                  onContact: (message) =>
-                      _contactProspect(prospects[index], message),
-                  onTap: () async {
-                    await context.push(
-                      '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
-                      extra: prospects[index],
-                    );
-                    if (mounted) await _load();
-                  },
-                ),
-              ),
+              itemBuilder: (_, index) {
+                final prospect = prospects[index];
+                final action = ProspectAction.resolve(
+                  prospect: prospect,
+                  activities: _activities,
+                );
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ProspectCard(
+                    prospect: prospect,
+                    action: action,
+                    onContact: (_) => _contactProspect(prospect, action),
+                    onTap: () async {
+                      await context.push(
+                        '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',
+                        extra: prospects[index],
+                      );
+                      if (mounted) await _load();
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _ActivitiesResult {
-  const _ActivitiesResult(this.activities, {required this.verified});
-
-  final List<AgendaActivity> activities;
-  final bool verified;
 }

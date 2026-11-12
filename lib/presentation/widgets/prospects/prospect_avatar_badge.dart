@@ -10,11 +10,13 @@ import 'package:flutter/material.dart';
 class ProspectAvatarBadge extends StatelessWidget {
   final ProspectRecord prospect;
   final double radius;
+  final Color? borderColor;
 
   const ProspectAvatarBadge({
     super.key,
     required this.prospect,
     this.radius = 18,
+    this.borderColor,
   });
 
   @override
@@ -26,27 +28,31 @@ class ProspectAvatarBadge extends StatelessWidget {
       size: diameter / 1.5,
     );
     final avatarUrl = prospect.avatarUrl;
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: prospect.avatarColor,
-      child: prospect.id == null
-          ? Image.asset(
-              'lib/resources/images/Frame.png',
-              width: diameter - 8,
-              height: diameter - 8,
-              excludeFromSemantics: true,
-            )
-          : ClipOval(
-              child: avatarUrl == null || avatarUrl.isEmpty
-                  ? fallback
-                  : Image.network(
-                      avatarUrl,
-                      width: diameter - 4,
-                      height: diameter - 4,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => fallback,
-                    ),
-            ),
+    return Container(
+      padding: borderColor == null ? EdgeInsets.zero : const EdgeInsets.all(2),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: borderColor),
+      child: CircleAvatar(
+        radius: radius,
+        backgroundColor: prospect.avatarColor,
+        child: prospect.id == null
+            ? Image.asset(
+                'lib/resources/images/Frame.png',
+                width: diameter - 8,
+                height: diameter - 8,
+                excludeFromSemantics: true,
+              )
+            : ClipOval(
+                child: avatarUrl == null || avatarUrl.isEmpty
+                    ? fallback
+                    : Image.network(
+                        avatarUrl,
+                        width: diameter - 1,
+                        height: diameter - 1,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => fallback,
+                      ),
+              ),
+      ),
     );
   }
 }

@@ -267,6 +267,62 @@ class ProspectsRepository {
     remote: (id, key) => _service.update(id, fields, operationKey: key),
   );
 
+  Future<ProspectMutationResult> convertToClient(
+    ProspectRecord prospect,
+  ) async {
+    final currentScope = scope;
+    var id = prospect.id;
+    if (id == null) {
+      throw const ProspectsBusinessException(
+        'El prospecto no tiene un identificador válido.',
+      );
+    }
+    if (id < 0) {
+      id = await _outbox.resolveLocalId(currentScope, 'prospect', id) ?? id;
+    }
+    final optimistic = prospect.copyWith(isClient: true);
+    final key = PendingOperationsStore.newOperationKey();
+    if (id < 0) {
+      await _cache.upsert(currentScope, optimistic);
+      await _outbox.enqueue(
+        currentScope,
+        kind: 'prospect.convert',
+        entityId: id,
+        operationKey: key,
+        payload: {'local_prospect': _prospectJson(optimistic)},
+      );
+      unawaited(_sync.flush());
+      return ProspectMutationResult(
+        ProspectMutationState.pending,
+        prospect: optimistic,
+      );
+    }
+    try {
+      final clientId = await _service.convertToClient(id, operationKey: key);
+      final saved = optimistic.copyWith(clientId: clientId);
+      await _cache.upsert(currentScope, saved);
+      return ProspectMutationResult(
+        ProspectMutationState.saved,
+        prospect: saved,
+      );
+    } on ProspectsRecoverableException {
+      if (!_outbox.isAvailable) rethrow;
+      await _cache.upsert(currentScope, optimistic);
+      await _outbox.enqueue(
+        currentScope,
+        kind: 'prospect.convert',
+        entityId: id,
+        operationKey: key,
+        payload: {'local_prospect': _prospectJson(optimistic)},
+      );
+      unawaited(_sync.flush());
+      return ProspectMutationResult(
+        ProspectMutationState.pending,
+        prospect: optimistic,
+      );
+    }
+  }
+
   Future<ProspectMutationResult> createFollowUp(
     ProspectRecord prospect,
     Map<String, dynamic> fields, {
@@ -553,7 +609,8 @@ class ProspectsRepository {
       if (operation.kind != 'prospect.create' &&
           operation.kind != 'prospect.update' &&
           operation.kind != 'prospect.follow_up' &&
-          operation.kind != 'prospect.call') {
+          operation.kind != 'prospect.call' &&
+          operation.kind != 'prospect.convert') {
         continue;
       }
       final raw = operation.payload['local_prospect'];

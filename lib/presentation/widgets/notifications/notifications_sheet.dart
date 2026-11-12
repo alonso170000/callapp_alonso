@@ -33,7 +33,7 @@ class _NotificationsSheet extends StatefulWidget {
 
 class _NotificationsSheetState extends State<_NotificationsSheet> {
   Timer? _elapsedTimer;
-  NotificationInboxFilter _filter = NotificationInboxFilter.all;
+  final NotificationInboxFilter _filter = NotificationInboxFilter.all;
 
   @override
   void initState() {
@@ -206,7 +206,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                       ),
                     ),
                   ),
-                
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(

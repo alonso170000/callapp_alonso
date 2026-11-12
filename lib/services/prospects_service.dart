@@ -542,6 +542,24 @@ class ProspectsService {
     mutation: true,
   );
 
+  Future<int> convertToClient(int prospectId, {String? operationKey}) async {
+    final response = await _request(
+      'clients/convert',
+      body: {'prospecto_id': prospectId},
+      method: 'POST',
+      operationKey: operationKey,
+      mutation: true,
+    );
+    final data = response['data'];
+    final clientId = data is Map ? int.tryParse('${data['id']}') : null;
+    if (clientId == null) {
+      throw const ProspectsIndeterminateException(
+        'No se pudo confirmar la conversión. Actualiza la lista antes de intentarlo nuevamente.',
+      );
+    }
+    return clientId;
+  }
+
   Future<List<ProspectRecord>> fetch() async {
     final token = _auth.token;
     if (token == null) {
@@ -667,6 +685,8 @@ class ProspectsService {
                 .clamp(0, 100000),
       comments: row['comentario'] as String? ?? 'Sin comentarios registrados.',
       tipoProspecto: row['tipo_prospecto']?.toString() ?? 'regular',
+      isClient: row['es_cliente'] == true || row['es_cliente'] == 1,
+      clientId: int.tryParse('${row['cliente_id']}'),
     );
   }
 

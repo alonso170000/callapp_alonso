@@ -44,6 +44,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.warmBannerForeground,
     required this.headerBadgeFill,
     required this.headerBadgeForeground,
+    required this.contrasteCampos,
     required this.headerChipFill,
     required this.headerChipForeground,
     required this.headerForeground,
@@ -142,6 +143,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Cromo del encabezado del detalle del prospecto (franja de marca).
   final Color headerBadgeFill;
   final Color headerBadgeForeground;
+  final Color contrasteCampos;
   final Color headerChipFill;
   final Color headerChipForeground;
   final Color headerForeground;
@@ -242,6 +244,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     warmBannerForeground: AppColors.primaryColor,
     headerBadgeFill: Color(0xFF004C49),
     headerBadgeForeground: AppColors.homeWarmText,
+    contrasteCampos: Color.fromARGB(255, 130, 249, 255),
     headerChipFill: Color(0xFF004F4B),
     headerChipForeground: Color(0xFFA9DCD3),
     headerForeground: AppColors.homeBackground,
@@ -325,6 +328,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     warmBannerForeground: Color(0xFFFFE6A8),
     headerBadgeFill: Color(0xFF06322D),
     headerBadgeForeground: Color(0xFFFFD98A),
+    contrasteCampos: Color.fromARGB(255, 130, 249, 255),
     headerChipFill: Color(0xFF06322D),
     headerChipForeground: Color(0xFFA9DCD3),
     headerForeground: Color(0xFFD6EFE8),
@@ -408,6 +412,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? warmBannerForeground,
     Color? headerBadgeFill,
     Color? headerBadgeForeground,
+    Color? contrasteCampos,
     Color? headerChipFill,
     Color? headerChipForeground,
     Color? headerForeground,
@@ -487,6 +492,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     warmBannerForeground: warmBannerForeground ?? this.warmBannerForeground,
     headerBadgeFill: headerBadgeFill ?? this.headerBadgeFill,
     headerBadgeForeground: headerBadgeForeground ?? this.headerBadgeForeground,
+    contrasteCampos: contrasteCampos ?? this.contrasteCampos,
     headerChipFill: headerChipFill ?? this.headerChipFill,
     headerChipForeground: headerChipForeground ?? this.headerChipForeground,
     headerForeground: headerForeground ?? this.headerForeground,
@@ -585,6 +591,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
         headerBadgeForeground,
         other.headerBadgeForeground,
       ),
+      contrasteCampos: mix(contrasteCampos, other.contrasteCampos),
       headerChipFill: mix(headerChipFill, other.headerChipFill),
       headerChipForeground: mix(
         headerChipForeground,

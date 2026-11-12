@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activity_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +18,8 @@ void main() {
   );
 
   AgendaActivity activity(String medium) => AgendaActivity(
+    id: 20,
+    prospectId: 7,
     type: 'seguimiento',
     medium: medium,
     title: 'SEGUIMIENTO',
@@ -91,6 +94,30 @@ void main() {
       find.text('El prospecto no tiene Facebook registrado.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('VER ACTIVIDAD permite editar y abrir la cancelación', (
+    tester,
+  ) async {
+    await pumpMedium(tester, 'whatsapp');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('open-follow-up-completion-activity')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('open-follow-up-completion-activity')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pump();
+    expect(find.text('Cancelar actividad'), findsOneWidget);
+    await tester.tap(find.text('VOLVER'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('EDITAR'));
+    await tester.pump();
+    expect(find.byType(NewAgendaActivityDialog), findsOneWidget);
   });
 
   testWidgets('sin actividad espera la resolución antes de mostrar Llamar', (

@@ -43,6 +43,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final bool readOnly;
   final bool callInProgress;
   final int? llamadaId;
+  final ValueChanged<bool>? onDirtyChanged;
   const ProspectFollowUpForm({
     super.key,
     required this.prospect,
@@ -59,6 +60,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.readOnly = false,
     this.callInProgress = false,
     this.llamadaId,
+    this.onDirtyChanged,
   });
   @override
   State<ProspectFollowUpForm> createState() => _ProspectFollowUpFormState();
@@ -78,7 +80,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   late bool _schedule;
   late DateTime _activityDate;
   late TimeOfDay _activityTime;
-  String _activityMedium = 'llamada';
+  String _activityMedium = 'telefono';
   int _reminderMinutes = 15;
   _FollowUpActivityDraft? _activityDraft;
   bool _saving = false;
@@ -92,6 +94,19 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   String? _followUpOperationKey;
   ContactMedium? _lastNotifiedMedium;
   bool _hasNotifiedMedium = false;
+  final Set<String> _dirtyControls = {};
+
+  void _markDirty(String control) {
+    if (widget.readOnly || _dirtyControls.contains(control)) return;
+    setState(() => _dirtyControls.add(control));
+    widget.onDirtyChanged?.call(true);
+  }
+
+  void _clearDirty() {
+    if (_dirtyControls.isEmpty) return;
+    setState(_dirtyControls.clear);
+    widget.onDirtyChanged?.call(false);
+  }
 
   bool get _requiresCompletedCall =>
       _selectedMedium == ContactMedium.llamada &&
@@ -316,6 +331,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       _activityDraft = _saved?['activity'] as _FollowUpActivityDraft?;
     });
     _notifyCurrentMedium();
+    _clearDirty();
   }
 
   Future<void> _pickDate() async {
@@ -333,6 +349,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       _activityDate = date;
       _activityDraft = null;
     });
+    _markDirty('Fecha y hora');
   }
 
   Future<void> _pickTime() async {
@@ -345,15 +362,21 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       _activityTime = time;
       _activityDraft = null;
     });
+    _markDirty('Fecha y hora');
   }
 
   String _dateLabel(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}/'
       '${value.month.toString().padLeft(2, '0')}/${value.year}';
 
-  InputDecoration _decoration() => InputDecoration(
+  InputDecoration _decoration([bool changed = false]) => InputDecoration(
     filled: true,
-    fillColor: const Color(0xFF398FA3),
+    fillColor: changed
+        ? Color.alphaBlend(
+            AppPalette.of(context).headerBadgeForeground.withValues(alpha: .2),
+            AppColors.prospectFormField,
+          )
+        : AppColors.prospectFormField,
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     border: OutlineInputBorder(
@@ -362,7 +385,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide.none,
+      borderSide: changed
+          ? BorderSide(color: AppPalette.of(context).contrasteCampos, width: 2)
+          : BorderSide.none,
     ),
   );
   Widget _label(String label, Widget child) => Padding(
@@ -416,13 +441,16 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         Icons.keyboard_arrow_down,
         color: AppColors.prospectFormFieldText,
       ),
-      decoration: _decoration(),
+      decoration: _decoration(_dirtyControls.contains(label)),
       items: values
           .map((v) => DropdownMenuItem(value: v, child: Text(v)))
           .toList(),
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: enabled && !widget.readOnly
-          ? (v) => setState(() => change(v!))
+          ? (v) {
+              _markDirty(label);
+              setState(() => change(v!));
+            }
           : null,
     ),
   );
@@ -444,7 +472,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               toggled: value,
               label: label,
               child: InkWell(
-                onTap: widget.readOnly ? null : () => onChanged(!value),
+                onTap: widget.readOnly
+                    ? null
+                    : () {
+                        _markDirty(label);
+                        onChanged(!value);
+                      },
                 child: Container(
                   width: 62,
                   height: 27,
@@ -457,6 +490,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                         ? const Color(0xFF4CA382)
                         : const Color(0xFFA44D4D),
                     borderRadius: BorderRadius.circular(6),
+                    border: _dirtyControls.contains(label)
+                        ? Border.all(
+                            color: AppPalette.of(context).contrasteCampos,
+                            width: 2,
+                          )
+                        : null,
                   ),
                   child: Container(
                     width: 27,
@@ -594,6 +633,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       widget.onSaved(
         '$_status · $_method${_notes.text.trim().isEmpty ? '' : ' · ${_notes.text.trim()}'}',
       );
+      _clearDirty();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Seguimiento guardado en esta vista.')),
       );
@@ -671,6 +711,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       widget.onSaved(
         '$_status · $_method${_notes.text.trim().isEmpty ? '' : ' · ${_notes.text.trim()}'}',
       );
+      _clearDirty();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -745,8 +786,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               minLines: 2,
               maxLines: 4,
               style: const TextStyle(color: Colors.white),
-              decoration: _decoration(),
-              onChanged: (_) => setState(() => _activityDraft = null),
+              decoration: _decoration(
+                _dirtyControls.contains('Descripción de siguiente actividad'),
+              ),
+              onChanged: (_) {
+                _markDirty('Descripción de siguiente actividad');
+                setState(() => _activityDraft = null);
+              },
               validator: (value) => value == null || value.trim().isEmpty
                   ? 'La descripción es obligatoria'
                   : null,
@@ -1024,13 +1070,16 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 TextField(
                   key: const ValueKey('follow-up-notes'),
                   controller: _notes,
+                  onChanged: (_) => _markDirty('Notas de la interacción'),
                   onTapOutside: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
                   readOnly: widget.readOnly,
                   minLines: 2,
                   maxLines: 5,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _decoration(),
+                  decoration: _decoration(
+                    _dirtyControls.contains('Notas de la interacción'),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

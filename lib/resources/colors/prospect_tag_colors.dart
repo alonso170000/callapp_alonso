@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'colors.dart';
 
 class ProspectTagColors {
+  static Color get client => AppColors.prospectTagClient;
+  static Color get clientForeground => AppColors.prospectTagClientInk;
   static String _key(String value) =>
       value.trim().toLowerCase().replaceAll('ó', 'o').replaceAll('í', 'i');
 
