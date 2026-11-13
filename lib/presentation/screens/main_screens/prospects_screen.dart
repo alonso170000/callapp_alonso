@@ -27,6 +27,8 @@ import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/contact_launcher.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -52,6 +54,7 @@ class ProspectsScreen extends StatefulWidget {
   final PhoneCallService? phoneCallService;
   final DateTime Function()? now;
   final AgendaRepository? agendaRepository;
+  final bool active;
   const ProspectsScreen({
     super.key,
     this.controller,
@@ -60,6 +63,7 @@ class ProspectsScreen extends StatefulWidget {
     this.phoneCallService,
     this.now,
     this.agendaRepository,
+    this.active = true,
   });
 
   @override
@@ -173,6 +177,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     _load();
   }
 
+  void _dataChanged() {
+    if (mounted && widget.active) _load();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -183,6 +191,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     widget.controller?._openProspect = _openProspectById;
     widget.controller?._refresh = _load;
     AuthService.instance.addListener(_sessionChanged);
+    DataChangeBus.instance.addListener(_dataChanged);
     _load();
   }
 
@@ -199,6 +208,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       widget.controller?._openProspect = _openProspectById;
       widget.controller?._refresh = _load;
     }
+    if (widget.active && !oldWidget.active) _load();
   }
 
   void _showFromHome(Set<int> ids, String label) {
@@ -294,6 +304,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     widget.controller?._refresh = null;
     _search.dispose();
     AuthService.instance.removeListener(_sessionChanged);
+    DataChangeBus.instance.removeListener(_dataChanged);
     _repository.dispose();
     if (_ownsAgendaRepository) _agendaRepository.dispose();
     super.dispose();
@@ -407,7 +418,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       return;
     }
     if (medium == ContactMedium.whatsapp) {
-      final opened = await const ContactLauncher().openWhatsApp(prospect);
+      final opened = await const ContactLauncher().openWhatsApp(
+        prospect,
+        activity: activity,
+      );
       if (!mounted) return;
       if (!opened) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -419,7 +433,10 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       return;
     }
     if (medium == ContactMedium.correo) {
-      final opened = await const ContactLauncher().openEmail(prospect);
+      final opened = await const ContactLauncher().openEmail(
+        prospect,
+        activity: activity,
+      );
       if (!mounted) return;
       if (!opened) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -519,6 +536,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       sourceActivityId: activity?.id,
       startedAt: startedAt,
     );
+    await NotificationService.instance.showFollowUpReminder(prospect, activity);
     return false;
   }
 

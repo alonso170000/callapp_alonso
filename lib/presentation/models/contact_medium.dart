@@ -41,7 +41,14 @@ enum ContactMedium {
   };
 
   String get backendValue => switch (this) {
-    llamada => 'telefono',
+    llamada => 'llamada',
+    whatsapp => 'whatsapp',
+    facebook => 'facebook',
+    correo => 'correo',
+  };
+
+  String get activityValue => switch (this) {
+    llamada => 'llamada',
     whatsapp => 'whatsapp',
     facebook => 'facebook',
     correo => 'correo',

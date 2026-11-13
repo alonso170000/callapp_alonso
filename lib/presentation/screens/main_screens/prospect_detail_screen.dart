@@ -100,6 +100,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   late final AgendaRepository _agendaRepository;
   late final bool _ownsAgendaRepository;
   AgendaActivity? _sourceActivity;
+  AgendaActivity? _pendingReminderActivity;
   int _activityContextRevision = 0;
   final _dirtyForms = <ProspectSection>{};
   bool _allowDirtyPop = false;
@@ -319,6 +320,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     WidgetsBinding.instance.addObserver(this);
     _prospect = widget.prospect;
     _sourceActivity = widget.sourceActivity;
+    _pendingReminderActivity =
+        NotificationService.shouldRemindFollowUp(_sourceActivity)
+        ? _sourceActivity
+        : null;
     final sourceMedium = ContactMedium.parse(_sourceActivity?.medium);
     _primaryMedium = widget.callStarted ? ContactMedium.llamada : sourceMedium;
     _mediumResolved =
@@ -451,7 +456,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final opened = await const ContactLauncher().openWhatsApp(_prospect);
+    final opened = await const ContactLauncher().openWhatsApp(
+      _prospect,
+      activity: _pendingReminderActivity,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -473,7 +481,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final opened = await const ContactLauncher().openEmail(_prospect);
+    final opened = await const ContactLauncher().openEmail(
+      _prospect,
+      activity: _pendingReminderActivity,
+    );
     if (!mounted || opened) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -655,13 +666,15 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     await _callSession.start(
       prospect: _prospect,
       origin: 'detalle',
-      sourceActivityId: _sourceActivity?.id,
+      sourceActivityId: _pendingReminderActivity?.id,
       startedAt: startedAt,
     );
-    unawaited(
-      (widget.showCallReminder ??
-          NotificationService.instance.showCallReminder)(_prospect),
-    );
+    if (NotificationService.shouldRemindFollowUp(_pendingReminderActivity)) {
+      unawaited(
+        (widget.showCallReminder ??
+            NotificationService.instance.showCallReminder)(_prospect),
+      );
+    }
   }
 
   Future<void> _finishCall() async {
@@ -729,7 +742,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
           key: ValueKey(section.label),
           title: title ?? section.title,
           color: section.fill(palette),
-          foreground: section.ink(palette),
+          foreground: palette.headerForeground,
           initiallyExpanded:
               section == ProspectSection.followUp || revision > 0,
           expansionRevision: revision,
@@ -815,6 +828,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
           _primaryMediumFromActivity = false;
           _primaryMedium = null;
           _mediumResolved = false;
+        }
+        if (_pendingReminderActivity?.id == activity.id) {
+          _pendingReminderActivity = null;
         }
         _activityContextRevision++;
       });
@@ -1105,6 +1121,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       loadActivities: widget.loadActivities,
                                       onOpenActivity: _openActivity,
                                       onMediumChanged: _resolvePrimaryMedium,
+                                      onPendingActivityChanged: (activity) =>
+                                          _pendingReminderActivity = activity,
                                       onDirtyChanged: (dirty) => _setFormDirty(
                                         ProspectSection.followUp,
                                         dirty,
@@ -1120,6 +1138,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                           _callRegistered = true;
                                           _followUpSaved =
                                               _sourceActivity != null;
+                                          _pendingReminderActivity = null;
                                         });
                                         _commentsKey.currentState?.refresh();
                                       },

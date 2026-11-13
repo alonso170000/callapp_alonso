@@ -387,7 +387,7 @@ class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
                       _expanded
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
-                      color: palette.panelArrowForeground,
+                      color: palette.cardArrowFill,
                       size: 26,
                     ),
                   ),

@@ -25,6 +25,11 @@ void main() {
     expect(ContactMedium.parse(null), isNull);
   });
 
+  test('serializa telefono según el contrato de contactos y actividades', () {
+    expect(ContactMedium.llamada.backendValue, 'telefono');
+    expect(ContactMedium.llamada.activityValue, 'llamada');
+  });
+
   test('valida disponibilidad con los datos reales del prospecto', () {
     final complete = prospect(
       phone: '+52 (998) 123-4567',

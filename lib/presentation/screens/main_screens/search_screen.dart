@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/widgets/search/search_widgets.da
 import 'package:callerapp_frontend/repositories/prospect_search_repository.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -57,6 +58,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _repository = widget.repository ?? ProspectSearchRepository();
     _ownsRepository = widget.repository == null;
     _load();
+    DataChangeBus.instance.addListener(_dataChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -64,10 +66,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    DataChangeBus.instance.removeListener(_dataChanged);
     _controller.dispose();
     _focusNode.dispose();
     if (_ownsRepository) _repository.dispose();
     super.dispose();
+  }
+
+  void _dataChanged() {
+    if (mounted) unawaited(_refresh(silent: true));
   }
 
   Future<void> _load() async {

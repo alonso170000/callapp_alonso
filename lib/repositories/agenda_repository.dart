@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 enum AgendaMutationState { saved, pending }
 
@@ -23,16 +24,24 @@ class AgendaRepository {
     ActivitiesCache? cache,
     PendingOperationsStore? outbox,
     AuthService? auth,
+    DataChangeBus? changes,
   }) : _service = service ?? AgendaService(auth: auth),
        _ownsService = service == null,
        _cache = cache ?? ActivitiesCache(),
        _outbox = outbox ?? PendingOperationsStore(),
-       _auth = auth ?? AuthService.instance;
+       _auth = auth ?? AuthService.instance,
+       _changes = changes ?? DataChangeBus.instance;
   final AgendaService _service;
   final bool _ownsService;
   final ActivitiesCache _cache;
   final PendingOperationsStore _outbox;
   final AuthService _auth;
+  final DataChangeBus _changes;
+
+  AgendaMutationResult _changed(AgendaMutationResult result) {
+    _changes.notify(agenda: true, prospects: true);
+    return result;
+  }
 
   LocalScope get scope {
     final user = _auth.userId, development = _auth.developmentId;
@@ -64,7 +73,9 @@ class AgendaRepository {
     try {
       final saved = await _service.create(fields, operationKey: key);
       await _cache.upsert(current, saved);
-      return AgendaMutationResult(AgendaMutationState.saved, activity: saved);
+      return _changed(
+        AgendaMutationResult(AgendaMutationState.saved, activity: saved),
+      );
     } on AgendaRecoverableException {
       if (!_outbox.isAvailable) rethrow;
       final local = optimisticActivity.copyWith(
@@ -79,7 +90,9 @@ class AgendaRepository {
         payload: {'fields': fields, 'local_activity': _activityJson(local)},
       );
       unawaited(OutboxService.instance.flush());
-      return AgendaMutationResult(AgendaMutationState.pending, activity: local);
+      return _changed(
+        AgendaMutationResult(AgendaMutationState.pending, activity: local),
+      );
     }
   }
 
@@ -133,14 +146,14 @@ class AgendaRepository {
           }
         }
         await _cache.remove(current, id);
-        return const AgendaMutationResult(AgendaMutationState.saved);
+        return _changed(const AgendaMutationResult(AgendaMutationState.saved));
       }
     }
     final key = PendingOperationsStore.newOperationKey();
     try {
       await _service.delete(id, operationKey: key);
       await _cache.remove(current, id);
-      return const AgendaMutationResult(AgendaMutationState.saved);
+      return _changed(const AgendaMutationResult(AgendaMutationState.saved));
     } on AgendaRecoverableException {
       if (!_outbox.isAvailable) rethrow;
       await _cache.remove(current, id);
@@ -152,7 +165,7 @@ class AgendaRepository {
         payload: const {},
       );
       unawaited(OutboxService.instance.flush());
-      return const AgendaMutationResult(AgendaMutationState.pending);
+      return _changed(const AgendaMutationResult(AgendaMutationState.pending));
     }
   }
 
@@ -196,17 +209,15 @@ class AgendaRepository {
         payload: effectivePayload,
       );
       unawaited(OutboxService.instance.flush());
-      return AgendaMutationResult(
-        AgendaMutationState.pending,
-        activity: projected,
+      return _changed(
+        AgendaMutationResult(AgendaMutationState.pending, activity: projected),
       );
     }
     try {
       await remote(id, key);
       await _cache.upsert(current, projected);
-      return AgendaMutationResult(
-        AgendaMutationState.saved,
-        activity: projected,
+      return _changed(
+        AgendaMutationResult(AgendaMutationState.saved, activity: projected),
       );
     } on AgendaRecoverableException {
       if (!_outbox.isAvailable) rethrow;
@@ -219,9 +230,8 @@ class AgendaRepository {
         payload: effectivePayload,
       );
       unawaited(OutboxService.instance.flush());
-      return AgendaMutationResult(
-        AgendaMutationState.pending,
-        activity: projected,
+      return _changed(
+        AgendaMutationResult(AgendaMutationState.pending, activity: projected),
       );
     }
   }

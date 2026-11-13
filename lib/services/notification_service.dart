@@ -296,6 +296,19 @@ class NotificationService extends ChangeNotifier {
     await _showAssignmentAlerts(newAssignments);
   }
 
+  static bool shouldRemindFollowUp(AgendaActivity? activity) =>
+      activity?.isFollowUp == true &&
+      (activity?.status == AgendaStatus.pending ||
+          activity?.status == AgendaStatus.overdue);
+
+  Future<void> showFollowUpReminder(
+    ProspectRecord prospect,
+    AgendaActivity? activity,
+  ) async {
+    if (!shouldRemindFollowUp(activity)) return;
+    await showCallReminder(prospect);
+  }
+
   Future<void> showCallReminder(ProspectRecord prospect) async {
     if (!_enabled || kIsWeb) return;
     await initialize();

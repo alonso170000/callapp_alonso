@@ -11,6 +11,7 @@ import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -45,17 +46,24 @@ void main() {
         payload: const {},
       );
       final agenda = _RecordingAgendaService();
+      final changes = DataChangeBus(debounce: Duration.zero);
+      addTearDown(changes.dispose);
+      var changeNotifications = 0;
+      changes.addListener(() => changeNotifications++);
       final service = OutboxService(
         store: store,
         agenda: agenda,
         activities: ActivitiesCache(database: database),
         auth: auth,
+        changes: changes,
       );
 
       await service.flush();
+      await Future<void>.delayed(Duration.zero);
 
       expect(agenda.calls, ['complete:1:first', 'cancel:2:second']);
       expect(await store.read(scope), isEmpty);
+      expect(changeNotifications, 1);
     },
   );
 
@@ -267,9 +275,12 @@ void main() {
       activities: ActivitiesCache(database: database),
       auth: auth,
     );
+    final syncingStates = <bool>[];
+    service.addListener(() => syncingStates.add(service.isSyncing));
 
     await service.flush();
     expect(service.revision, 0);
+    expect(syncingStates, isEmpty);
 
     await store.enqueue(
       scope,
@@ -574,7 +585,7 @@ void main() {
       );
 
       for (var attempt = 0; attempt < 12; attempt++) {
-        await service.flush();
+        await service.flush(force: true);
       }
 
       final remaining = (await store.read(scope)).single;
@@ -612,7 +623,7 @@ void main() {
       );
 
       for (var attempt = 0; attempt < 5; attempt++) {
-        await service.flush();
+        await service.flush(force: true);
       }
 
       final remaining = (await store.read(scope)).single;
@@ -652,7 +663,7 @@ void main() {
     );
 
     for (var attempt = 0; attempt < 5; attempt++) {
-      await service.flush();
+      await service.flush(force: true);
     }
     final parked = (await store.read(scope)).single;
     expect(parked.state, PendingOperationState.conflict);

@@ -29,6 +29,33 @@ void main() {
     reminderMinutes: reminderMinutes,
   );
 
+  test('only reminds after opening a pending or overdue follow-up', () {
+    final followUp = activity(
+      id: 1,
+      date: DateTime(2026, 10, 20, 12),
+    ).copyWith(type: 'seguimiento');
+    expect(NotificationService.shouldRemindFollowUp(followUp), isTrue);
+    expect(
+      NotificationService.shouldRemindFollowUp(
+        followUp.copyWith(status: AgendaStatus.overdue),
+      ),
+      isTrue,
+    );
+    expect(
+      NotificationService.shouldRemindFollowUp(
+        followUp.copyWith(status: AgendaStatus.completed),
+      ),
+      isFalse,
+    );
+    expect(
+      NotificationService.shouldRemindFollowUp(
+        followUp.copyWith(type: 'tarea'),
+      ),
+      isFalse,
+    );
+    expect(NotificationService.shouldRemindFollowUp(null), isFalse);
+  });
+
   test('uses each pending activity reminder and sorts upcoming alerts', () {
     final now = DateTime(2026, 10, 20, 9);
     final reminders = NotificationService.remindersFor([

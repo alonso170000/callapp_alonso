@@ -53,6 +53,7 @@ class ProspectsService {
   /// Las mutaciones no deben dejar la interfaz bloqueada mucho tiempo cuando
   /// no hay red; se degrada a la cola local cuanto antes.
   static const _mutationTimeout = Duration(seconds: 12);
+  static const _audioUploadTimeout = Duration(minutes: 5);
   int? get userId => _auth.userId;
   int? get developmentId => _auth.developmentId;
   Map<String, dynamic>? get activeDevelopment => _auth.activeDevelopment;
@@ -313,7 +314,7 @@ class ProspectsService {
                 contentType: _audioContentType(file.path),
               ),
             );
-      final response = await _client.send(request).timeout(_mutationTimeout);
+      final response = await _client.send(request).timeout(_audioUploadTimeout);
       final text = await response.stream.bytesToString();
       Map<String, dynamic>? data;
       try {

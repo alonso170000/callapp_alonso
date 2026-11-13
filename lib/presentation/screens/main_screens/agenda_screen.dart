@@ -22,10 +22,12 @@ import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/services/contact_launcher.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
-  ValueChanged<AgendaActivity>? _showActivity;
+  Future<void> Function(AgendaActivity)? _showActivity;
   void showFromHome(DateTime date, Set<int> ids, String label) =>
       _show?.call(date, ids, label);
   VoidCallback? _openNewActivity;
@@ -33,7 +35,9 @@ class AgendaController {
 
   void openNewActivity() => _openNewActivity?.call();
   void refresh() => _refresh?.call();
-  void openActivity(AgendaActivity activity) => _showActivity?.call(activity);
+  Future<void> openActivity(AgendaActivity activity) async {
+    await _showActivity?.call(activity);
+  }
 
   void dispose() {
     _openNewActivity = null;
@@ -50,6 +54,7 @@ class AgendaScreen extends StatefulWidget {
   final ValueChanged<AgendaActivity>? onNotificationActivity;
   final Widget? syncStatus;
   final PhoneCallService? phoneCallService;
+  final bool active;
 
   const AgendaScreen({
     super.key,
@@ -59,6 +64,7 @@ class AgendaScreen extends StatefulWidget {
     this.onNotificationActivity,
     this.syncStatus,
     this.phoneCallService,
+    this.active = true,
   });
 
   @override
@@ -166,6 +172,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
     _load();
   }
 
+  void _dataChanged() {
+    if (mounted && widget.active) _load();
+  }
+
   AgendaPeriod _period = AgendaPeriod.day;
   AgendaFilters _filters = AgendaFilters();
 
@@ -175,8 +185,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
     widget.controller?._openNewActivity = _showNewActivityDialog;
     widget.controller?._refresh = _load;
     widget.controller?._show = _showFromHome;
-    widget.controller?._showActivity = _showActivity;
+    widget.controller?._showActivity = _showCurrentActivity;
     AuthService.instance.addListener(_sessionChanged);
+    DataChangeBus.instance.addListener(_dataChanged);
     _load();
   }
 
@@ -191,8 +202,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
       widget.controller?._openNewActivity = _showNewActivityDialog;
       widget.controller?._refresh = _load;
       widget.controller?._show = _showFromHome;
-      widget.controller?._showActivity = _showActivity;
+      widget.controller?._showActivity = _showCurrentActivity;
     }
+    if (widget.active && !oldWidget.active) _load();
   }
 
   @override
@@ -202,6 +214,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     widget.controller?._show = null;
     widget.controller?._showActivity = null;
     AuthService.instance.removeListener(_sessionChanged);
+    DataChangeBus.instance.removeListener(_dataChanged);
     _repository.dispose();
     _service.dispose();
     _prospects.dispose();
@@ -219,6 +232,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
       );
     });
     _load();
+  }
+
+  Future<void> _showCurrentActivity(AgendaActivity notificationActivity) async {
+    await _load();
+    if (!mounted) return;
+    final id = notificationActivity.id;
+    final matches = id == null
+        ? const <AgendaActivity>[]
+        : _activities.where((activity) => activity.id == id);
+    _showActivity(matches.isEmpty ? notificationActivity : matches.first);
   }
 
   Future<void> _showNewActivityDialog() async {
@@ -533,6 +556,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
         sourceActivityId: activity.id,
         startedAt: startedAt,
       );
+      await NotificationService.instance.showFollowUpReminder(
+        prospect,
+        activity,
+      );
       if (!detailContext.mounted) return;
       Navigator.pop(detailContext);
       if (!mounted) return;
@@ -593,8 +620,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
       final prospect = matches.first;
       final opened = medium == ContactMedium.whatsapp
-          ? await const ContactLauncher().openWhatsApp(prospect)
-          : await const ContactLauncher().openEmail(prospect);
+          ? await const ContactLauncher().openWhatsApp(
+              prospect,
+              activity: activity,
+            )
+          : await const ContactLauncher().openEmail(
+              prospect,
+              activity: activity,
+            );
       if (!detailContext.mounted) return;
       if (!opened) {
         _showActionMessage(
@@ -901,7 +934,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   userName: AuthService.instance.userName,
                   title: 'MI AGENDA',
                   onNotificationActivity:
-                      widget.onNotificationActivity ?? _showActivity,
+                      widget.onNotificationActivity ?? _showCurrentActivity,
                 ),
                 if (widget.syncStatus != null) widget.syncStatus!,
                 const SizedBox(height: 20),

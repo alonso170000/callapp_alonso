@@ -39,6 +39,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final ValueChanged<AgendaActivity>? onOpenActivity;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
   final ValueChanged<ContactMedium?>? onMediumChanged;
+  final ValueChanged<AgendaActivity?>? onPendingActivityChanged;
   final bool initialContactSuccess;
   final bool readOnly;
   final bool callInProgress;
@@ -56,6 +57,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.onOpenActivity,
     this.onProspectUpdated,
     this.onMediumChanged,
+    this.onPendingActivityChanged,
     this.initialContactSuccess = false,
     this.readOnly = false,
     this.callInProgress = false,
@@ -80,7 +82,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   late bool _schedule;
   late DateTime _activityDate;
   late TimeOfDay _activityTime;
-  String _activityMedium = 'telefono';
+  String _activityMedium = 'llamada';
   int _reminderMinutes = 15;
   _FollowUpActivityDraft? _activityDraft;
   bool _saving = false;
@@ -210,12 +212,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         _activeActivities = active;
         _loadingContext = false;
         final followUp = _followUpToComplete;
-        if (followUp?.medium != null) {
+        if (followUp?.medium != null && !widget.readOnly) {
           _method = _methodForActivity(followUp!.medium!);
         } else {
           _initializeWithoutPendingActivity();
         }
       });
+      widget.onPendingActivityChanged?.call(_pendingFollowUp);
       final medium = _followUpToComplete?.medium;
       _notifyMediumChanged(
         medium == null ? _selectedAvailableMedium : ContactMedium.parse(medium),
@@ -299,6 +302,24 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     if (source != null && source.isFollowUp) return source;
     for (final activity in _activeActivities) {
       if (activity.isFollowUp) return activity;
+    }
+    return null;
+  }
+
+  AgendaActivity? get _pendingFollowUp {
+    final source = widget.sourceActivity;
+    if (source != null &&
+        source.isFollowUp &&
+        (source.status == AgendaStatus.pending ||
+            source.status == AgendaStatus.overdue)) {
+      return source;
+    }
+    for (final activity in _activeActivities) {
+      if (activity.isFollowUp &&
+          (activity.status == AgendaStatus.pending ||
+              activity.status == AgendaStatus.overdue)) {
+        return activity;
+      }
     }
     return null;
   }
@@ -669,7 +690,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           'actividad': {
             'tipo': 'seguimiento',
             'prospecto_id': widget.prospect.id,
-            'medio': activity.medium,
+            'medio':
+                ContactMedium.parse(activity.medium)?.activityValue ??
+                activity.medium,
             'descripcion': activity.description,
             'programada_at': businessTimeToUtcIso8601(activity.date),
             'recordatorio_at': businessTimeToUtcIso8601(
@@ -750,7 +773,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           _select(
             'Medio de contacto',
             _activityMedium,
-            const ['telefono', 'whatsapp', 'facebook', 'correo'],
+            const ['llamada', 'whatsapp', 'facebook', 'correo'],
             (value) {
               _activityMedium = value;
               _activityDraft = null;

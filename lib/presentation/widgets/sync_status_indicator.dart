@@ -7,7 +7,6 @@ class SyncStatusIndicator extends StatelessWidget {
     required this.pendingCount,
     required this.conflictCount,
     required this.syncing,
-    required this.onSync,
     required this.onConflicts,
     required this.onPending,
   });
@@ -15,13 +14,12 @@ class SyncStatusIndicator extends StatelessWidget {
   final int pendingCount;
   final int conflictCount;
   final bool syncing;
-  final VoidCallback onSync;
   final VoidCallback onConflicts;
   final VoidCallback onPending;
 
   @override
   Widget build(BuildContext context) {
-    if (pendingCount == 0 && conflictCount == 0 && !syncing) {
+    if (pendingCount == 0 && conflictCount == 0) {
       return const SizedBox.shrink();
     }
     final colors = Theme.of(context).colorScheme;
@@ -37,7 +35,11 @@ class SyncStatusIndicator extends StatelessWidget {
       child: Card(
         color: hasConflicts ? colors.errorContainer : colors.primaryContainer,
         child: Padding(
-          padding: EdgeInsets.all(AppStyles.spacingMedium(context)),
+          padding: EdgeInsets.all(
+            hasConflicts
+                ? AppStyles.spacingMedium(context)
+                : AppStyles.spacingSmall(context),
+          ),
           child: Wrap(
             spacing: AppStyles.spacingSmall(context),
             runSpacing: AppStyles.spacingSmall(context),
@@ -72,14 +74,7 @@ class SyncStatusIndicator extends StatelessWidget {
               if (hasConflicts)
                 TextButton(onPressed: onConflicts, child: const Text('REVISAR'))
               else if (pendingCount > 0)
-                TextButton(
-                  onPressed: onPending,
-                  child: const Text('VER DETALLE'),
-                ),
-              FilledButton.tonal(
-                onPressed: syncing || pendingCount == 0 ? null : onSync,
-                child: Text(syncing ? 'SINCRONIZANDO…' : 'SINCRONIZAR AHORA'),
-              ),
+                TextButton(onPressed: onPending, child: const Text('VER')),
             ],
           ),
         ),

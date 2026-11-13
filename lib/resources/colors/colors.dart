@@ -61,7 +61,7 @@ class AppColors {
   static const Color prospectStatusContacted = Color(0xFFFF98DD);
   static const Color prospectStatusSale = Color(0xFF9BFF92);
   static const Color prospectStatusOverdue = Color(0xFFFFA3A6);
-  static const Color prospectTagReactivation = Color(0xFF2ebab3);
+  static const Color prospectTagReactivation = Color.fromARGB(255, 42, 102, 255);
   static const Color prospectTagReactivationInk = Color(0xFFFFFFFF);
   static const Color prospectTagClient = Color(0xFFFFD86B);
   static const Color prospectTagClientInk = Color(0xFF332600);

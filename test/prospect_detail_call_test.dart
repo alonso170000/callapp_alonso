@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
 import 'package:callerapp_frontend/services/call_log_service.dart';
@@ -49,12 +50,24 @@ void main() {
     final controller = CallSessionController(callLog: log);
     addTearDown(controller.dispose);
     final prospect = demoProspects[1];
+    final activity = AgendaActivity(
+      id: 41,
+      prospectId: prospect.id,
+      type: 'seguimiento',
+      medium: 'llamada',
+      title: 'SEGUIMIENTO',
+      prospect: prospect.name,
+      description: 'Realizar llamada',
+      date: DateTime(2026, 11, 13, 12),
+      status: AgendaStatus.pending,
+    );
     ProspectRecord? reminderProspect;
 
     await tester.pumpWidget(
       MaterialApp(
         home: ProspectDetailScreen(
           prospect: prospect,
+          sourceActivity: activity,
           callSession: controller,
           phoneCallService: PhoneCallService(
             canLaunch: (_) async => true,

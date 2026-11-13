@@ -14,7 +14,7 @@ void main() {
       tester.view.physicalSize = Size(width, 844);
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
-      var syncs = 0;
+      var opened = 0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -22,17 +22,16 @@ void main() {
               pendingCount: 2,
               conflictCount: 0,
               syncing: false,
-              onSync: () => syncs++,
               onConflicts: () {},
-              onPending: () {},
+              onPending: () => opened++,
             ),
           ),
         ),
       );
 
       expect(find.text('2 cambios pendientes'), findsOneWidget);
-      await tester.tap(find.text('SINCRONIZAR AHORA'));
-      expect(syncs, 1);
+      await tester.tap(find.text('VER'));
+      expect(opened, 1);
       expect(tester.takeException(), isNull);
     });
 
@@ -49,7 +48,6 @@ void main() {
               pendingCount: 0,
               conflictCount: 1,
               syncing: false,
-              onSync: () {},
               onConflicts: () => reviews++,
               onPending: () {},
             ),
@@ -108,9 +106,7 @@ void main() {
     expect(find.byType(SyncConflictsSheet), findsNothing);
   });
 
-  testWidgets('VER DETALLE abre los cambios pendientes con su motivo', (
-    tester,
-  ) async {
+  testWidgets('VER abre los cambios pendientes con su motivo', (tester) async {
     var retried = 0;
     await tester.pumpWidget(
       MaterialApp(
@@ -120,7 +116,6 @@ void main() {
               pendingCount: 1,
               conflictCount: 0,
               syncing: false,
-              onSync: () {},
               onConflicts: () {},
               onPending: () => showModalBottomSheet<void>(
                 context: context,
@@ -143,7 +138,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('VER DETALLE'));
+    await tester.tap(find.text('VER'));
     await tester.pumpAndSettle();
 
     expect(find.byType(SyncPendingSheet), findsOneWidget);
@@ -158,5 +153,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(retried, 1);
     expect(find.byType(SyncPendingSheet), findsNothing);
+  });
+
+  testWidgets('no muestra tarjeta durante un flush vacío', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SyncStatusIndicator(
+            pendingCount: 0,
+            conflictCount: 0,
+            syncing: true,
+            onConflicts: () {},
+            onPending: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(Card), findsNothing);
+    expect(find.textContaining('Sincronizando'), findsNothing);
   });
 }

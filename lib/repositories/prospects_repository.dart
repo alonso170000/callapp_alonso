@@ -15,6 +15,7 @@ import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 enum ProspectMutationState { saved, pending }
 
@@ -35,6 +36,7 @@ class ProspectsRepository {
     OutboxService? sync,
     CatalogCache? catalogs,
     AuthService? auth,
+    DataChangeBus? changes,
   }) : _service = service ?? ProspectsService(auth: auth),
        _ownsService = service == null,
        _cache = cache ?? ProspectsCache(),
@@ -42,7 +44,8 @@ class ProspectsRepository {
        _outbox = outbox ?? PendingOperationsStore(),
        _sync = sync ?? OutboxService.instance,
        _catalogs = catalogs ?? CatalogCache(),
-       _auth = auth ?? AuthService.instance;
+       _auth = auth ?? AuthService.instance,
+       _changes = changes ?? DataChangeBus.instance;
 
   final ProspectsService _service;
   final bool _ownsService;
@@ -52,6 +55,15 @@ class ProspectsRepository {
   final OutboxService _sync;
   final CatalogCache _catalogs;
   final AuthService _auth;
+  final DataChangeBus _changes;
+
+  ProspectMutationResult _changed(
+    ProspectMutationResult result, {
+    bool agenda = false,
+  }) {
+    _changes.notify(prospects: true, agenda: agenda);
+    return result;
+  }
 
   LocalScope get scope {
     final userId = _auth.userId ?? _service.userId;
@@ -230,9 +242,8 @@ class ProspectsRepository {
       final id = await _service.create(fields, operationKey: key);
       final saved = optimisticProspect.copyWith(id: id);
       await _cache.upsert(currentScope, saved);
-      return ProspectMutationResult(
-        ProspectMutationState.saved,
-        prospect: saved,
+      return _changed(
+        ProspectMutationResult(ProspectMutationState.saved, prospect: saved),
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;
@@ -248,9 +259,8 @@ class ProspectsRepository {
         payload: {'fields': fields, 'local_prospect': _prospectJson(local)},
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: local,
+      return _changed(
+        ProspectMutationResult(ProspectMutationState.pending, prospect: local),
       );
     }
   }
@@ -292,18 +302,19 @@ class ProspectsRepository {
         payload: {'local_prospect': _prospectJson(optimistic)},
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: optimistic,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: optimistic,
+        ),
       );
     }
     try {
       final clientId = await _service.convertToClient(id, operationKey: key);
       final saved = optimistic.copyWith(clientId: clientId);
       await _cache.upsert(currentScope, saved);
-      return ProspectMutationResult(
-        ProspectMutationState.saved,
-        prospect: saved,
+      return _changed(
+        ProspectMutationResult(ProspectMutationState.saved, prospect: saved),
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;
@@ -316,9 +327,11 @@ class ProspectsRepository {
         payload: {'local_prospect': _prospectJson(optimistic)},
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: optimistic,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: optimistic,
+        ),
       );
     }
   }
@@ -334,7 +347,7 @@ class ProspectsRepository {
       'frio' => 'Frío',
       _ => prospect.temperature,
     };
-    final isTelephone = fields['medio'] == 'telefono';
+    final isTelephone = fields['medio'] == 'llamada';
     final optimistic = prospect.copyWith(
       status: fields['estatus'] as String? ?? prospect.status,
       temperature: priority,
@@ -353,6 +366,7 @@ class ProspectsRepository {
       fields: fields,
       optimistic: optimistic,
       operationKey: operationKey,
+      agenda: true,
       remote: (id, key) =>
           _service.createFollowUp(id, fields, operationKey: key),
     );
@@ -407,9 +421,12 @@ class ProspectsRepository {
         payload: payload,
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: optimistic,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: optimistic,
+        ),
+        agenda: true,
       );
     }
     try {
@@ -429,12 +446,15 @@ class ProspectsRepository {
         }
       }
       await _cache.upsert(currentScope, optimistic);
-      return ProspectMutationResult(
-        audioPending
-            ? ProspectMutationState.pending
-            : ProspectMutationState.saved,
-        prospect: optimistic,
-        callId: callId,
+      return _changed(
+        ProspectMutationResult(
+          audioPending
+              ? ProspectMutationState.pending
+              : ProspectMutationState.saved,
+          prospect: optimistic,
+          callId: callId,
+        ),
+        agenda: true,
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;
@@ -447,9 +467,12 @@ class ProspectsRepository {
         payload: payload,
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: optimistic,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: optimistic,
+        ),
+        agenda: true,
       );
     }
   }
@@ -484,7 +507,7 @@ class ProspectsRepository {
     );
     final id = result.prospect?.id;
     if (id != null && id > 0) await rememberDiscovery(id, fields);
-    return result;
+    return _changed(result);
   }
 
   /// Devuelve el discovery del prospecto priorizando la red, cayendo a la caché
@@ -531,6 +554,7 @@ class ProspectsRepository {
     required ProspectRecord optimistic,
     required Future<void> Function(int id, String key) remote,
     String? operationKey,
+    bool agenda = false,
   }) async {
     final currentScope = scope;
     var id = prospect.id;
@@ -564,17 +588,23 @@ class ProspectsRepository {
         payload: {'fields': fields, 'local_prospect': _prospectJson(projected)},
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: projected,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: projected,
+        ),
+        agenda: agenda,
       );
     }
     try {
       await remote(id, key);
       await _cache.upsert(currentScope, projected);
-      return ProspectMutationResult(
-        ProspectMutationState.saved,
-        prospect: projected,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.saved,
+          prospect: projected,
+        ),
+        agenda: agenda,
       );
     } on ProspectsRecoverableException {
       if (!_outbox.isAvailable) rethrow;
@@ -587,9 +617,12 @@ class ProspectsRepository {
         payload: {'fields': fields, 'local_prospect': _prospectJson(projected)},
       );
       unawaited(_sync.flush());
-      return ProspectMutationResult(
-        ProspectMutationState.pending,
-        prospect: projected,
+      return _changed(
+        ProspectMutationResult(
+          ProspectMutationState.pending,
+          prospect: projected,
+        ),
+        agenda: agenda,
       );
     }
   }

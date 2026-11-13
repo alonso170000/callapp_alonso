@@ -292,11 +292,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _wasSyncing = syncing;
   }
 
-  Future<void> _syncNow() async {
-    await OutboxService.instance.flush();
-    if (mounted) _refreshSyncedViews();
-  }
-
   Widget _syncStatus() => ListenableBuilder(
     listenable: OutboxService.instance,
     builder: (context, _) {
@@ -305,7 +300,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         pendingCount: outbox.pendingCount,
         conflictCount: outbox.conflictCount,
         syncing: outbox.isSyncing,
-        onSync: _syncNow,
         onConflicts: _showSyncConflicts,
         onPending: _showSyncPending,
       );
@@ -326,14 +320,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _prospectsController.openProspect(prospectId);
   }
 
-  void _openNotificationActivity(AgendaActivity activity) {
+  Future<void> _openNotificationActivity(AgendaActivity activity) async {
     if (activity.type == NotificationService.assignmentType &&
         activity.prospectId != null) {
       setState(() => _selectedDestination = 1);
       _prospectsController.openProspect(activity.prospectId!);
       return;
     }
-    _agendaController.openActivity(activity);
+    await _agendaController.openActivity(activity);
   }
 
   @override
@@ -398,11 +392,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           syncStatus: _syncStatus(),
                         ),
                         ProspectsScreen(
+                          active: _selectedDestination == 1,
                           controller: _prospectsController,
                           loadProspects: widget.loadProspects,
                           onNotificationActivity: _openNotificationActivity,
                         ),
                         AgendaScreen(
+                          active: _selectedDestination == 2,
                           controller: _agendaController,
                           loadActivities: widget.loadActivities,
                           loadProspects: widget.loadProspects,

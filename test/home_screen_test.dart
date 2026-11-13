@@ -1,6 +1,9 @@
-import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/prospect_section.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -84,4 +87,44 @@ void main() {
     expect(requests, greaterThan(before));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'una notificación abre como ver seguimiento si la actividad ya se completó',
+    (tester) async {
+      final now = businessNow();
+      final pending = AgendaActivity(
+        id: 91,
+        prospectId: 12,
+        type: 'seguimiento',
+        medium: 'llamada',
+        title: 'SEGUIMIENTO',
+        prospect: 'Alan Dorantes',
+        description: 'Llamar',
+        date: now.add(const Duration(minutes: 12)),
+        status: AgendaStatus.pending,
+        reminderMinutes: 15,
+      );
+      final completed = pending.copyWith(status: AgendaStatus.completed);
+      await NotificationService.instance.syncActivities([pending]);
+      addTearDown(NotificationService.instance.endSession);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            loadActivities: () async => [completed],
+            loadProspects: () async => [],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Notificaciones').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('notification-91')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VER SEGUIMIENTO'), findsOneWidget);
+      expect(find.text('ATENDER ACTIVIDAD'), findsNothing);
+      expect(find.text('COMPLETAR ACTIVIDAD'), findsNothing);
+    },
+  );
 }

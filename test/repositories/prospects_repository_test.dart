@@ -162,54 +162,52 @@ void main() {
     );
   });
 
-  test(
-    'crear sin conexión encola y el reintento remapea el id temporal',
-    () async {
-      final auth = await _auth(userId: 4, developmentId: 8);
-      final database = AppDatabase(
-        factory: databaseFactoryFfi,
-        databasePath: inMemoryDatabasePath,
-      );
-      addTearDown(database.close);
-      final cache = ProspectsCache(database: database);
-      final store = PendingOperationsStore(database: database);
-      const scope = LocalScope(userId: 4, developmentId: 8);
-      final remote = _RecordingProspectsService();
-      final sync = OutboxService(
-        store: store,
-        prospects: remote,
-        prospectsCache: cache,
-        activities: ActivitiesCache(database: database),
-        auth: auth,
-      );
-      final repository = ProspectsRepository(
-        auth: auth,
-        cache: cache,
-        outbox: store,
-        sync: sync,
-        service: _FailingCreateService(),
-      );
+  test('crear sin conexión encola y el reintento remapea el id temporal', () async {
+    final auth = await _auth(userId: 4, developmentId: 8);
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    final cache = ProspectsCache(database: database);
+    final store = PendingOperationsStore(database: database);
+    const scope = LocalScope(userId: 4, developmentId: 8);
+    final remote = _RecordingProspectsService();
+    final sync = OutboxService(
+      store: store,
+      prospects: remote,
+      prospectsCache: cache,
+      activities: ActivitiesCache(database: database),
+      auth: auth,
+    );
+    final repository = ProspectsRepository(
+      auth: auth,
+      cache: cache,
+      outbox: store,
+      sync: sync,
+      service: _FailingCreateService(),
+    );
 
-      final result = await repository.create(const {
-        'nombre': 'Local',
-      }, optimisticProspect: _prospect(0, 'Local'));
+    final result = await repository.create(const {
+      'nombre': 'Local',
+    }, optimisticProspect: _prospect(0, 'Local'));
 
-      expect(result.isPending, isTrue);
-      expect(result.prospect?.id, -1);
-      final pending = (await store.read(scope)).single;
-      expect(pending.kind, 'prospect.create');
-      expect(pending.entityId, -1);
+    expect(result.isPending, isTrue);
+    expect(result.prospect?.id, -1);
+    final pending = (await store.read(scope)).single;
+    expect(pending.kind, 'prospect.create');
+    expect(pending.entityId, -1);
 
-      // El encolado dispara el drenado automático en segundo plano.
-      while (sync.isSyncing) {
-        await Future<void>.delayed(const Duration(milliseconds: 1));
-      }
+    // El encolado dispara el drenado automático en segundo plano. Puede estar
+    // preparando la cola antes de publicar el estado visible de sincronización.
+    for (var attempt = 0; attempt < 100 && remote.calls.isEmpty; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
 
-      expect(remote.calls, ['create:${pending.operationKey}']);
-      expect(await store.read(scope), isEmpty);
-      expect((await cache.read(scope)).single.id, 120);
-    },
-  );
+    expect(remote.calls, ['create:${pending.operationKey}']);
+    expect(await store.read(scope), isEmpty);
+    expect((await cache.read(scope)).single.id, 120);
+  });
 
   test('catálogos remotos se guardan y luego resuelven una caída', () async {
     final auth = await _auth(userId: 7, developmentId: 12);

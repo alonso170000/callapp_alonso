@@ -13,6 +13,7 @@ import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_widgets.da
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 import 'home_dashboard_widgets.dart';
 
@@ -92,6 +93,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     super.initState();
     widget.controller?._refresh = _load;
     AuthService.instance.addListener(_sessionChanged);
+    DataChangeBus.instance.addListener(_dataChanged);
     _load();
   }
 
@@ -108,6 +110,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void _sessionChanged() {
     _data = null;
     _load();
+  }
+
+  void _dataChanged() {
+    if (mounted && widget.active) _load();
   }
 
   Future<void> _load() async {
@@ -220,6 +226,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void dispose() {
     widget.controller?._refresh = null;
     AuthService.instance.removeListener(_sessionChanged);
+    DataChangeBus.instance.removeListener(_dataChanged);
     _agenda.dispose();
     _prospects.dispose();
     super.dispose();

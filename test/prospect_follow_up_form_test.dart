@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _RecordingProspectsService extends ProspectsService {
+  _RecordingProspectsService({this.history = const []});
+
+  final List<ProspectHistoryComment> history;
   int? prospectId;
   Map<String, dynamic>? fields;
 
@@ -26,7 +29,7 @@ class _RecordingProspectsService extends ProspectsService {
   }
 
   @override
-  Future<List<ProspectHistoryComment>> contactHistory(int id) async => const [];
+  Future<List<ProspectHistoryComment>> contactHistory(int id) async => history;
 }
 
 class _UnverifiableCallLogService extends CallLogService {
@@ -145,6 +148,7 @@ void main() {
         expect(service.fields?['actividad'], isA<Map<String, dynamic>>());
         expect(service.fields?['actividad']['tipo'], 'seguimiento');
         expect(service.fields?['actividad']['prospecto_id'], 17);
+        expect(service.fields?['actividad']['medio'], 'llamada');
         expect(
           service.fields?['actividad']['descripcion'],
           'Confirmar propuesta',
@@ -605,5 +609,97 @@ void main() {
           .any((text) => text.style?.color == AppColors.prospectFormFieldText),
       isTrue,
     );
+  });
+
+  testWidgets(
+    'Completed phone follow-up accepts telefono and shows the recorded medium',
+    (tester) async {
+      final completed = AgendaActivity(
+        id: 25,
+        prospectId: 17,
+        type: 'seguimiento',
+        medium: 'telefono',
+        title: 'SEGUIMIENTO',
+        prospect: prospect.name,
+        description: 'Realizar llamada',
+        date: DateTime(2026, 10, 20, 10),
+        status: AgendaStatus.completed,
+      );
+      final service = _RecordingProspectsService(
+        history: [
+          ProspectHistoryComment(
+            activityId: 25,
+            medium: 'whatsapp',
+            comment: 'Se respondió por WhatsApp.',
+            createdAt: DateTime(2026, 10, 20, 10),
+            results: const [ProspectContactResult.answered],
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProspectFollowUpForm(
+                prospect: prospect,
+                prospectsService: service,
+                sourceActivity: completed,
+                readOnly: true,
+                loadActivities: () async => [completed],
+                onSaved: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final medium = tester.widget<DropdownButtonFormField<String>>(
+        find.byType(DropdownButtonFormField<String>).at(1),
+      );
+      expect(medium.initialValue, 'WhatsApp');
+      expect(medium.onChanged, isNull);
+      expect(find.text('Se respondió por WhatsApp.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('reports a pending follow-up discovered from My Prospects', (
+    tester,
+  ) async {
+    final pending = AgendaActivity(
+      id: 26,
+      prospectId: 17,
+      type: 'seguimiento',
+      medium: 'whatsapp',
+      title: 'SEGUIMIENTO',
+      prospect: prospect.name,
+      description: 'Enviar información',
+      date: DateTime(2026, 11, 14, 10),
+      status: AgendaStatus.pending,
+    );
+    AgendaActivity? reported;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: prospect,
+              prospectsService: _RecordingProspectsService(),
+              loadActivities: () async => [pending],
+              onPendingActivityChanged: (activity) => reported = activity,
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reported?.id, 26);
+    expect(reported?.medium, 'whatsapp');
+    expect(tester.takeException(), isNull);
   });
 }

@@ -10,6 +10,7 @@ import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
+import 'package:callerapp_frontend/services/data_change_bus.dart';
 
 class OutboxService extends ChangeNotifier {
   OutboxService({
@@ -19,12 +20,14 @@ class OutboxService extends ChangeNotifier {
     ProspectsService? prospects,
     ProspectsCache? prospectsCache,
     AuthService? auth,
+    DataChangeBus? changes,
   }) : _store = store ?? PendingOperationsStore(),
        _agenda = agenda ?? AgendaService(auth: auth),
        _activities = activities ?? ActivitiesCache(),
        _prospects = prospects ?? ProspectsService(auth: auth),
        _prospectsCache = prospectsCache ?? ProspectsCache(),
-       _auth = auth ?? AuthService.instance;
+       _auth = auth ?? AuthService.instance,
+       _changes = changes ?? DataChangeBus.instance;
   static final instance = OutboxService();
   final PendingOperationsStore _store;
   final AgendaService _agenda;
@@ -32,7 +35,10 @@ class OutboxService extends ChangeNotifier {
   final ProspectsService _prospects;
   final ProspectsCache _prospectsCache;
   final AuthService _auth;
+  final DataChangeBus _changes;
   bool _syncing = false;
+  bool _flushRunning = false;
+  DateTime? _retryBlockedUntil;
 
   bool _isProspectOperation(PendingOperation operation) =>
       operation.kind.startsWith('prospect.') || operation.kind == 'call.audio';
@@ -75,7 +81,7 @@ class OutboxService extends ChangeNotifier {
     _initialized = true;
     _auth.addListener(_sessionChanged);
     await load();
-    await flush();
+    if (pendingCount > 0) await flush();
     _autoSyncTimer ??= Timer.periodic(
       autoSyncInterval,
       (_) => unawaited(maybeAutoSync()),
@@ -98,7 +104,9 @@ class OutboxService extends ChangeNotifier {
   }
 
   void _sessionChanged() {
-    load().then((_) => flush());
+    load().then((_) {
+      if (pendingCount > 0) unawaited(flush());
+    });
   }
 
   Future<void> load() async {
@@ -107,13 +115,32 @@ class OutboxService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> flush() async {
+  Future<void> flush({bool force = false}) async {
     final current = _scope;
-    if (_syncing || current == null || !_store.isAvailable) return;
-    _syncing = true;
-    notifyListeners();
+    if (_flushRunning || current == null || !_store.isAvailable) return;
+    if (!force && _retryBlockedUntil?.isAfter(DateTime.now()) == true) {
+      return;
+    }
+    _flushRunning = true;
+    late final List<PendingOperation> initialQueue;
     try {
       await _store.recoverInterrupted(current);
+      initialQueue = await _store.read(current);
+    } catch (_) {
+      _flushRunning = false;
+      rethrow;
+    }
+    if (!initialQueue.any(
+      (operation) => operation.state != PendingOperationState.conflict,
+    )) {
+      _operations = initialQueue;
+      _flushRunning = false;
+      return;
+    }
+    _syncing = true;
+    notifyListeners();
+    var completed = 0;
+    try {
       while (true) {
         final queue = await _store.read(current);
         PendingOperation? operation;
@@ -156,6 +183,8 @@ class OutboxService extends ChangeNotifier {
               operation.kind != 'prospect.create') {
             await _store.remove(operation);
           }
+          completed++;
+          _retryBlockedUntil = null;
         } on AgendaSessionException {
           await _store.markPending(
             operation,
@@ -164,13 +193,15 @@ class OutboxService extends ChangeNotifier {
           break;
         } on AgendaOfflineException catch (error) {
           await _store.markPendingOffline(operation, error.message);
+          _retryBlockedUntil = DateTime.now().add(autoSyncInterval);
           break;
         } on AgendaRecoverableException catch (error) {
           await _pauseRetries(operation, error.message);
+          _retryBlockedUntil = DateTime.now().add(autoSyncInterval);
           break;
         } on AgendaBusinessException catch (error) {
           await _store.markConflict(operation, error.message);
-          await _restoreRemote(operation);
+          if (await _restoreRemote(operation)) completed++;
         } on ProspectsSessionException {
           await _store.markPending(
             operation,
@@ -179,19 +210,21 @@ class OutboxService extends ChangeNotifier {
           break;
         } on ProspectsOfflineException catch (error) {
           await _store.markPendingOffline(operation, error.message);
+          _retryBlockedUntil = DateTime.now().add(autoSyncInterval);
           break;
         } on ProspectsRecoverableException catch (error) {
           await _pauseRetries(operation, error.message);
+          _retryBlockedUntil = DateTime.now().add(autoSyncInterval);
           break;
         } on ProspectsBusinessException catch (error) {
           await _store.markConflict(operation, error.message);
-          await _restoreRemote(operation);
+          if (await _restoreRemote(operation)) completed++;
         } on AgendaException catch (error) {
           await _store.markConflict(operation, error.message);
-          await _restoreRemote(operation);
+          if (await _restoreRemote(operation)) completed++;
         } on ProspectsException catch (error) {
           await _store.markConflict(operation, error.message);
-          await _restoreRemote(operation);
+          if (await _restoreRemote(operation)) completed++;
         } catch (_) {
           await _store.markPending(
             operation,
@@ -202,7 +235,11 @@ class OutboxService extends ChangeNotifier {
       }
     } finally {
       _syncing = false;
+      _flushRunning = false;
       await load();
+      if (completed > 0) {
+        _changes.notify(prospects: true, agenda: true);
+      }
     }
   }
 
@@ -389,7 +426,7 @@ class OutboxService extends ChangeNotifier {
   Future<void> retry(PendingOperation operation) async {
     if (operation.scope != _scope) return;
     await _store.retryConflict(operation);
-    await flush();
+    await flush(force: true);
     final unresolved = _operations.where(
       (value) =>
           value.id == operation.id &&

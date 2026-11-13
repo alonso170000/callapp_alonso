@@ -9,12 +9,14 @@ import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/local_maintenance_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
+import 'package:callerapp_frontend/services/realtime_sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.instance.restoreSession();
   await NotificationService.instance.initialize();
   unawaited(OutboxService.instance.initialize());
+  unawaited(RealtimeSyncService.instance.start());
   unawaited(LocalMaintenanceService.instance.runIfDue());
 
   runApp(const MainApp());
