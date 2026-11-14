@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_models.dart';
 
-
 import 'prospect_avatar.dart';
 
 class ProspectTile extends StatelessWidget {

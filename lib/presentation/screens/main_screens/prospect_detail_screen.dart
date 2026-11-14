@@ -18,9 +18,10 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_histo
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_options_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_history_panel.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_registration_bar.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/convert_prospect_sheet.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_deletion_request_sheet.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
@@ -112,6 +113,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   String? _emailError;
   bool _sendingEmail = false;
   bool _convertingClient = false;
+  bool _requestingDeletion = false;
   bool _telephoneCallCompleted = false;
   bool _telephoneCallSuccessful = false;
   bool _callRegistered = false;
@@ -119,6 +121,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _calling = false;
   late final CallSessionController _callSession;
   int? _lastCallId;
+  int _callResultRevision = 0;
   bool _openingCallResult = false;
   bool get _viewingCompletedFollowUp =>
       _sourceActivity?.isFollowUp == true &&
@@ -154,8 +157,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         child: IconButton.filledTonal(
           tooltip: label,
           style: IconButton.styleFrom(
-            backgroundColor: palette.secondaryActionForeground,
-            foregroundColor: palette.secondaryActionFill,
+            backgroundColor: palette.secondaryActionForeground.withValues(
+              alpha: 0.2,
+            ),
+            foregroundColor: palette.secondaryActionForeground.withValues(
+              alpha: 0.7,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -304,6 +311,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _callRegistered = widget.callStarted;
     _lastCallId = widget.callId;
     _callSession.addListener(_callSessionChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_detectCompletedCall());
+    });
     if (_viewingCompletedFollowUp) {
       _selected.addAll(ProspectSection.values.map((section) => section.label));
     }
@@ -579,6 +589,46 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     }
   }
 
+  Future<void> _requestDeletion() async {
+    if (_requestingDeletion ||
+        _prospect.status.toLowerCase() == 'por eliminar') {
+      return;
+    }
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => const ProspectDeletionRequestSheet(),
+    );
+    if (reason == null || !mounted) return;
+    setState(() => _requestingDeletion = true);
+    try {
+      final result = await _prospectsRepository.requestDeletion(
+        _prospect,
+        reason,
+      );
+      if (!mounted) return;
+      setState(() => _prospect = result.prospect ?? _prospect);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isPending
+                ? 'Solicitud guardada. Pendiente de sincronizar.'
+                : 'Solicitud de eliminación enviada.',
+          ),
+        ),
+      );
+    } on ProspectsException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _requestingDeletion = false);
+    }
+  }
+
   Future<String?> _openDialer() async {
     try {
       await _phoneCallService.call(_prospect.phone);
@@ -664,6 +714,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     final active = _callSession.activeCall;
     if (active == null) return;
     _openingCallResult = true;
+    if (await _callSession.isCallInProgress()) {
+      _openingCallResult = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Termina la llamada antes de registrar el resultado.'),
+        ),
+      );
+      return;
+    }
     final logged = await _callSession.latestLog();
     if (!mounted) {
       _openingCallResult = false;
@@ -677,11 +737,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       builder: (_) => ProspectCallResultSheet(
         name: active.prospect.name,
         duration: logged == null
-            ? _callSession.elapsed
+            ? _callSession.callDuration
             : Duration(seconds: logged.durationSeconds),
         durationEstimated: logged == null,
         phone: active.prospect.phone,
-        startedAt: active.startedAt,
+        startedAt: active.windowStart,
+        endedAt: active.realEndedAt ?? DateTime.now(),
       ),
     );
     if (closure == null || !mounted) {
@@ -702,6 +763,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         if (result.prospect != null) _prospect = result.prospect!;
         _telephoneCallCompleted = true;
         _telephoneCallSuccessful = closure.outcome.successful;
+        _callResultRevision++;
         _callRegistered = true;
         _lastCallId = result.callId;
         _selected.add(ProspectSection.followUp.label);
@@ -956,7 +1018,10 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                     child: FilledButton(
                       key: const ValueKey('discard-pending-form-changes'),
                       onPressed: () => Navigator.pop(sheetContext, true),
-                      child: const Text('SALIR SIN GUARDAR', style: TextStyle(fontSize: 13)),
+                      child: const Text(
+                        'SALIR SIN GUARDAR',
+                        style: TextStyle(fontSize: 13),
+                      ),
                     ),
                   ),
                 ],
@@ -1011,7 +1076,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                         children: [
                           _actionButton(
                             'Correos prediseñados',
-                            Iconsax.send_2_copy,
+                            Iconsax.sms_copy,
                             _sendingEmail ? () {} : _openEmailOptions,
                           ),
                           const SizedBox(width: 7),
@@ -1027,15 +1092,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                           _primaryAction(palette),
                           const SizedBox(width: 7),
                           _actionButton(
-                            'Descartar prospecto',
+                            _prospect.status.toLowerCase() == 'por eliminar'
+                                ? 'Eliminación solicitada'
+                                : 'Solicitar eliminación',
                             Iconsax.profile_delete_copy,
-                            () => ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'El descarte estará disponible al conectar el servicio.',
-                                ),
-                              ),
-                            ),
+                            _requestingDeletion ||
+                                    _prospect.status.toLowerCase() ==
+                                        'por eliminar'
+                                ? null
+                                : _requestDeletion,
+                            busy: _requestingDeletion,
                           ),
                         ],
                       ),
@@ -1049,10 +1115,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                   child: Column(
                     children: [
                       if (callVerified)
-                        CallInProgressBar(
+                        CallRegistrationBar(
                           name: activeCall!.prospect.name,
-                          elapsed: _callSession.elapsed,
-                          onFinish: _finishCall,
+                          onRegister: _finishCall,
                           onDiscard: () => _callSession.cancel(),
                         ),
                       ProspectDetailHeader(
@@ -1096,6 +1161,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       telephoneCallCompleted:
                                           _telephoneCallCompleted,
                                       callInProgress: callVerified,
+                                      callResultRevision: _callResultRevision,
                                       llamadaId: _lastCallId,
                                       initialContactSuccess:
                                           _telephoneCallSuccessful,

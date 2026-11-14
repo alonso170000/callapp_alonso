@@ -81,6 +81,7 @@ class ProspectsService {
       final response = await switch (method) {
         'POST' => _client.post(uri, headers: headers, body: encoded),
         'PUT' => _client.put(uri, headers: headers, body: encoded),
+        'PATCH' => _client.patch(uri, headers: headers, body: encoded),
         _ => _client.get(uri, headers: headers),
       }.timeout(mutation ? _mutationTimeout : const Duration(seconds: 60));
       dynamic decoded;
@@ -539,6 +540,18 @@ class ProspectsService {
     'leads/$prospectId',
     body: fields,
     method: 'PUT',
+    operationKey: operationKey,
+    mutation: true,
+  );
+
+  Future<void> requestDeletion(
+    int prospectId,
+    String reason, {
+    String? operationKey,
+  }) async => _request(
+    'leads/$prospectId/request-deletion',
+    body: {'motivo_descarte': reason},
+    method: 'PATCH',
     operationKey: operationKey,
     mutation: true,
   );

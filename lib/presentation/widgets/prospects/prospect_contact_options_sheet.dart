@@ -165,7 +165,10 @@ class _ProspectContactOptionsSheetState
         ),
         subtitle: Text(_subtitle(medium) ?? ''),
         trailing: selected
-            ? Icon(Iconsax.tick_circle, color: palette.secondaryActionForeground)
+            ? Icon(
+                Iconsax.tick_circle,
+                color: palette.secondaryActionForeground,
+              )
             : null,
       ),
     );

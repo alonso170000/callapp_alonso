@@ -16,7 +16,7 @@ import 'package:callerapp_frontend/presentation/models/sync_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_conflicts_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_pending_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/sync_status_indicator.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_registration_bar.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
@@ -102,6 +102,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final active = _callSession.activeCall;
     if (active == null) return;
     _openingCallResult = true;
+    if (await _callSession.isCallInProgress()) {
+      _openingCallResult = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Termina la llamada antes de registrar el resultado.'),
+        ),
+      );
+      return;
+    }
     final logged = await _callSession.latestLog();
     if (!mounted) {
       _openingCallResult = false;
@@ -115,11 +125,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (_) => ProspectCallResultSheet(
         name: active.prospect.name,
         duration: logged == null
-            ? _callSession.elapsed
+            ? _callSession.callDuration
             : Duration(seconds: logged.durationSeconds),
         durationEstimated: logged == null,
         phone: active.prospect.phone,
-        startedAt: active.startedAt,
+        startedAt: active.windowStart,
+        endedAt: active.realEndedAt ?? DateTime.now(),
       ),
     );
     if (closure == null || !mounted) {
@@ -151,16 +162,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
       if (mounted) _refreshSyncedViews();
     }
-  }
-
-  Future<void> _returnToCall() async {
-    final active = _callSession.activeCall;
-    if (active == null) return;
-    await context.push(
-      '/prospectos/${Uri.encodeComponent(active.prospect.phone)}',
-      extra: ProspectDetailArguments(prospect: active.prospect),
-    );
-    if (mounted) _refreshSyncedViews();
   }
 
   @override
@@ -360,11 +361,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Column(
                 children: [
                   if (callVerified)
-                    CallInProgressBar(
+                    CallRegistrationBar(
                       name: activeCall!.prospect.name,
-                      elapsed: _callSession.elapsed,
-                      onFinish: _finishCall,
-                      onReturn: _returnToCall,
+                      onRegister: _finishCall,
                       onDiscard: () => _callSession.cancel(),
                     ),
                   Expanded(

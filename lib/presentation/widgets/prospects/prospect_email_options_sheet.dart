@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class ProspectEmailOptionsSheet extends StatelessWidget {
   const ProspectEmailOptionsSheet({super.key, required this.email});
@@ -37,7 +38,7 @@ class ProspectEmailOptionsSheet extends StatelessWidget {
                     onPressed: email.isEmpty
                         ? null
                         : () => Navigator.pop(context, template),
-                    icon: const Icon(Icons.mail_outline),
+                    icon: const Icon(Iconsax.sms_copy),
                     label: Text(template.label),
                     style: FilledButton.styleFrom(
                       backgroundColor: palette.secondaryActionFill,

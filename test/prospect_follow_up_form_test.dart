@@ -200,9 +200,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.activeCall, isNotNull);
     expect(controller.activeCall!.verified, isTrue);
-    expect(find.textContaining('EN LLAMADA'), findsOneWidget);
+    expect(find.textContaining('LLAMADA CON'), findsOneWidget);
     expect(
-      find.text('Termina la llamada para registrar el seguimiento.'),
+      find.text(
+        'Registra el resultado de la llamada antes de guardar el seguimiento.',
+      ),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -511,6 +513,63 @@ void main() {
     expect(find.text('Llamada telefónica'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'sincroniza el éxito del contacto con el resultado de la llamada',
+    (tester) async {
+      var success = false;
+      var revision = 0;
+      late StateSetter updateHost;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                updateHost = setState;
+                return SingleChildScrollView(
+                  child: ProspectFollowUpForm(
+                    prospect: prospect,
+                    prospectsService: _RecordingProspectsService(),
+                    telephoneCallCompleted: true,
+                    initialContactSuccess: success,
+                    callResultRevision: revision,
+                    loadActivities: () async => [],
+                    onSaved: (_) {},
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Semantics successToggle() => tester.widget<Semantics>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == '¿Hubo éxito en el contacto?',
+        ),
+      );
+
+      expect(successToggle().properties.toggled, isFalse);
+
+      updateHost(() {
+        success = true;
+        revision++;
+      });
+      await tester.pump();
+      expect(successToggle().properties.toggled, isTrue);
+
+      updateHost(() {
+        success = false;
+        revision++;
+      });
+      await tester.pump();
+      expect(successToggle().properties.toggled, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Empty interaction notes require confirmation before saving', (
     tester,

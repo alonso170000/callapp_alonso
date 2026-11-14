@@ -25,6 +25,7 @@ class ProspectTagColors {
     'contactado y validado' => AppColors.prospectStatusContacted,
     'venta realizada' => AppColors.prospectStatusSale,
     'atrasados' => AppColors.prospectStatusOverdue,
+    'por eliminar' => AppColors.prospectStatusOverdueInk,
     _ => AppColors.homeWarmText,
   };
 

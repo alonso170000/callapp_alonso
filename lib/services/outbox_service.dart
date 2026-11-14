@@ -383,6 +383,12 @@ class OutboxService extends ChangeNotifier {
           id!,
           operationKey: operation.operationKey,
         );
+      case 'prospect.request_deletion':
+        await _prospects.requestDeletion(
+          id!,
+          operation.payload['fields']['motivo_descarte'] as String,
+          operationKey: operation.operationKey,
+        );
       case 'prospect.follow_up':
         await _prospects.createFollowUp(
           id!,

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
-import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:flutter/material.dart';
 
 class ProspectCallClosure {
@@ -24,6 +23,7 @@ class ProspectCallResultSheet extends StatefulWidget {
     required this.duration,
     required this.phone,
     required this.startedAt,
+    required this.endedAt,
     this.durationEstimated = true,
     this.audioService,
   });
@@ -31,7 +31,13 @@ class ProspectCallResultSheet extends StatefulWidget {
   final String name;
   final Duration duration;
   final String phone;
+
+  /// Instante real en el que se abrió el marcador. Se usa para localizar la
+  /// grabación porque los archivos de Cube ACR usan la hora del dispositivo.
   final DateTime startedAt;
+
+  /// Instante real en el que terminó la llamada.
+  final DateTime endedAt;
   final bool durationEstimated;
   final CubeAcrAudioService? audioService;
 
@@ -65,14 +71,8 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
     }
   }
 
-  Future<void> _linkFolder() async {
-    final name = await _audioService.linkFolder();
-    if (!mounted || name == null) return;
-    setState(() => _configured = true);
-    await _findAudio();
-  }
-
   Future<void> _findAudio() async {
+    if (!_configured) return;
     setState(() {
       _searching = true;
       _audioMessage = null;
@@ -83,7 +83,7 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
         candidates = await _audioService.findCandidates(
           ProspectCallSession(
             startedAt: widget.startedAt,
-            endedAt: businessNow(),
+            endedAt: widget.endedAt,
             outcome: ProspectCallOutcome.other,
             phone: widget.phone,
             origin: 'detalle',
@@ -97,7 +97,8 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
       if (!mounted) return;
       if (candidates.isEmpty) {
         setState(
-          () => _audioMessage = 'No se detectó una grabación. Verifica que vinculaste la carpeta raíz de Cube ACR.',
+          () =>
+              _audioMessage = 'No se encontró una grabación para esta llamada.',
         );
         return;
       }
@@ -127,41 +128,76 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
     }
   }
 
-  Future<void> _pickAudioManually() async {
-    setState(() {
-      _searching = true;
-      _audioMessage = null;
-    });
-    try {
-      final audio = await _audioService.pickRecording();
-      if (!mounted || audio == null) return;
-      setState(() => _audio = audio);
-    } on AudioImportException catch (error) {
-      if (mounted) setState(() => _audioMessage = error.message);
-    } finally {
-      if (mounted) setState(() => _searching = false);
-    }
-  }
-
   String get _durationLabel {
     final minutes = widget.duration.inMinutes.toString().padLeft(2, '0');
     final seconds = (widget.duration.inSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
+  void _selectOutcome(ProspectCallOutcome value) {
+    setState(() {
+      _outcome = value;
+      _audioMessage = null;
+      if (value != ProspectCallOutcome.answered) {
+        _consent = null;
+        _audio = null;
+      }
+    });
+  }
+
   void _submit() {
-    if (_outcome == null || _consent == null) {
+    final outcome = _outcome;
+    if (outcome == null) {
+      setState(() => _audioMessage = 'Selecciona el resultado de la llamada.');
+      return;
+    }
+    if (outcome == ProspectCallOutcome.answered && _consent == null) {
       setState(
-        () => _audioMessage = 'Selecciona el resultado y el consentimiento.',
+        () => _audioMessage =
+            'Indica si el prospecto aceptó que se grabe la llamada.',
       );
       return;
     }
+    final consent = outcome == ProspectCallOutcome.answered && _consent == true;
     Navigator.pop(
       context,
       ProspectCallClosure(
-        outcome: _outcome!,
-        consent: _consent!,
-        audio: _consent! ? _audio : null,
+        outcome: outcome,
+        consent: consent,
+        audio: consent ? _audio : null,
+      ),
+    );
+  }
+
+  Widget _audioStatus(BuildContext context) {
+    final theme = Theme.of(context);
+    final audio = _audio;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            audio == null
+                ? Icons.audio_file_outlined
+                : Icons.check_circle_outline,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              audio == null
+                  ? 'Aún no se detecta la grabación.'
+                  : 'Grabación detectada: ${audio.name}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(onPressed: _findAudio, child: const Text('BUSCAR')),
+        ],
       ),
     );
   }
@@ -193,67 +229,64 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
                   (value) => ChoiceChip(
                     label: Text(value.label),
                     selected: _outcome == value,
-                    onSelected: (_) => setState(() => _outcome = value),
+                    onSelected: (_) => _selectOutcome(value),
                   ),
                 )
                 .toList(),
           ),
-          const SizedBox(height: 16),
-          const Text('¿El prospecto aceptó la grabación?'),
-          Wrap(
-            spacing: 8,
-            children: [
-              ChoiceChip(
-                label: const Text('Sí, aceptó'),
-                selected: _consent == true,
-                onSelected: (_) {
-                  setState(() => _consent = true);
-                  if (_configured && _audio == null && !_searching) {
-                    unawaited(_findAudio());
-                  }
-                },
-              ),
-              ChoiceChip(
-                label: const Text('No aceptó'),
-                selected: _consent == false,
-                onSelected: (_) => setState(() {
-                  _consent = false;
-                  _audio = null;
-                }),
-              ),
+          if (_outcome == ProspectCallOutcome.answered) ...[
+            const SizedBox(height: 16),
+            const Text('¿El prospecto aceptó que se grabe la llamada?'),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Sí, aceptó'),
+                  selected: _consent == true,
+                  onSelected: (_) {
+                    setState(() {
+                      _consent = true;
+                      _audioMessage = null;
+                    });
+                    if (_configured && _audio == null && !_searching) {
+                      unawaited(_findAudio());
+                    }
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('No aceptó'),
+                  selected: _consent == false,
+                  onSelected: (_) => setState(() {
+                    _consent = false;
+                    _audio = null;
+                    _audioMessage = null;
+                  }),
+                ),
+              ],
+            ),
+            if (_consent == true) ...[
+              const SizedBox(height: 12),
+              if (!_configured)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'No hay una carpeta de Cube ACR vinculada. Configúrala desde Mi perfil para adjuntar grabaciones.',
+                  ),
+                )
+              else if (_searching)
+                const Center(child: Text('Buscando grabación…'))
+              else
+                _audioStatus(context),
             ],
-          ),
-          if (_consent == true) ...[
-            const SizedBox(height: 12),
-            if (!_configured)
-              OutlinedButton(
-                onPressed: _linkFolder,
-                child: const Text('VINCULAR CARPETA DE CUBE ACR'),
-              )
-            else if (_searching)
-              const Center(child: Text('Buscando grabación…'))
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OutlinedButton(
-                    onPressed: _findAudio,
-                    child: Text(
-                      _audio == null
-                          ? 'BUSCAR NUEVAMENTE'
-                          : 'Grabación detectada: ${_audio!.name}',
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _linkFolder,
-                    child: const Text('CAMBIAR CARPETA DE CUBE ACR'),
-                  ),
-                  TextButton(
-                    onPressed: _pickAudioManually,
-                    child: const Text('SELECCIONAR GRABACIÓN MANUALMENTE'),
-                  ),
-                ],
-              ),
           ],
           if (_audioMessage != null)
             Padding(
@@ -263,11 +296,7 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _submit,
-            child: const Text('REGISTRAR LLAMADA'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('SEGUIR EN LA LLAMADA'),
+            child: const Text('GUARDAR RESULTADO'),
           ),
         ],
       ),

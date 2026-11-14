@@ -45,6 +45,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final bool readOnly;
   final bool callInProgress;
   final int? llamadaId;
+  final int callResultRevision;
   final ValueChanged<bool>? onDirtyChanged;
   const ProspectFollowUpForm({
     super.key,
@@ -64,6 +65,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.readOnly = false,
     this.callInProgress = false,
     this.llamadaId,
+    this.callResultRevision = 0,
     this.onDirtyChanged,
   });
   @override
@@ -154,6 +156,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       _method = 'Llamada telefónica';
     }
     if (widget.llamadaId != null) _method = 'Llamada telefónica';
+    if (oldWidget.callResultRevision != widget.callResultRevision) {
+      _success = widget.initialContactSuccess;
+    }
     _notifyCurrentMedium();
   }
 
@@ -1143,7 +1148,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                   const Padding(
                     padding: EdgeInsets.only(bottom: 8),
                     child: Text(
-                      'Termina la llamada para registrar el seguimiento.',
+                      'Registra el resultado de la llamada antes de guardar el seguimiento.',
                     ),
                   ),
                 const SizedBox(height: 12),

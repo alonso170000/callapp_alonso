@@ -1,7 +1,7 @@
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/call_in_progress_bar.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/call_registration_bar.dart';
 import 'package:callerapp_frontend/services/call_log_service.dart';
 import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
@@ -86,7 +86,7 @@ void main() {
 
     expect(controller.activeCall, isNotNull);
     expect(reminderProspect, prospect);
-    expect(find.byType(CallInProgressBar), findsNothing);
+    expect(find.byType(CallRegistrationBar), findsNothing);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
@@ -95,7 +95,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.activeCall, isNull);
-    expect(find.byType(CallInProgressBar), findsNothing);
+    expect(find.byType(CallRegistrationBar), findsNothing);
     expect(find.text('REGISTRAR LLAMADA'), findsNothing);
   });
 }

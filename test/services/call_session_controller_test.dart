@@ -48,24 +48,27 @@ void main() {
     expect(controller.hasUnverifiedCall, isFalse);
   });
 
-  test('la ventana de búsqueda usa el instante real, no la hora de negocio', () async {
-    final log = _FakeCallLogService(active: false);
-    final before = DateTime.now().millisecondsSinceEpoch;
-    final controller = await _startSession(log);
+  test(
+    'la ventana de búsqueda usa el instante real, no la hora de negocio',
+    () async {
+      final log = _FakeCallLogService(active: false);
+      final before = DateTime.now().millisecondsSinceEpoch;
+      final controller = await _startSession(log);
 
-    await controller.latestLog();
+      await controller.latestLog();
 
-    final window = log.lastWindowStart;
-    expect(window, isNotNull);
-    expect(
-      window!.millisecondsSinceEpoch,
-      greaterThanOrEqualTo(before - 2000),
-    );
-    expect(
-      window.difference(DateTime.now()).inSeconds.abs(),
-      lessThanOrEqualTo(2),
-    );
-  });
+      final window = log.lastWindowStart;
+      expect(window, isNotNull);
+      expect(
+        window!.millisecondsSinceEpoch,
+        greaterThanOrEqualTo(before - 2000),
+      );
+      expect(
+        window.difference(DateTime.now()).inSeconds.abs(),
+        lessThanOrEqualTo(2),
+      );
+    },
+  );
 
   test('conserva la sesión cuando aparece una llamada nueva', () async {
     final log = _FakeCallLogService(
@@ -82,18 +85,24 @@ void main() {
     expect(resolution, PendingCallResolution.verified);
     expect(controller.activeCall?.verified, isTrue);
     expect(controller.activeCall?.callLogId, '9001');
+    expect(controller.activeCall?.endedAt, isNotNull);
+    expect(controller.activeCall?.realEndedAt, isNotNull);
+    expect(controller.callDuration.inSeconds, greaterThanOrEqualTo(0));
     expect(log.lookups, greaterThan(0));
   });
 
-  test('conserva la sesión cuando el teléfono reporta una llamada activa', () async {
-    final log = _FakeCallLogService(active: true);
-    final controller = await _startSession(log);
+  test(
+    'conserva la sesión cuando el teléfono reporta una llamada activa',
+    () async {
+      final log = _FakeCallLogService(active: true);
+      final controller = await _startSession(log);
 
-    final resolution = await controller.resolveAfterDialer(attempts: 1);
+      final resolution = await controller.resolveAfterDialer(attempts: 1);
 
-    expect(resolution, PendingCallResolution.inProgress);
-    expect(controller.activeCall?.verified, isTrue);
-  });
+      expect(resolution, PendingCallResolution.inProgress);
+      expect(controller.activeCall?.verified, isTrue);
+    },
+  );
 
   test('conserva la sesión si no se puede verificar la llamada', () async {
     final log = _FakeCallLogService(active: null);

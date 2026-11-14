@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
@@ -14,21 +16,30 @@ import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, this.onNotificationActivity});
+  const ProfileScreen({
+    super.key,
+    this.onNotificationActivity,
+    this.audioService,
+  });
   final ValueChanged<AgendaActivity>? onNotificationActivity;
+  final CubeAcrAudioService? audioService;
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late ProfileData _profile;
+  late final CubeAcrAudioService _audioService;
   final _preferences = ProfilePreferencesStore();
   final _database = AppDatabase.instance;
   int _reminder = 15;
   DateTime? _lastSync;
+  String? _audioFolder;
+  bool _loadingAudioFolder = true;
 
   @override
   void initState() {
@@ -36,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     AppearanceController.instance.addListener(_appearanceChanged);
     NotificationService.instance.addListener(_notificationsChanged);
     OutboxService.instance.addListener(_syncChanged);
+    _audioService = widget.audioService ?? CubeAcrAudioService();
     final auth = AuthService.instance;
     _profile = ProfileData(
       name: auth.userName,
@@ -45,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     _loadReminder();
     _loadSyncStatus();
+    unawaited(_loadAudioFolder());
   }
 
   LocalScope? get _scope {
@@ -70,6 +83,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (scope == null) return;
     final value = await _database.lastRefreshedAt(scope);
     if (mounted) setState(() => _lastSync = value);
+  }
+
+  Future<void> _loadAudioFolder() async {
+    try {
+      final name = await _audioService.folderName();
+      if (mounted) {
+        setState(() {
+          _audioFolder = name;
+          _loadingAudioFolder = false;
+        });
+      }
+    } on AudioImportException {
+      if (mounted) setState(() => _loadingAudioFolder = false);
+    }
+  }
+
+  Future<void> _linkAudioFolder() async {
+    if (_audioFolder != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Cambiar carpeta de grabaciones'),
+          content: const Text(
+            'Los audios se buscarán en la nueva carpeta. Elige la carpeta raíz de Cube ACR.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('CONTINUAR'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    try {
+      final name = await _audioService.linkFolder();
+      if (!mounted || name == null) return;
+      setState(() => _audioFolder = name);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Carpeta vinculada: $name')));
+    } on AudioImportException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo vincular la carpeta de Cube ACR.'),
+        ),
+      );
+    }
   }
 
   void _appearanceChanged() {
@@ -288,6 +358,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.dark_mode_outlined,
               actionLabel: 'Apariencia',
               onPressed: _chooseAppearance,
+            ),
+            ProfileSettingRow(
+              title: 'CARPETA DE GRABACIONES',
+              value: _loadingAudioFolder
+                  ? 'Comprobando…'
+                  : _audioFolder ?? 'Sin vincular',
+              titleColor: AppColors.profileConfiguracion,
+              icon: Icons.folder_open,
+              actionLabel: _audioFolder == null
+                  ? 'Vincular carpeta de Cube ACR'
+                  : 'Cambiar carpeta de Cube ACR',
+              onPressed: _loadingAudioFolder ? null : _linkAudioFolder,
             ),
           ],
         ),

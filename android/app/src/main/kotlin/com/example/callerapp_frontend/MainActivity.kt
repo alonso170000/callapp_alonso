@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.CallLog
 import android.provider.DocumentsContract
-import android.provider.OpenableColumns
 import android.telephony.TelephonyManager
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -18,9 +17,7 @@ class MainActivity : FlutterActivity() {
     private val cubeChannelName = "callerapp/cube_acr"
     private val requestCode = 781
     private val cubeFolderRequestCode = 782
-    private val cubeAudioRequestCode = 783
     private var cubeFolderResult: MethodChannel.Result? = null
-    private var cubeAudioResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -94,17 +91,6 @@ class MainActivity : FlutterActivity() {
                             result.success(listCubeRecordings(Uri.parse(treeUri)))
                         }
                     }
-                    "pickRecording" -> {
-                        cubeAudioResult = result
-                        startActivityForResult(
-                            Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                addCategory(Intent.CATEGORY_OPENABLE)
-                                type = "audio/*"
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            },
-                            cubeAudioRequestCode,
-                        )
-                    }
                     "copyRecording" -> {
                         val source = call.argument<String>("uri")
                         val name = call.argument<String>("name")
@@ -146,26 +132,6 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == cubeAudioRequestCode) {
-            val result = cubeAudioResult ?: return
-            cubeAudioResult = null
-            val uri = data?.data
-            if (resultCode != RESULT_OK || uri == null) {
-                result.success(null)
-                return
-            }
-            val name = contentResolver.query(
-                uri,
-                arrayOf(OpenableColumns.DISPLAY_NAME),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            } ?: "grabacion_${System.currentTimeMillis()}"
-            result.success(mapOf("uri" to uri.toString(), "name" to name))
-            return
-        }
         if (requestCode == cubeFolderRequestCode) {
             val result = cubeFolderResult ?: return
             cubeFolderResult = null

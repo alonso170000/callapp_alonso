@@ -4,7 +4,6 @@ import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
-import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -55,15 +54,27 @@ class CubeAcrAudioService {
     return LocalScope(userId: userId, developmentId: developmentId);
   }
 
-  String _key(String prefix, LocalScope scope) =>
-      '$prefix:${scope.userId}:${scope.developmentId}';
+  /// La carpeta de Cube ACR es una preferencia del dispositivo, no del usuario
+  /// ni del desarrollo. Se guarda sin ámbito para que el mantenimiento local no
+  /// la borre junto con las cachés.
+  String _key(String prefix) => prefix;
 
-  Future<String?> folderName() => _read(_key(_namePrefix, scope));
+  /// Clave usada por versiones anteriores, atada al ámbito. Solo permite
+  /// migrarla cuando hay una sesión activa.
+  String? _legacyKey(String prefix) {
+    final userId = _auth.userId;
+    final developmentId = _auth.developmentId;
+    if (userId == null || developmentId == null) return null;
+    return '$prefix:$userId:$developmentId';
+  }
 
-  Future<bool> hasFolder() async =>
-      (await _read(_key(_uriPrefix, scope))) != null;
+  Future<String?> folderName() => _read(_namePrefix);
+
+  Future<bool> hasFolder() async => (await _read(_uriPrefix)) != null;
 
   Future<String?> linkFolder() async {
+    // Exige una sesión activa antes de abrir el selector.
+    scope;
     final selected = await _channel.invokeMapMethod<String, dynamic>(
       'pickFolder',
     );
@@ -72,15 +83,15 @@ class CubeAcrAudioService {
     if (uri is! String || uri.isEmpty || name is! String || name.isEmpty) {
       return null;
     }
-    await _write(_key(_uriPrefix, scope), uri);
-    await _write(_key(_namePrefix, scope), name);
+    await _write(_key(_uriPrefix), uri);
+    await _write(_key(_namePrefix), name);
     return name;
   }
 
   Future<List<CubeAcrAudioCandidate>> findCandidates(
     ProspectCallSession call,
   ) async {
-    final treeUri = await _read(_key(_uriPrefix, scope));
+    final treeUri = await _read(_uriPrefix);
     if (treeUri == null) return const [];
     final raw = await _channel.invokeListMethod<dynamic>('listRecordings', {
       'treeUri': treeUri,
@@ -175,20 +186,6 @@ class CubeAcrAudioService {
     return ImportedCallAudio(path: filePath, name: candidate.name);
   }
 
-  Future<ImportedCallAudio?> pickRecording() async {
-    final selected = await _channel.invokeMapMethod<String, dynamic>(
-      'pickRecording',
-    );
-    final uri = selected?['uri'];
-    final name = selected?['name'];
-    if (uri is! String || uri.isEmpty || name is! String || name.isEmpty) {
-      return null;
-    }
-    return copyToPrivate(
-      CubeAcrAudioCandidate(uri: uri, name: name, recordedAt: businessNow()),
-    );
-  }
-
   Future<void> remove(String? filePath) async {
     if (filePath == null || filePath.isEmpty) return;
     final file = File(filePath);
@@ -211,6 +208,18 @@ class CubeAcrAudioService {
   }
 
   Future<String?> _read(String key) async {
+    final direct = await _readKey(_key(key));
+    if (direct != null) return direct;
+    final legacy = _legacyKey(key);
+    if (legacy == null) return null;
+    final legacyValue = await _readKey(legacy);
+    if (legacyValue == null) return null;
+    await _write(_key(key), legacyValue);
+    await _delete(legacy);
+    return legacyValue;
+  }
+
+  Future<String?> _readKey(String key) async {
     final database = await _database.databaseOrNull;
     if (database == null) return null;
     final rows = await database.query(
@@ -229,5 +238,11 @@ class CubeAcrAudioService {
       'key': key,
       'value': value,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> _delete(String key) async {
+    final database = await _database.databaseOrNull;
+    if (database == null) return;
+    await database.delete('app_metadata', where: 'key = ?', whereArgs: [key]);
   }
 }

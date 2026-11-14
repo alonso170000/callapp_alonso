@@ -125,6 +125,34 @@ void main() {
     },
   );
 
+  test('solicita eliminar un prospecto con su motivo', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient((request) async {
+        expect(request.method, 'PATCH');
+        expect(
+          request.url.toString(),
+          'https://example.com/api/v1/leads/17/request-deletion',
+        );
+        expect(request.headers['Idempotency-Key'], 'deletion-key');
+        expect(jsonDecode(request.body), {
+          'motivo_descarte': 'Teléfono incorrecto',
+        });
+        return http.Response(
+          '{"success":true,"data":{"id":17,"estatus":"Por eliminar"}}',
+          200,
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+
+    await service.requestDeletion(
+      17,
+      'Teléfono incorrecto',
+      operationKey: 'deletion-key',
+    );
+  });
+
   test(
     'Loads and saves discovery sections through the lead endpoints',
     () async {

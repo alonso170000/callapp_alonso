@@ -61,14 +61,30 @@ class AppColors {
   static const Color prospectStatusContacted = Color(0xFFFF98DD);
   static const Color prospectStatusSale = Color(0xFF9BFF92);
   static const Color prospectStatusOverdue = Color(0xFFFFA3A6);
-  static const Color prospectTagReactivation = Color.fromARGB(255, 42, 102, 255);
+  static const Color prospectStatusOverdueInk = Color.fromARGB(
+    255,
+    233,
+    233,
+    233,
+  );
+  static const Color prospectTagReactivation = Color.fromARGB(
+    255,
+    42,
+    102,
+    255,
+  );
   static const Color prospectTagReactivationInk = Color(0xFFFFFFFF);
   static const Color prospectTagClient = Color(0xFFFFD86B);
   static const Color prospectTagClientInk = Color(0xFF332600);
   static const Color prospectClientAvatarBorder = Color(0xFFFFD86B);
   static const Color prospectActionCall = Color.fromARGB(255, 255, 210, 76);
   static const Color prospectActionMessage = Color(0xFF64FF98);
-  static const Color prospectActionFacebook = Color.fromARGB(255, 102, 217, 255);
+  static const Color prospectActionFacebook = Color.fromARGB(
+    255,
+    102,
+    217,
+    255,
+  );
   static const Color prospectActionWhastapp = Color.fromARGB(255, 55, 245, 125);
   static const Color prospectActionMail = Color.fromARGB(255, 221, 170, 255);
   static const Color prospectActionOptions = Color(0xFFB0E4DB);

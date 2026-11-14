@@ -3,7 +3,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
+import 'package:callerapp_frontend/presentation/screens/main_screens/profile_screen.dart';
+import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
+
+class _FakeCubeAcrAudioService extends CubeAcrAudioService {
+  String? name;
+  int links = 0;
+
+  @override
+  Future<String?> folderName() async => name;
+
+  @override
+  Future<String?> linkFolder() async {
+    links++;
+    name = 'Cube ACR';
+    return name;
+  }
+}
 
 void main() {
   for (final width in [320.0, 390.0]) {
@@ -68,4 +85,42 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('la carpeta de Cube ACR se vincula desde el perfil', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final audio = _FakeCubeAcrAudioService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ProfileScreen(audioService: audio)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollable = find.descendant(
+      of: find.byKey(const PageStorageKey('profile-scroll')),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text('CARPETA DE GRABACIONES'),
+      150,
+      scrollable: scrollable,
+    );
+    expect(find.text('SIN VINCULAR'), findsOneWidget);
+
+    final linkFolder = find.byTooltip('Vincular carpeta de Cube ACR');
+    await tester.ensureVisible(linkFolder);
+    await tester.pumpAndSettle();
+    await tester.tap(linkFolder);
+    await tester.pumpAndSettle();
+
+    expect(audio.links, 1);
+    expect(find.text('CUBE ACR'), findsOneWidget);
+    expect(find.text('Carpeta vinculada: Cube ACR'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

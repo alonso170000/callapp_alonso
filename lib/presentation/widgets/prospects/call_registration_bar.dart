@@ -2,27 +2,20 @@ import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:flutter/material.dart';
 
-class CallInProgressBar extends StatelessWidget {
-  const CallInProgressBar({
+/// Recordatorio discreto para que el vendedor registre el resultado de una
+/// llamada que ya se realizó fuera de la app. No muestra cronómetro ni
+/// acciones de "finalizar" porque la llamada no se origina en CallerApp.
+class CallRegistrationBar extends StatelessWidget {
+  const CallRegistrationBar({
     super.key,
     required this.name,
-    required this.elapsed,
-    required this.onFinish,
-    this.onReturn,
+    required this.onRegister,
     this.onDiscard,
   });
 
   final String name;
-  final Duration elapsed;
-  final VoidCallback onFinish;
-  final VoidCallback? onReturn;
+  final VoidCallback onRegister;
   final VoidCallback? onDiscard;
-
-  String get _time {
-    final minutes = elapsed.inMinutes.toString().padLeft(2, '0');
-    final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 
   Future<void> _confirmDiscard(BuildContext context) async {
     final discard = await showDialog<bool>(
@@ -58,7 +51,7 @@ class CallInProgressBar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.circle, color: palette.onBrand),
+              Icon(Icons.phone_in_talk, color: palette.onBrand),
               SizedBox(width: gap),
               Expanded(
                 child: Column(
@@ -66,7 +59,7 @@ class CallInProgressBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'EN LLAMADA · $name',
+                      'LLAMADA CON ${name.toUpperCase()}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -74,29 +67,33 @@ class CallInProgressBar extends StatelessWidget {
                         fontFamily: 'BebasNeue',
                       ),
                     ),
-                    Text(_time, style: TextStyle(color: palette.onBrand)),
+                    Text(
+                      'Registra el resultado cuando termines.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: palette.onBrand, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
-              if (onReturn != null)
-                IconButton(
-                  tooltip: 'Volver a la llamada',
-                  onPressed: onReturn,
-                  icon: Icon(Icons.open_in_new, color: palette.onBrand),
-                ),
               if (onDiscard != null)
                 IconButton(
                   tooltip: 'Descartar llamada',
                   onPressed: () => _confirmDiscard(context),
                   icon: Icon(Icons.delete_outline, color: palette.onBrand),
                 ),
-              FilledButton.tonalIcon(
-                onPressed: onFinish,
-                icon: const Icon(Icons.call_end),
-                label: const Text('FINALIZAR', style: TextStyle(fontFamily: 'BebasNeue')),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                onPressed: onRegister,
+                icon: const Icon(Icons.assignment_turned_in_outlined, size: 18),
+                label: const Text(
+                  'REGISTRAR',
+                  style: TextStyle(fontFamily: 'BebasNeue'),
+                ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 246, 37, 22),
-                  foregroundColor: Colors.white,
+                  backgroundColor: palette.onBrand,
+                  foregroundColor: palette.callbar,
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
-import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 
 class ProfileSettingRow extends StatelessWidget {
@@ -49,7 +48,8 @@ class ProfileSettingRow extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: AppPalette.of(context).iconChipFill,
+              color: Theme.of(context).colorScheme.primary
+                  .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(

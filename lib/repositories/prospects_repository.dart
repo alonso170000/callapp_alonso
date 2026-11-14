@@ -277,6 +277,21 @@ class ProspectsRepository {
     remote: (id, key) => _service.update(id, fields, operationKey: key),
   );
 
+  Future<ProspectMutationResult> requestDeletion(
+    ProspectRecord prospect,
+    String reason,
+  ) {
+    final fields = {'motivo_descarte': reason};
+    return _mutate(
+      prospect,
+      kind: 'prospect.request_deletion',
+      fields: fields,
+      optimistic: prospect.copyWith(status: 'Por eliminar'),
+      remote: (id, key) =>
+          _service.requestDeletion(id, reason, operationKey: key),
+    );
+  }
+
   Future<ProspectMutationResult> convertToClient(
     ProspectRecord prospect,
   ) async {
@@ -643,7 +658,8 @@ class ProspectsRepository {
           operation.kind != 'prospect.update' &&
           operation.kind != 'prospect.follow_up' &&
           operation.kind != 'prospect.call' &&
-          operation.kind != 'prospect.convert') {
+          operation.kind != 'prospect.convert' &&
+          operation.kind != 'prospect.request_deletion') {
         continue;
       }
       final raw = operation.payload['local_prospect'];

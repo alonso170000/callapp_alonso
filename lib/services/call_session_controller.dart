@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:callerapp_frontend/data/local/app_database.dart';
@@ -23,6 +22,8 @@ class ActiveCall {
     this.sourceActivityId,
     this.verified = false,
     this.callLogId,
+    this.endedAt,
+    this.realEndedAt,
   });
 
   final ProspectRecord prospect;
@@ -34,6 +35,14 @@ class ActiveCall {
   /// registro del sistema. No usa la hora de negocio para evitar corrimientos.
   final DateTime windowStart;
 
+  /// Hora de negocio en la que se detectó el fin de la llamada. Se congela para
+  /// que la duración estimada no siga creciendo hasta que se registre.
+  final DateTime? endedAt;
+
+  /// Instante real en el que terminó la llamada. Se usa para localizar la
+  /// grabación porque los archivos de Cube ACR usan la hora del dispositivo.
+  final DateTime? realEndedAt;
+
   final String origin;
   final int? sourceActivityId;
 
@@ -42,7 +51,12 @@ class ActiveCall {
   final bool verified;
   final String? callLogId;
 
-  ActiveCall copyWith({bool? verified, String? callLogId}) => ActiveCall(
+  ActiveCall copyWith({
+    bool? verified,
+    String? callLogId,
+    DateTime? endedAt,
+    DateTime? realEndedAt,
+  }) => ActiveCall(
     prospect: prospect,
     startedAt: startedAt,
     windowStart: windowStart,
@@ -50,6 +64,8 @@ class ActiveCall {
     sourceActivityId: sourceActivityId,
     verified: verified ?? this.verified,
     callLogId: callLogId ?? this.callLogId,
+    endedAt: endedAt ?? this.endedAt,
+    realEndedAt: realEndedAt ?? this.realEndedAt,
   );
 }
 
@@ -112,9 +128,7 @@ class CallSessionController extends ChangeNotifier {
   final CallLogService _callLog;
   final AppDatabase _database;
   final AuthService _auth;
-  Timer? _timer;
   ActiveCall? _activeCall;
-  Duration _elapsed = Duration.zero;
   int? _lastCallId;
   bool _staleSession = false;
   bool _autoClosureClaimed = false;
@@ -122,9 +136,16 @@ class CallSessionController extends ChangeNotifier {
   Future<bool>? _claimInFlight;
 
   ActiveCall? get activeCall => _activeCall;
-  Duration get elapsed => _elapsed;
   int? get lastCallId => _lastCallId;
   bool get hasStaleSession => _staleSession;
+
+  /// Duración de la llamada. Si ya se detectó el fin, queda congelada; de lo
+  /// contrario se calcula contra el reloj de negocio.
+  Duration get callDuration {
+    final current = _activeCall;
+    if (current == null) return Duration.zero;
+    return (current.endedAt ?? businessNow()).difference(current.startedAt);
+  }
 
   /// `true` mientras la sesión se abrió al lanzar el marcador pero todavía no
   /// hay evidencia de que la llamada haya ocurrido.
@@ -135,6 +156,11 @@ class CallSessionController extends ChangeNotifier {
     if (current == null) return Future.value();
     return _callLog.latestFor(current.prospect.phone, current.windowStart);
   }
+
+  /// Indica si el teléfono mantiene una llamada activa. Se usa para no abrir el
+  /// registro del resultado mientras el vendedor sigue hablando.
+  Future<bool> isCallInProgress() async =>
+      await _callLog.isCallActive() ?? false;
 
   /// Comprueba, al volver del marcador, si la llamada realmente ocurrió.
   ///
@@ -170,6 +196,8 @@ class CallSessionController extends ChangeNotifier {
         _activeCall = pending.copyWith(
           verified: true,
           callLogId: logged.id,
+          endedAt: businessNow(),
+          realEndedAt: DateTime.now(),
         );
         await _persist();
         notifyListeners();
@@ -203,7 +231,10 @@ class CallSessionController extends ChangeNotifier {
   }) {
     final inFlight = _claimInFlight;
     if (inFlight != null) return inFlight;
-    final future = _claimCompletedCall(attempts: attempts, retryDelay: retryDelay);
+    final future = _claimCompletedCall(
+      attempts: attempts,
+      retryDelay: retryDelay,
+    );
     _claimInFlight = future;
     return future.whenComplete(() => _claimInFlight = null);
   }
@@ -226,6 +257,17 @@ class CallSessionController extends ChangeNotifier {
                 current.windowStart.subtract(const Duration(seconds: 5)),
               ))) {
         _autoClosureClaimed = true;
+        final pending = _activeCall;
+        if (pending != null && pending.endedAt == null) {
+          _activeCall = pending.copyWith(
+            verified: true,
+            callLogId: pending.callLogId ?? logged.id,
+            endedAt: businessNow(),
+            realEndedAt: DateTime.now(),
+          );
+          await _persist();
+          notifyListeners();
+        }
         return true;
       }
       if (attempt < attempts - 1) await Future<void>.delayed(retryDelay);
@@ -263,9 +305,7 @@ class CallSessionController extends ChangeNotifier {
       sourceActivityId: sourceActivityId,
     );
     _autoClosureClaimed = false;
-    _elapsed = businessNow().difference(startedAt);
     await _persist();
-    _startTimer();
     notifyListeners();
   }
 
@@ -287,7 +327,7 @@ class CallSessionController extends ChangeNotifier {
         message: 'No se puede adjuntar audio sin consentimiento.',
       );
     }
-    final endedAt = businessNow();
+    final endedAt = current.endedAt ?? businessNow();
     final logged = await _callLog.latestFor(
       current.prospect.phone,
       current.windowStart,
@@ -365,7 +405,9 @@ class CallSessionController extends ChangeNotifier {
         ),
         startedAt: startedAt,
         windowStart: json['window_start_ms'] is int
-            ? DateTime.fromMillisecondsSinceEpoch(json['window_start_ms'] as int)
+            ? DateTime.fromMillisecondsSinceEpoch(
+                json['window_start_ms'] as int,
+              )
             : startedAt,
         origin: json['origin'] as String,
         sourceActivityId: json['source_activity_id'] as int?,
@@ -373,10 +415,16 @@ class CallSessionController extends ChangeNotifier {
         // conservan para no interrumpir una llamada que ya estaba en curso.
         verified: json['verified'] as bool? ?? true,
         callLogId: json['call_log_id'] as String?,
+        endedAt: json['ended_at'] is String
+            ? DateTime.tryParse(json['ended_at'] as String)
+            : null,
+        realEndedAt: json['real_ended_at_ms'] is int
+            ? DateTime.fromMillisecondsSinceEpoch(
+                json['real_ended_at_ms'] as int,
+              )
+            : null,
       );
       _autoClosureClaimed = false;
-      _elapsed = businessNow().difference(startedAt);
-      _startTimer();
       notifyListeners();
     } on Object {
       await cancel();
@@ -387,16 +435,6 @@ class CallSessionController extends ChangeNotifier {
     _staleSession = false;
     await _deletePersisted();
     notifyListeners();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final current = _activeCall;
-      if (current == null) return;
-      _elapsed = businessNow().difference(current.startedAt);
-      notifyListeners();
-    });
   }
 
   Future<void> _persist() async {
@@ -418,6 +456,8 @@ class CallSessionController extends ChangeNotifier {
         'source_activity_id': current.sourceActivityId,
         'verified': current.verified,
         'call_log_id': current.callLogId,
+        'ended_at': current.endedAt?.toIso8601String(),
+        'real_ended_at_ms': current.realEndedAt?.millisecondsSinceEpoch,
       }),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
@@ -437,18 +477,9 @@ class CallSessionController extends ChangeNotifier {
   }
 
   Future<void> _clearActive() async {
-    _timer?.cancel();
-    _timer = null;
     await _deletePersisted();
     _activeCall = null;
     _autoClosureClaimed = false;
-    _elapsed = Duration.zero;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 }
