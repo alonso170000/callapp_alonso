@@ -1,12 +1,22 @@
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activity_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  void mockUrlLauncherFailure() {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (_) async => false);
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+  }
+
   const prospect = ProspectRecord(
     name: 'Ana',
     phone: '529981234567',
@@ -78,7 +88,8 @@ void main() {
     expect(find.text('Llamar'), findsNothing);
   });
 
-  testWidgets('Facebook se presenta deshabilitado', (tester) async {
+  testWidgets('Facebook abre la app sin buscar el perfil', (tester) async {
+    mockUrlLauncherFailure();
     await pumpMedium(tester, 'facebook');
     final button = tester.widget<FilledButton>(
       find.ancestor(
@@ -86,14 +97,11 @@ void main() {
         matching: find.byType(FilledButton),
       ),
     );
-    expect(button.onPressed, isNull);
+    expect(button.onPressed, isNotNull);
     expect(find.text('Llamar'), findsNothing);
     await tester.tap(find.text('Abrir Facebook'));
-    await tester.pump();
-    expect(
-      find.text('El prospecto no tiene Facebook registrado.'),
-      findsOneWidget,
-    );
+    await tester.pumpAndSettle();
+    expect(find.text('No se pudo abrir Facebook.'), findsOneWidget);
   });
 
   testWidgets('VER ACTIVIDAD permite editar y abrir la cancelación', (
@@ -170,6 +178,34 @@ void main() {
     await tester.pump();
     expect(resolved, 'whatsapp');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('el formulario usa el medio elegido sin actividad', (
+    tester,
+  ) async {
+    String? resolved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: prospect.copyWith(id: 7),
+              initialMedium: ContactMedium.whatsapp,
+              loadActivities: () async => const [],
+              onMediumChanged: (value) => resolved = value?.backendValue,
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(resolved, 'whatsapp');
+    expect(
+      find.byKey(const ValueKey('¿Cómo intentaste contactarlo?WhatsApp')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('el formulario notifica el medio descubierto en la agenda', (

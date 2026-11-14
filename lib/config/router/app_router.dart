@@ -32,6 +32,7 @@ final appRouter = GoRouter(
             callStarted: arguments.callStarted,
             callSuccessful: arguments.callSuccessful,
             callId: arguments.callId,
+            initialContactMedium: arguments.initialContactMedium,
           );
         }
         if (state.extra is ProspectRecord) {

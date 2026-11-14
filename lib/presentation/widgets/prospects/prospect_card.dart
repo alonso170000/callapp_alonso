@@ -17,12 +17,14 @@ class ProspectCard extends StatelessWidget {
   final VoidCallback? onTap;
   final ProspectAction action;
   final Future<void> Function(ContactMedium medium)? onContact;
+  final VoidCallback? onContactOptions;
   const ProspectCard({
     super.key,
     required this.prospect,
     this.action = const ProspectAction(medium: ContactMedium.llamada),
     this.onTap,
     this.onContact,
+    this.onContactOptions,
   });
 
   Future<void> _contact(BuildContext context, ContactMedium medium) async {
@@ -211,17 +213,45 @@ class ProspectCard extends StatelessWidget {
 
   Widget _action(BuildContext context) {
     final medium = action.medium;
-    final suffix = action.hasActivity
-        ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
-        : '';
+    if (!action.hasActivity) {
+      final label = 'Elegir medio de contacto para ${prospect.name}';
+      return Semantics(
+        button: true,
+        label: label,
+        child: IconButton(
+          tooltip: label,
+          onPressed:
+              onContactOptions ??
+              () => onContact != null
+                  ? onContact!(medium)
+                  : _contact(context, medium),
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.prospectActionOptions,
+            foregroundColor: AppColors.textDarkColor,
+            minimumSize: const Size(40, 40),
+            maximumSize: const Size(40, 40),
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+          ),
+          icon: const Icon(Iconsax.more_copy, size: 22),
+        ),
+      );
+    }
+    final suffix =
+        ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}';
     final icon = switch (medium) {
-      ContactMedium.llamada => Iconsax.call_copy,
-      ContactMedium.whatsapp || ContactMedium.facebook => Iconsax.message_copy,
-      ContactMedium.correo => Iconsax.send_2_copy,
+      ContactMedium.llamada => Iconsax.call_calling_copy,
+      ContactMedium.whatsapp => Iconsax.whatsapp_copy,
+      ContactMedium.facebook => Iconsax.facebook_copy,
+      ContactMedium.correo => Iconsax.sms_copy,
     };
+    final available =
+        medium == ContactMedium.facebook || medium.isAvailable(prospect);
     return IconButton(
       tooltip: '${medium.actionLabel} a ${prospect.name}$suffix',
-      onPressed: !medium.isAvailable(prospect)
+      onPressed: !available
           ? null
           : () async {
               final action = onContact;
@@ -232,9 +262,12 @@ class ProspectCard extends StatelessWidget {
               }
             },
       style: IconButton.styleFrom(
-        backgroundColor: medium == ContactMedium.llamada
-            ? AppColors.prospectActionCall
-            : AppColors.prospectActionMessage,
+        backgroundColor: switch (medium) {
+          ContactMedium.llamada => AppColors.prospectActionCall,
+          ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
+          ContactMedium.facebook => AppColors.prospectActionFacebook,
+          ContactMedium.correo => AppColors.prospectActionMail,
+        },
         foregroundColor: AppColors.textDarkColor,
         minimumSize: const Size(40, 40),
         maximumSize: const Size(40, 40),

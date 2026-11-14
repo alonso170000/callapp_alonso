@@ -355,7 +355,9 @@ void main() {
       expect(find.text('CALIENTE'), findsOneWidget);
       expect(find.text('Llamada de seguimiento pendiente.'), findsOneWidget);
       expect(find.text('02:30 PM'), findsOneWidget);
-      await tester.tap(find.byTooltip('Llamar a Luis Antonio'));
+      await tester.tap(
+        find.byTooltip('Elegir medio de contacto para Luis Antonio'),
+      );
       await tester.pumpAndSettle();
       expect(find.text('529980000001'), findsOneWidget);
       expect(tester.takeException(), isNull);

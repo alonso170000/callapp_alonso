@@ -35,6 +35,7 @@ class ProspectFollowUpForm extends StatefulWidget {
   final ProspectsRepository? repository;
   final bool telephoneCallCompleted;
   final AgendaActivity? sourceActivity;
+  final ContactMedium? initialMedium;
   final Future<List<AgendaActivity>> Function()? loadActivities;
   final ValueChanged<AgendaActivity>? onOpenActivity;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
@@ -53,6 +54,7 @@ class ProspectFollowUpForm extends StatefulWidget {
     this.repository,
     this.telephoneCallCompleted = false,
     this.sourceActivity,
+    this.initialMedium,
     this.loadActivities,
     this.onOpenActivity,
     this.onProspectUpdated,
@@ -129,6 +131,8 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     if (widget.sourceActivity?.medium != null) {
       _method = _methodForActivity(widget.sourceActivity!.medium!);
       _notifyMediumChanged(ContactMedium.parse(widget.sourceActivity!.medium));
+    } else if (widget.initialMedium != null && !widget.telephoneCallCompleted) {
+      _method = _methodForActivity(widget.initialMedium!.activityValue);
     }
     final initial =
         widget.prospect.nextContact ??

@@ -8,6 +8,21 @@ import 'package:url_launcher/url_launcher.dart';
 class ContactLauncher {
   const ContactLauncher();
 
+  Future<bool> openFacebook() async {
+    for (final url in const ['fb://', 'https://www.facebook.com']) {
+      try {
+        final opened = await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+        if (opened) return true;
+      } on Object {
+        // Se intenta la siguiente alternativa (app o sitio web).
+      }
+    }
+    return false;
+  }
+
   Future<bool> openWhatsApp(
     ProspectRecord prospect, {
     AgendaActivity? activity,

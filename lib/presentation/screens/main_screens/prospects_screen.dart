@@ -11,6 +11,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_filters_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_card.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_contact_options_sheet.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_search.dart';
@@ -410,11 +411,15 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     );
     if (!mounted || confirmed != true) return;
     if (medium == ContactMedium.facebook) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Facebook no está disponible para este prospecto.'),
-        ),
-      );
+      final opened = await const ContactLauncher().openFacebook();
+      if (!mounted) return;
+      if (!opened) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir Facebook.')),
+        );
+        return;
+      }
+      await _openProspectDetail(prospect, activity);
       return;
     }
     if (medium == ContactMedium.whatsapp) {
@@ -454,10 +459,71 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     await _openProspectDetail(prospect, activity);
   }
 
+  Future<void> _showContactOptions(ProspectRecord prospect) async {
+    final medium = await showModalBottomSheet<ContactMedium>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => ProspectContactOptionsSheet(
+        prospect: prospect,
+        agendaVerified: _agendaVerified,
+      ),
+    );
+    if (!mounted || medium == null) return;
+
+    if (medium == ContactMedium.llamada) {
+      final successful = await _runCall(prospect);
+      if (!mounted || successful == null) return;
+      await _openProspectDetail(prospect, null);
+      return;
+    }
+    if (medium == ContactMedium.whatsapp) {
+      final opened = await const ContactLauncher().openWhatsApp(prospect);
+      if (!mounted) return;
+      if (!opened) {
+        _showContactError('No se pudo abrir WhatsApp.');
+        return;
+      }
+      await _openProspectDetail(prospect, null, contactMedium: medium);
+      return;
+    }
+    if (medium == ContactMedium.correo) {
+      final opened = await const ContactLauncher().openEmail(prospect);
+      if (!mounted) return;
+      if (!opened) {
+        _showContactError('No se pudo abrir la aplicación de correo.');
+        return;
+      }
+      await _openProspectDetail(prospect, null, contactMedium: medium);
+      return;
+    }
+    if (medium == ContactMedium.facebook) {
+      final opened = await const ContactLauncher().openFacebook();
+      if (!mounted) return;
+      if (!opened) {
+        _showContactError('No se pudo abrir Facebook.');
+        return;
+      }
+      await _openProspectDetail(prospect, null, contactMedium: medium);
+    }
+  }
+
+  void _showContactError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _openProspectDetail(
     ProspectRecord prospect,
-    AgendaActivity? activity,
-  ) async {
+    AgendaActivity? activity, {
+    ContactMedium? contactMedium,
+  }) async {
     await context.push(
       '/prospectos/${Uri.encodeComponent(prospect.phone.isEmpty ? 'id-${prospect.id}' : prospect.phone)}',
       extra: ProspectDetailArguments(
@@ -465,6 +531,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
         sourceActivity: activity,
         callStarted: false,
         callSuccessful: false,
+        initialContactMedium: contactMedium,
       ),
     );
     if (mounted) await _load();
@@ -967,6 +1034,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                     prospect: prospect,
                     action: action,
                     onContact: (_) => _contactProspect(prospect, action),
+                    onContactOptions: () =>
+                        unawaited(_showContactOptions(prospect)),
                     onTap: () async {
                       await context.push(
                         '/prospectos/${Uri.encodeComponent(prospects[index].phone.isEmpty ? 'id-${prospects[index].id}' : prospects[index].phone)}',

@@ -225,9 +225,11 @@ void main() {
     await tester.tap(find.text('VER 1 RESULTADOS'));
     await tester.pumpAndSettle();
     expect(find.text('MOSTRANDO 1 PROSPECTO'), findsOneWidget);
-    final call = find.byTooltip('Llamar a María José Sánchez');
+    final options = find.byTooltip(
+      'Elegir medio de contacto para María José Sánchez',
+    );
     await tester.scrollUntilVisible(
-      call,
+      options,
       150,
       scrollable: find
           .descendant(
@@ -236,16 +238,20 @@ void main() {
           )
           .first,
     );
-    await Scrollable.ensureVisible(tester.element(call), alignment: 0.5);
+    await Scrollable.ensureVisible(tester.element(options), alignment: 0.5);
     await tester.pumpAndSettle();
-    await tester.tap(call);
+    await tester.tap(options);
     await tester.pumpAndSettle();
     expect(
       find.textContaining('No se pudo verificar la agenda'),
       findsOneWidget,
     );
-    expect(find.text('SÍ, LLAMAR'), findsOneWidget);
-    expect(find.text('NO LLAMAR'), findsOneWidget);
+    await tester.tap(find.text('Llamar'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('SÍ, CONTINUAR'));
+    await tester.tap(find.text('SÍ, CONTINUAR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Antes de marcar'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

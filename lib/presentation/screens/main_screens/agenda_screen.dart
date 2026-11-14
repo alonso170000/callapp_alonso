@@ -591,13 +591,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
       await _callActivity(activity, detailContext);
       return;
     }
-    if (medium == ContactMedium.facebook) {
-      _showActionMessage(
-        'Facebook no está disponible para este prospecto.',
-        detailContext,
-      );
-      return;
-    }
     if (activity.prospectId == null) {
       _showActionMessage(
         'Esta actividad no tiene un prospecto asociado.',
@@ -619,23 +612,26 @@ class _AgendaScreenState extends State<AgendaScreen> {
         return;
       }
       final prospect = matches.first;
-      final opened = medium == ContactMedium.whatsapp
-          ? await const ContactLauncher().openWhatsApp(
-              prospect,
-              activity: activity,
-            )
-          : await const ContactLauncher().openEmail(
-              prospect,
-              activity: activity,
-            );
+      final opened = switch (medium) {
+        ContactMedium.whatsapp => await const ContactLauncher().openWhatsApp(
+          prospect,
+          activity: activity,
+        ),
+        ContactMedium.correo => await const ContactLauncher().openEmail(
+          prospect,
+          activity: activity,
+        ),
+        ContactMedium.facebook => await const ContactLauncher().openFacebook(),
+        ContactMedium.llamada => false,
+      };
       if (!detailContext.mounted) return;
       if (!opened) {
-        _showActionMessage(
-          medium == ContactMedium.whatsapp
-              ? 'No se pudo abrir WhatsApp.'
-              : 'No se pudo abrir la aplicación de correo.',
-          detailContext,
-        );
+        _showActionMessage(switch (medium) {
+          ContactMedium.whatsapp => 'No se pudo abrir WhatsApp.',
+          ContactMedium.correo => 'No se pudo abrir la aplicación de correo.',
+          ContactMedium.facebook => 'No se pudo abrir Facebook.',
+          ContactMedium.llamada => 'No se pudo abrir el marcador.',
+        }, detailContext);
         return;
       }
       Navigator.pop(detailContext);

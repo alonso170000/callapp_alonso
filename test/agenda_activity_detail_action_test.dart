@@ -80,6 +80,25 @@ void main() {
     expect(received, ContactMedium.llamada);
   });
 
+  testWidgets('Facebook con actividad queda habilitado', (tester) async {
+    ContactMedium? received;
+    await pump(tester, 'facebook', (value) => received = value);
+    final action = find.byTooltip(
+      'Abrir Facebook a Ana Pérez · Seguimiento agendado',
+    );
+    expect(action, findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(of: action, matching: find.byType(IconButton)),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(action);
+    expect(received, ContactMedium.facebook);
+  });
+
   testWidgets('deshabilita WhatsApp cuando falta teléfono', (tester) async {
     await pump(tester, 'whatsapp', (_) {}, value: prospect.copyWith(phone: ''));
     final button = tester.widget<IconButton>(

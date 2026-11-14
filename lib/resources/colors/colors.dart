@@ -66,8 +66,12 @@ class AppColors {
   static const Color prospectTagClient = Color(0xFFFFD86B);
   static const Color prospectTagClientInk = Color(0xFF332600);
   static const Color prospectClientAvatarBorder = Color(0xFFFFD86B);
-  static const Color prospectActionCall = Color(0xFFFFE18A);
+  static const Color prospectActionCall = Color.fromARGB(255, 255, 210, 76);
   static const Color prospectActionMessage = Color(0xFF64FF98);
+  static const Color prospectActionFacebook = Color.fromARGB(255, 102, 217, 255);
+  static const Color prospectActionWhastapp = Color.fromARGB(255, 55, 245, 125);
+  static const Color prospectActionMail = Color.fromARGB(255, 221, 170, 255);
+  static const Color prospectActionOptions = Color(0xFFB0E4DB);
 
   // Paleta compartida por la bandeja de notificaciones.
   static const Color notificationFollowUp = Color(0xFFE34BB4);

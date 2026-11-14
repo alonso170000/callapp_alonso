@@ -56,8 +56,9 @@ enum ContactMedium {
 
   IconData get icon => switch (this) {
     llamada => Iconsax.call_calling_copy,
-    whatsapp || facebook => Iconsax.message_copy,
-    correo => Iconsax.send_2_copy,
+    whatsapp => Iconsax.whatsapp_copy,
+    facebook => Iconsax.facebook_copy,
+    correo => Iconsax.sms_copy,
   };
 
   bool isAvailable(ProspectRecord prospect) => switch (this) {

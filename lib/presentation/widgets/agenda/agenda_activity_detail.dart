@@ -180,7 +180,9 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   Widget _contactAction() {
     final action = _prospectAction;
     final medium = action.medium;
-    final available = _prospect != null && medium.isAvailable(_prospect!);
+    final available =
+        _prospect != null &&
+        (medium == ContactMedium.facebook || medium.isAvailable(_prospect!));
     final suffix = action.hasActivity
         ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
         : '';

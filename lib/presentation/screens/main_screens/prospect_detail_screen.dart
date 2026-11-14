@@ -45,12 +45,14 @@ class ProspectDetailArguments {
     this.callStarted = false,
     this.callSuccessful = false,
     this.callId,
+    this.initialContactMedium,
   });
   final ProspectRecord prospect;
   final AgendaActivity? sourceActivity;
   final bool callStarted;
   final bool callSuccessful;
   final int? callId;
+  final ContactMedium? initialContactMedium;
 }
 
 class ProspectDetailScreen extends StatefulWidget {
@@ -62,6 +64,7 @@ class ProspectDetailScreen extends StatefulWidget {
   final bool callStarted;
   final bool callSuccessful;
   final int? callId;
+  final ContactMedium? initialContactMedium;
   final Future<void> Function(ProspectRecord)? showCallReminder;
   final ProspectsRepository? prospectsRepository;
   final AgendaRepository? agendaRepository;
@@ -75,6 +78,7 @@ class ProspectDetailScreen extends StatefulWidget {
     this.callStarted = false,
     this.callSuccessful = false,
     this.callId,
+    this.initialContactMedium,
     this.showCallReminder,
     this.prospectsRepository,
     this.agendaRepository,
@@ -225,7 +229,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     final busy =
         (medium == ContactMedium.llamada && _calling) ||
         (medium == ContactMedium.correo && _sendingEmail);
-    final enabled = medium != ContactMedium.facebook && !busy;
+    final enabled = !busy;
     final button = Expanded(
       flex: 2,
       child: SizedBox(
@@ -260,7 +264,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                   medium.actionLabel,
                   style: const TextStyle(
                     fontFamily: 'SulphurPoint',
-                    fontSize: 12,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -269,47 +273,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         ),
       ),
     );
-    if (medium != ContactMedium.facebook) return button;
-    return Expanded(
-      flex: 2,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _showFacebookUnavailable,
-        child: SizedBox(
-          height: 54,
-          child: Semantics(
-            label: '${medium.actionLabel} de ${_prospect.name}',
-            button: true,
-            enabled: false,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.brandFill,
-                foregroundColor: palette.onBrand,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: null,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(medium.icon, size: 25),
-                  const SizedBox(height: 2),
-                  Text(
-                    medium.actionLabel,
-                    style: const TextStyle(
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    return button;
   }
 
   @override
@@ -344,6 +308,18 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       _selected.addAll(ProspectSection.values.map((section) => section.label));
     }
     _loadEmails();
+    if (widget.initialContactMedium != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Registra el resultado del contacto y, si quieres, agenda el siguiente seguimiento.',
+            ),
+          ),
+        );
+      });
+    }
   }
 
   void _resolvePrimaryMedium(ContactMedium? value) {
@@ -493,10 +469,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     );
   }
 
-  void _showFacebookUnavailable() {
+  Future<void> _openFacebook() async {
+    final opened = await const ContactLauncher().openFacebook();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('El prospecto no tiene Facebook registrado.'),
+      SnackBar(
+        content: Text(
+          opened
+              ? 'Facebook abierto. Busca el perfil del prospecto y registra el resultado en el seguimiento.'
+              : 'No se pudo abrir Facebook.',
+        ),
       ),
     );
   }
@@ -505,7 +487,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     ContactMedium.llamada => _startCall(),
     ContactMedium.whatsapp => _openWhatsApp(),
     ContactMedium.correo => _openContactEmail(),
-    ContactMedium.facebook => Future.sync(_showFacebookUnavailable),
+    ContactMedium.facebook => _openFacebook(),
   };
 
   Future<void> _sendEmail(ProspectEmailTemplate template) async {
@@ -974,7 +956,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                     child: FilledButton(
                       key: const ValueKey('discard-pending-form-changes'),
                       onPressed: () => Navigator.pop(sheetContext, true),
-                      child: const Text('SALIR SIN GUARDAR'),
+                      child: const Text('SALIR SIN GUARDAR', style: TextStyle(fontSize: 13)),
                     ),
                   ),
                 ],
@@ -1118,6 +1100,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       initialContactSuccess:
                                           _telephoneCallSuccessful,
                                       sourceActivity: _sourceActivity,
+                                      initialMedium:
+                                          widget.initialContactMedium,
                                       loadActivities: widget.loadActivities,
                                       onOpenActivity: _openActivity,
                                       onMediumChanged: _resolvePrimaryMedium,

@@ -34,6 +34,7 @@ void main() {
     ProspectAction action,
     ValueChanged<ContactMedium> callback, {
     ProspectRecord value = prospect,
+    VoidCallback? onOptions,
   }) => tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -41,6 +42,7 @@ void main() {
           prospect: value,
           action: action,
           onContact: (medium) async => callback(medium),
+          onContactOptions: onOptions,
         ),
       ),
     ),
@@ -63,22 +65,63 @@ void main() {
     expect(received, ContactMedium.whatsapp);
   });
 
-  testWidgets('llamada entrega el medio al callback', (tester) async {
+  testWidgets('sin actividad abre las opciones de contacto', (tester) async {
+    var opened = false;
     ContactMedium? received;
     await pump(
       tester,
       const ProspectAction(medium: ContactMedium.llamada),
       (value) => received = value,
+      onOptions: () => opened = true,
     );
-    expect(find.byTooltip('Llamar a Ana Pérez'), findsOneWidget);
+    expect(
+      find.byTooltip('Elegir medio de contacto para Ana Pérez'),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Llamar a Ana Pérez'), findsNothing);
     await tester.tap(find.byType(IconButton));
-    expect(received, ContactMedium.llamada);
+    expect(opened, isTrue);
+    expect(received, isNull);
+  });
+
+  testWidgets('Facebook con actividad queda habilitado', (tester) async {
+    ContactMedium? received;
+    final facebookFollowUp = AgendaActivity(
+      id: 3,
+      prospectId: 1,
+      type: 'seguimiento',
+      medium: 'facebook',
+      title: 'SEGUIMIENTO',
+      prospect: 'ANA',
+      description: '',
+      date: DateTime(2026, 11, 12),
+      status: AgendaStatus.pending,
+    );
+    await pump(
+      tester,
+      ProspectAction(
+        medium: ContactMedium.facebook,
+        activity: facebookFollowUp,
+      ),
+      (value) => received = value,
+    );
+    expect(find.byType(IconButton), findsOneWidget);
+    expect(
+      find.byTooltip('Abrir Facebook a Ana Pérez · Seguimiento agendado'),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<IconButton>(find.byType(IconButton)).onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.byType(IconButton));
+    expect(received, ContactMedium.facebook);
   });
 
   testWidgets('WhatsApp queda deshabilitado sin teléfono', (tester) async {
     await pump(
       tester,
-      const ProspectAction(medium: ContactMedium.whatsapp),
+      ProspectAction(medium: ContactMedium.whatsapp, activity: followUp),
       (_) {},
       value: prospect.copyWith(phone: ''),
     );
