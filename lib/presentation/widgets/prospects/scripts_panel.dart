@@ -14,6 +14,7 @@ class ProspectScriptsPanel extends StatelessWidget {
     required this.prospectName,
     required this.asesorName,
     this.desarrolloName,
+    this.emptyMessage,
   });
   final GuionesBundle? guiones;
   final bool loading;
@@ -23,6 +24,7 @@ class ProspectScriptsPanel extends StatelessWidget {
   final String prospectName;
   final String asesorName;
   final String? desarrolloName;
+  final String? emptyMessage;
   @override
   Widget build(BuildContext context) {
     if (loading && guiones == null) {
@@ -51,10 +53,12 @@ class ProspectScriptsPanel extends StatelessWidget {
     }
     final scripts = guiones?.guiones ?? const <Guion>[];
     if (scripts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Este desarrollo aún no tiene guiones publicados.'),
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            emptyMessage ?? 'Este desarrollo aún no tiene guiones publicados.',
+          ),
         ),
       );
     }

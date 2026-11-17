@@ -187,9 +187,10 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
         ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
         : '';
     final icon = switch (medium) {
-      ContactMedium.llamada => Iconsax.call_copy,
-      ContactMedium.whatsapp || ContactMedium.facebook => Iconsax.message_copy,
-      ContactMedium.correo => Iconsax.send_2_copy,
+      ContactMedium.llamada => Iconsax.call_calling_copy,
+      ContactMedium.whatsapp => Iconsax.whatsapp_copy,
+      ContactMedium.facebook => Iconsax.facebook_copy,
+      ContactMedium.correo => Iconsax.sms_copy,
     };
     return IconButton(
       tooltip: '${medium.actionLabel} a ${activity.prospect}$suffix',
@@ -206,9 +207,12 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
             }
           : null,
       style: IconButton.styleFrom(
-        backgroundColor: medium == ContactMedium.llamada
-            ? AppColors.prospectActionCall
-            : AppColors.prospectActionMessage,
+        backgroundColor: switch (medium) {
+          ContactMedium.llamada => AppColors.prospectActionCall,
+          ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
+          ContactMedium.facebook => AppColors.prospectActionFacebook,
+          ContactMedium.correo => AppColors.prospectActionMail,
+        },
         foregroundColor: AppColors.primaryColor,
         minimumSize: const Size(38, 38),
         padding: EdgeInsets.zero,

@@ -3,6 +3,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_information.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
@@ -79,7 +80,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   late final ProspectsService _service;
   late final ProspectsRepository _repository;
   late final AgendaService _agendaService;
-  String _status = 'Nuevo';
+  late String _status;
   late String _method;
   late String _priority = widget.prospect.temperature;
   bool _success = false;
@@ -117,6 +118,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
   bool get _requiresCompletedCall =>
       _selectedMedium == ContactMedium.llamada &&
       !widget.telephoneCallCompleted;
+  bool get _hasRegisteredCallResult => widget.telephoneCallCompleted;
 
   void _showCallRequiredNotice() => setState(() {
     _error = 'Primero debes realizar una llamada.';
@@ -128,6 +130,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _service = widget.prospectsService ?? ProspectsService();
     _repository = widget.repository ?? ProspectsRepository(service: _service);
     _agendaService = AgendaService();
+    _status = ProspectStatus.followUpInitial(widget.prospect.status);
     _method = _initialMethod();
     _success = widget.initialContactSuccess;
     if (widget.sourceActivity?.medium != null) {
@@ -350,13 +353,17 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   void _cancel() {
     setState(() {
-      _status = _saved?['status'] ?? 'Nuevo';
+      _status =
+          _saved?['status'] ??
+          ProspectStatus.followUpInitial(widget.prospect.status);
       _method =
           _saved?['method'] ??
           (widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp');
       _priority = _saved?['priority'] ?? widget.prospect.temperature;
       _notes.text = _saved?['notes'] ?? '';
-      _success = _saved?['success'] ?? false;
+      _success =
+          _saved?['success'] ??
+          (_hasRegisteredCallResult ? widget.initialContactSuccess : false);
       _schedule = _saved?['schedule'] ?? (_followUpToComplete == null);
       _activityDraft = _saved?['activity'] as _FollowUpActivityDraft?;
     });
@@ -484,69 +491,72 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           : null,
     ),
   );
-  Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppPalette.of(context).textColor,
-                ),
-              ),
+  Widget _toggle(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    bool enabled = true,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 5),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppPalette.of(context).textColor,
             ),
-            Semantics(
-              toggled: value,
-              label: label,
-              child: InkWell(
-                onTap: widget.readOnly
-                    ? null
-                    : () {
-                        _markDirty(label);
-                        onChanged(!value);
-                      },
-                child: Container(
-                  width: 62,
-                  height: 27,
-                  alignment: value
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: value
-                        ? const Color(0xFF4CA382)
-                        : const Color(0xFFA44D4D),
-                    borderRadius: BorderRadius.circular(6),
-                    border: _dirtyControls.contains(label)
-                        ? Border.all(
-                            color: AppPalette.of(context).contrasteCampos,
-                            width: 2,
-                          )
-                        : null,
-                  ),
-                  child: Container(
-                    width: 27,
-                    decoration: BoxDecoration(
-                      color: value
-                          ? const Color(0xFFA8F7D3)
-                          : const Color(0xFFFFB1B1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Icon(
-                      value ? Icons.check : Icons.close,
-                      size: 17,
-                      color: AppColors.textDarkColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+        Semantics(
+          toggled: value,
+          label: label,
+          enabled: enabled && !widget.readOnly,
+          child: InkWell(
+            onTap: widget.readOnly || !enabled
+                ? null
+                : () {
+                    _markDirty(label);
+                    onChanged(!value);
+                  },
+            child: Container(
+              width: 62,
+              height: 27,
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: value
+                    ? const Color(0xFF4CA382)
+                    : const Color(0xFFA44D4D),
+                borderRadius: BorderRadius.circular(6),
+                border: _dirtyControls.contains(label)
+                    ? Border.all(
+                        color: AppPalette.of(context).contrasteCampos,
+                        width: 2,
+                      )
+                    : null,
+              ),
+              child: Container(
+                width: 27,
+                decoration: BoxDecoration(
+                  color: value
+                      ? const Color(0xFFA8F7D3)
+                      : const Color(0xFFFFB1B1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  value ? Icons.check : Icons.close,
+                  size: 17,
+                  color: AppColors.textDarkColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _scheduleButton(String label, VoidCallback onPressed) => TextButton(
     style: TextButton.styleFrom(
@@ -1045,14 +1055,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           ),
           child: Column(
             children: [
-              _select('Estatus de seguimiento', _status, [
-                'Nuevo',
-                'Seguimiento',
-                'Contactado y validado',
-                'Cotización',
-                'Negociación',
-                'Venta realizada',
-              ], (v) => _status = v),
+              _select(
+                'Estatus de seguimiento',
+                _status,
+                ProspectStatus.availableFrom(_status),
+                (v) => _status = v,
+              ),
               _select(
                 '¿Cómo intentaste contactarlo?',
                 _method,
@@ -1095,6 +1103,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 '¿Hubo éxito en el contacto?',
                 _success,
                 (v) => setState(() => _success = v),
+                enabled: !_hasRegisteredCallResult,
               ),
               const SizedBox(height: 6),
               _label(

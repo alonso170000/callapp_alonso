@@ -17,21 +17,33 @@ class ScriptsRepository {
   final bool _ownsService;
   final ScriptsCache _cache;
   final AuthService _auth;
-  LocalScope get scope {
+  LocalScope scope(int developmentId) {
     final userId = _auth.userId ?? _service.userId;
-    final developmentId = _auth.developmentId ?? _service.developmentId;
-    if (userId == null || developmentId == null) {
+    if (userId == null) {
       throw const ScriptsSessionException(
-        'La sesión no identifica al usuario o desarrollo activo.',
+        'La sesión no identifica al usuario.',
       );
     }
     return LocalScope(userId: userId, developmentId: developmentId);
   }
 
-  Future<GuionesBundle?> readCache() => _cache.read(scope);
-  Future<GuionesBundle> refresh({String? tipoProspecto}) async {
-    final bundle = await _service.fetch(tipoProspecto: tipoProspecto);
-    await _cache.write(scope, bundle);
+  Future<GuionesBundle?> readCache({
+    required int developmentId,
+    String? tipoProspecto,
+  }) => _cache.read(scope(developmentId), tipoProspecto: tipoProspecto);
+  Future<GuionesBundle> refresh({
+    required int developmentId,
+    String? tipoProspecto,
+  }) async {
+    final bundle = await _service.fetch(
+      developmentId: developmentId,
+      tipoProspecto: tipoProspecto,
+    );
+    await _cache.write(
+      scope(developmentId),
+      bundle,
+      tipoProspecto: tipoProspecto,
+    );
     return bundle;
   }
 

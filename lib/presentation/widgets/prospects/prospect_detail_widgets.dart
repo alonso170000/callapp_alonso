@@ -105,7 +105,7 @@ class ProspectDetailHeader extends StatelessWidget {
                   date.day.toString().padLeft(2, '0'),
                   textAlign: TextAlign.right,
                   style: const TextStyle(
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.w500,
                     height: 0.95,
                   ),
@@ -135,7 +135,7 @@ class ProspectDetailHeader extends StatelessWidget {
             '${date.hour % 12 == 0 ? 12 : date.hour % 12}:${date.minute.toString().padLeft(2, '0')}',
             maxLines: 1,
             style: const TextStyle(
-              fontSize: 32,
+              fontSize: 30,
               fontWeight: FontWeight.w500,
               height: 1,
             ),
@@ -169,7 +169,7 @@ class ProspectDetailHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    lines[0], // "Sin" o "Venta"
+                    lines[0], 
                     style: TextStyle(
                       fontSize: fontSize,
                       height: height,
@@ -179,9 +179,9 @@ class ProspectDetailHeader extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(
                       left: 16,
-                    ), // Desplaza la 2da palabra a la derecha
+                    ), 
                     child: Text(
-                      lines[1], // "venta" o "realizada"
+                      lines[1], //
                       style: TextStyle(
                         fontSize: fontSize,
                         height: 0.7,
@@ -323,7 +323,7 @@ class ProspectDetailHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -400,7 +400,7 @@ class ProspectDetailHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(

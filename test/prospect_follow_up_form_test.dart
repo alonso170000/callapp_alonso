@@ -53,6 +53,46 @@ void main() {
     statusColor: Colors.orange,
   );
 
+  testWidgets('inicia con el estatus actual y no ofrece estatus anteriores', (
+    tester,
+  ) async {
+    const contactedProspect = ProspectRecord(
+      id: 18,
+      name: 'Prospecto validado',
+      phone: '9981234567',
+      email: '',
+      status: 'Validado',
+      temperature: 'Caliente',
+      avatarColor: Colors.teal,
+      statusColor: Colors.orange,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: contactedProspect,
+              prospectsService: _RecordingProspectsService(),
+              loadActivities: () async => [],
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final statusField = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>).first,
+    );
+    expect(statusField.initialValue, 'Contactado y validado');
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Nuevo'), findsNothing);
+    expect(find.text('Contactado y validado'), findsWidgets);
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets(
       'Programs a locked follow-up activity, summarizes it and saves both at $width',
@@ -98,6 +138,14 @@ void main() {
         expect(find.byIcon(Icons.lock_outline), findsNWidgets(2));
         expect(find.text('Seleccionar fecha'), findsNothing);
         expect(find.text('Seleccionar hora'), findsNothing);
+        final statusDropdown = find
+            .byType(DropdownButtonFormField<String>)
+            .first;
+        await tester.ensureVisible(statusDropdown);
+        await tester.tap(statusDropdown);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Contactado y validado').last);
+        await tester.pumpAndSettle();
         final activityForm = find.byKey(
           const ValueKey('follow-up-activity-form'),
         );
@@ -145,6 +193,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(saved, 1);
         expect(service.prospectId, 17);
+        expect(service.fields?['estatus'], 'Contactado y validado');
         expect(service.fields?['actividad'], isA<Map<String, dynamic>>());
         expect(service.fields?['actividad']['tipo'], 'seguimiento');
         expect(service.fields?['actividad']['prospecto_id'], 17);
@@ -553,11 +602,18 @@ void main() {
       );
 
       expect(successToggle().properties.toggled, isFalse);
+      expect(successToggle().properties.enabled, isFalse);
 
       updateHost(() {
         success = true;
         revision++;
       });
+      await tester.pump();
+      expect(successToggle().properties.toggled, isTrue);
+      expect(successToggle().properties.enabled, isFalse);
+      await tester.tap(
+        find.bySemanticsLabel('¿Hubo éxito en el contacto?').last,
+      );
       await tester.pump();
       expect(successToggle().properties.toggled, isTrue);
 
@@ -567,6 +623,7 @@ void main() {
       });
       await tester.pump();
       expect(successToggle().properties.toggled, isFalse);
+      expect(successToggle().properties.enabled, isFalse);
       expect(tester.takeException(), isNull);
     },
   );

@@ -16,3 +16,6 @@ bool isReactivationType(Object? value) =>
 
 String prospectTypeLabel(Object? value) =>
     isReactivationType(value) ? 'Reactivación' : 'Regular';
+
+String prospectTypeEndpointValue(Object? value) =>
+    isReactivationType(value) ? 'reactivado' : 'regular';

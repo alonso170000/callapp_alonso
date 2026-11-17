@@ -269,13 +269,28 @@ class ProspectsRepository {
     ProspectRecord prospect,
     Map<String, dynamic> fields, {
     required ProspectRecord optimisticProspect,
-  }) => _mutate(
-    prospect,
-    kind: 'prospect.update',
-    fields: fields,
-    optimistic: optimisticProspect,
-    remote: (id, key) => _service.update(id, fields, operationKey: key),
-  );
+  }) async {
+    final result = await _mutate(
+      prospect,
+      kind: 'prospect.update',
+      fields: fields,
+      optimistic: optimisticProspect,
+      remote: (id, key) => _service.update(id, fields, operationKey: key),
+    );
+    final id = result.prospect?.id;
+    if (id != null &&
+        id > 0 &&
+        (fields.containsKey('desarrollo_interes_id') ||
+            fields.containsKey('lote_id'))) {
+      await rememberDiscovery(id, {
+        if (fields.containsKey('desarrollo_interes_id'))
+          'desarrollo_interes_id': fields['desarrollo_interes_id'],
+        if (fields.containsKey('lote_id'))
+          'terreno_interes_id': fields['lote_id'],
+      });
+    }
+    return result;
+  }
 
   Future<ProspectMutationResult> requestDeletion(
     ProspectRecord prospect,
@@ -513,13 +528,14 @@ class ProspectsRepository {
 
   Future<ProspectMutationResult> saveDiscoverySection(
     ProspectRecord prospect,
-    Map<String, dynamic> fields,
-  ) async {
+    Map<String, dynamic> fields, {
+    ProspectRecord? optimisticProspect,
+  }) async {
     final result = await _mutate(
       prospect,
       kind: 'prospect.discovery',
       fields: fields,
-      optimistic: prospect,
+      optimistic: optimisticProspect ?? prospect,
       remote: (id, key) =>
           _service.saveDiscoverySection(id, fields, operationKey: key),
     );

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 
 typedef NotificationScope = LocalScope;
@@ -204,7 +205,7 @@ class NotificationsStore {
         date: DateTime.fromMillisecondsSinceEpoch(row['activity_at_ms'] as int),
         status: status,
         tags: (jsonDecode(row['tags_json'] as String) as List)
-            .map((value) => value.toString())
+            .map((value) => ProspectStatus.canonical(value.toString()))
             .toList(),
         location: row['location'] as String,
         reminderMinutes: row['reminder_minutes'] as int,

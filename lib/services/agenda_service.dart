@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 
 class AgendaException implements Exception {
@@ -470,7 +471,7 @@ class AgendaService {
       lastContact: 'Sin información de último contacto',
       tags: [
         if (row['prospecto_estatus'] is String)
-          row['prospecto_estatus'] as String,
+          ProspectStatus.canonical(row['prospecto_estatus'] as String),
         if (row['prioridad'] is String)
           (row['prioridad'] as String).replaceAll('frio', 'frío'),
       ],

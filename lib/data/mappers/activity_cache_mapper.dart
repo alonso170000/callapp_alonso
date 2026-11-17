@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 
 /// Convierte actividades entre el modelo de la app y la fila SQLite.
@@ -56,7 +57,7 @@ class ActivityCacheMapper {
       date: date,
       status: statusFromServer(rawStatus, date: date, now: reference),
       tags: (jsonDecode(row['tags_json'] as String? ?? '[]') as List)
-          .map((value) => value.toString())
+          .map((value) => ProspectStatus.canonical(value.toString()))
           .toList(),
       location: row['location']! as String,
       reminderMinutes: row['reminder_minutes']! as int,

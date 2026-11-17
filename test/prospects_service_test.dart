@@ -125,6 +125,34 @@ void main() {
     },
   );
 
+  test(
+    'Uses the database status name when saving a validated contact',
+    () async {
+      late Map<String, dynamic> requestBody;
+      final auth = await login();
+      final service = ProspectsService(
+        auth: auth,
+        client: MockClient((request) async {
+          requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            '{"success":true,"data":{"contact_id":31}}',
+            201,
+          );
+        }),
+      );
+      addTearDown(service.dispose);
+
+      await service.createFollowUp(17, {
+        'estatus': 'Contactado y validado',
+        'prioridad': 'caliente',
+        'medio': 'whatsapp',
+        'hubo_exito': true,
+      }, operationKey: 'validated-follow-up');
+
+      expect(requestBody['estatus'], 'Validado');
+    },
+  );
+
   test('solicita eliminar un prospecto con su motivo', () async {
     final service = ProspectsService(
       auth: await login(),

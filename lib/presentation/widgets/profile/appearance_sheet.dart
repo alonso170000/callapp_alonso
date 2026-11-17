@@ -17,10 +17,6 @@ class AppearanceSheet extends StatelessWidget {
               'APARIENCIA',
               style: TextStyle(fontFamily: 'BebasNeue', fontSize: 26),
             ),
-            const Text(
-              'Sistema utiliza el modo claro u oscuro de tu dispositivo.',
-              textAlign: TextAlign.center,
-            ),
             if (controller.loading || controller.saving)
               const LinearProgressIndicator(),
             if (controller.error != null) ...[

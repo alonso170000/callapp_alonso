@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detai
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_type.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
@@ -115,6 +116,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _scriptsLoading = false;
   String? _scriptsError;
   bool _scriptsOffline = false;
+  int _scriptsRequestRevision = 0;
   AgendaActivity? _sourceActivity;
   AgendaActivity? _pendingReminderActivity;
   AgendaActivity? _pendingFollowUpActivity;
@@ -364,26 +366,42 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   }
 
   Future<void> _loadScripts({bool force = false}) async {
-    if (_scriptsLoading) return;
+    final developmentId = _prospect.interestDevelopmentId;
+    final revision = ++_scriptsRequestRevision;
+    if (developmentId == null) {
+      if (!mounted) return;
+      setState(() {
+        _guiones = null;
+        _scriptsLoading = false;
+        _scriptsError = null;
+        _scriptsOffline = false;
+      });
+      return;
+    }
+    final tipoProspecto = prospectTypeEndpointValue(_prospect.tipoProspecto);
     setState(() {
       _scriptsLoading = true;
       _scriptsError = null;
     });
     GuionesBundle? cached;
     try {
-      cached = await _scriptsRepository.readCache();
-      if (!mounted) return;
+      cached = await _scriptsRepository.readCache(
+        developmentId: developmentId,
+        tipoProspecto: tipoProspecto,
+      );
+      if (!mounted || revision != _scriptsRequestRevision) return;
       if (cached != null) setState(() => _guiones = cached);
       final fresh = await _scriptsRepository.refresh(
-        tipoProspecto: _prospect.tipoProspecto,
+        developmentId: developmentId,
+        tipoProspecto: tipoProspecto,
       );
-      if (!mounted) return;
+      if (!mounted || revision != _scriptsRequestRevision) return;
       setState(() {
         _guiones = fresh;
         _scriptsOffline = false;
       });
     } on ScriptsException catch (error) {
-      if (!mounted) return;
+      if (!mounted || revision != _scriptsRequestRevision) return;
       setState(() {
         if (cached != null || _guiones != null) {
           _scriptsOffline = true;
@@ -392,8 +410,24 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         }
       });
     } finally {
-      if (mounted) setState(() => _scriptsLoading = false);
+      if (mounted && revision == _scriptsRequestRevision) {
+        setState(() => _scriptsLoading = false);
+      }
     }
+  }
+
+  void _applyProspectUpdate(ProspectRecord updated) {
+    final developmentChanged =
+        updated.interestDevelopmentId != _prospect.interestDevelopmentId;
+    setState(() {
+      _prospect = updated;
+      if (developmentChanged) {
+        _guiones = null;
+        _scriptsError = null;
+        _scriptsOffline = false;
+      }
+    });
+    if (developmentChanged) unawaited(_loadScripts());
   }
 
   void _pendingActivityChanged(AgendaActivity? activity) {
@@ -935,6 +969,23 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         initialDate: activity.date,
         activity: activity,
         agendaRepository: _agendaRepository,
+        onActivityUpdated: (updated) {
+          if (!mounted) return;
+          setState(() {
+            if ((_sourceActivity?.id == updated.id ||
+                    (_sourceActivity == null && updated.isFollowUp)) &&
+                updated.prospectId == _prospect.id) {
+              _sourceActivity = updated;
+              _prospect = _prospect.copyWith(nextContact: updated.date);
+            }
+            if (_pendingReminderActivity?.id == updated.id) {
+              _pendingReminderActivity = updated;
+            }
+            if (_pendingFollowUpActivity?.id == updated.id) {
+              _pendingFollowUpActivity = updated;
+            }
+          });
+        },
       ),
     );
     if (scheduled == null || !mounted || !detailContext.mounted) return;
@@ -1327,6 +1378,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       onSaved: (summary) => setState(
                                         () => _history.insert(0, summary),
                                       ),
+                                      onProspectUpdated: _applyProspectUpdate,
                                     ),
                                   ),
                                   _section(
@@ -1339,10 +1391,11 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       onRetry: () => _loadScripts(force: true),
                                       prospectName: p.name,
                                       asesorName: AuthService.instance.userName,
-                                      desarrolloName: AuthService
-                                          .instance
-                                          .activeDevelopment?['nombre']
-                                          ?.toString(),
+                                      desarrolloName: p.interestDevelopment,
+                                      emptyMessage:
+                                          p.interestDevelopmentId == null
+                                          ? 'Este prospecto no tiene un desarrollo asignado.'
+                                          : null,
                                     ),
                                   ),
                                   _section(
@@ -1350,8 +1403,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                     ProspectDataForm(
                                       prospect: p,
                                       repository: _prospectsRepository,
-                                      onProspectUpdated: (updated) =>
-                                          setState(() => _prospect = updated),
+                                      onProspectUpdated: _applyProspectUpdate,
                                       readOnly: _formsReadOnly,
                                       onDirtyChanged: (dirty) => _setFormDirty(
                                         ProspectSection.data,

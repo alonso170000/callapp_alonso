@@ -4,6 +4,7 @@ import 'package:callerapp_frontend/data/local/activities_cache.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
@@ -305,7 +306,9 @@ class AgendaRepository {
         description: value['description'] as String,
         date: DateTime.fromMillisecondsSinceEpoch(value['date_ms'] as int),
         status: AgendaStatus.values.byName(value['status'] as String),
-        tags: List<String>.from(value['tags'] as List),
+        tags: List<String>.from(value['tags'] as List)
+            .map(ProspectStatus.canonical)
+            .toList(),
         location: value['location'] as String,
         reminderMinutes: value['reminder_minutes'] as int,
         hasReminder: value['has_reminder'] as bool,

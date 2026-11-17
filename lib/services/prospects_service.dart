@@ -11,6 +11,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
@@ -252,9 +253,13 @@ class ProspectsService {
     Map<String, dynamic> fields, {
     String? operationKey,
   }) async {
+    final requestFields = Map<String, dynamic>.from(fields);
+    if (requestFields['estatus'] case final String status) {
+      requestFields['estatus'] = ProspectStatus.databaseValue(status);
+    }
     final data = await _request(
       'leads/$prospectId/follow-ups',
-      body: fields,
+      body: requestFields,
       method: 'POST',
       operationKey: operationKey,
       mutation: true,
@@ -638,7 +643,9 @@ class ProspectsService {
         row['ultima_llamada_exitosa'] == true ||
         row['ultima_llamada_exitosa'] == 1;
     final priority = row['prioridad']?.toString().toLowerCase();
-    final status = row['estatus'] as String? ?? 'Sin estatus';
+    final status = ProspectStatus.canonical(
+      row['estatus'] as String? ?? 'Sin estatus',
+    );
     final avatar = rawAvatar is String && rawAvatar.isNotEmpty
         ? Uri.parse('${_auth.baseUrl}/').resolve(rawAvatar)
         : null;

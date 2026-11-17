@@ -313,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ProfileSettingRow(
               title: 'BANDEJA DE NOTIFICACIONES',
               value: 'Consultar avisos',
-              titleColor: AppColors.profileConfiguracion,
+              titleColor: AppColors.profileNotificaciones,
               icon: Icons.chevron_right,
               actionLabel: 'Abrir notificaciones',
               onPressed: () async {
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: NotificationService.instance.enabled
                   ? 'Activado'
                   : 'Desactivado',
-              titleColor: AppColors.profileConfiguracion,
+              titleColor: AppColors.profileNotificaciones,
               icon: NotificationService.instance.enabled
                   ? Icons.close
                   : Icons.check,
@@ -340,7 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ProfileSettingRow(
               title: 'RECORDATORIOS',
               value: '$_reminder minutos antes',
-              titleColor: AppColors.profileConfiguracion,
+              titleColor: AppColors.profileNotificaciones,
               icon: Icons.expand_more,
               actionLabel: 'Cambiar recordatorios',
               onPressed: _chooseReminder,

@@ -92,9 +92,39 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
   @override
   void initState() {
     super.initState();
+    _savedDevelopmentId = widget.prospect.interestDevelopmentId;
+    _savedLotId = widget.prospect.interestLotId;
     _service = widget.prospectsService ?? ProspectsService();
     _repository = widget.repository ?? ProspectsRepository(service: _service);
     _loadInterests();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProspectDataForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final developmentChanged =
+        oldWidget.prospect.interestDevelopmentId !=
+        widget.prospect.interestDevelopmentId;
+    final lotChanged =
+        oldWidget.prospect.interestLotId != widget.prospect.interestLotId;
+    if (!developmentChanged && !lotChanged) return;
+    if (developmentChanged &&
+        !_dirtyControls.contains('Desarrollo de interés')) {
+      _developmentId = widget.prospect.interestDevelopmentId;
+      _savedDevelopmentId = _developmentId;
+      _lotId = widget.prospect.interestLotId;
+      _savedLotId = _lotId;
+      _stageId = 0;
+      _lots = const [];
+      if (_developmentId != null) _loadInterests();
+    } else if (lotChanged && !_dirtyControls.contains('Lote de interés')) {
+      _lotId = widget.prospect.interestLotId;
+      _savedLotId = _lotId;
+      final selectedLot = LotCatalog.findById(_lots, _lotId);
+      _stageId = selectedLot == null
+          ? 0
+          : LotCatalog.stageIdOf(selectedLot) ?? 0;
+    }
   }
 
   Future<void> _loadInterests() async {
@@ -361,6 +391,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
             development?['nombre']?.toString() ??
             widget.prospect.interestDevelopment,
         interestLotId: _lotId,
+        clearInterestLot: _lotId == null,
         interestLot: _lotId == null
             ? 'Sin lote seleccionado'
             : lot?['numero_lote'] == null

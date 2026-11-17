@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 
@@ -55,7 +56,7 @@ class ProspectCacheMapper {
   };
 
   static ProspectRecord fromRow(Map<String, Object?> row) {
-    final status = row['status']! as String;
+    final status = ProspectStatus.canonical(row['status']! as String);
     return ProspectRecord(
       id: row['prospect_id']! as int,
       avatarUrl: row['avatar_url'] as String?,

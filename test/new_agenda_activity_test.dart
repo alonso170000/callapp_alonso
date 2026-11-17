@@ -8,6 +8,7 @@ import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_prospect_selector.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activity_dialog.dart';
 
 void main() {
@@ -179,6 +180,7 @@ void main() {
               initialDate: DateTime(2026, 11, 3),
               activity: AgendaActivity(
                 id: 7,
+                prospectId: type == 'Tarea' ? null : 17,
                 type: type,
                 title: type.toUpperCase(),
                 prospect: type == 'Tarea' ? 'Sin prospecto' : 'Ana',
@@ -203,6 +205,11 @@ void main() {
         tester.widget<DropdownButtonFormField<String>>(field).onChanged,
         isNull,
       );
+      final prospectSelector = tester.widget<AgendaProspectSelector<int>>(
+        find.byKey(const ValueKey('new-activity-prospect-selector')),
+      );
+      expect(prospectSelector.enabled, isFalse);
+      expect(prospectSelector.value, type == 'Tarea' ? 0 : 17);
       expect(find.text(type), findsOneWidget);
       expect(
         find.text(

@@ -19,6 +19,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
   final ProspectsRepository? repository;
   final bool readOnly;
   final ValueChanged<bool>? onDirtyChanged;
+  final ValueChanged<ProspectRecord>? onProspectUpdated;
 
   const ProspectDiscoveryForm({
     super.key,
@@ -29,6 +30,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
     this.repository,
     this.readOnly = false,
     this.onDirtyChanged,
+    this.onProspectUpdated,
   });
 
   @override
@@ -81,6 +83,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String? _serviceError;
   String? _lotsError;
   final Set<String> _dirtyControls = {};
+  int _discoveryLoadRevision = 0;
 
   void _markDirty(String control) {
     if (widget.readOnly || _dirtyControls.contains(control)) return;
@@ -181,6 +184,37 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       _loadDiscovery();
       _loadDevelopments();
       _loadClosers();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProspectDiscoveryForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldProspect = oldWidget.prospect;
+    final prospect = widget.prospect;
+    if (oldProspect == null || prospect == null) return;
+    final developmentChanged =
+        oldProspect.interestDevelopmentId != prospect.interestDevelopmentId;
+    final lotChanged = oldProspect.interestLotId != prospect.interestLotId;
+    if (!developmentChanged && !lotChanged) return;
+    _discoveryLoadRevision++;
+    if (developmentChanged &&
+        !_dirtyControls.contains('Desarrollo de interés *')) {
+      _selectedDevelopmentId = prospect.interestDevelopmentId;
+      _selectedLotId = prospect.interestLotId;
+      _hasSpecificLot = _selectedLotId != null;
+      _selectedStageId = 0;
+      _lots = const [];
+      if (_selectedDevelopmentId != null) _loadLots();
+    } else if (lotChanged &&
+        !_dirtyControls.contains('Lote de interés *') &&
+        !_dirtyControls.contains('¿Tiene interés en un lote específico?')) {
+      _selectedLotId = prospect.interestLotId;
+      _hasSpecificLot = _selectedLotId != null;
+      final selectedLot = _selectedLot;
+      _selectedStageId = selectedLot == null
+          ? 0
+          : LotCatalog.stageIdOf(selectedLot) ?? 0;
     }
   }
 
@@ -599,13 +633,16 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   String _lotLabel(Map<String, dynamic> lot) => LotCatalog.lotLabel(lot);
 
   Future<void> _loadDiscovery() async {
+    final revision = ++_discoveryLoadRevision;
     setState(() {
       _loading = true;
       _serviceError = null;
     });
     try {
       final data = await _repository.loadDiscovery(widget.prospectId!);
-      if (!mounted || data == null) return;
+      if (!mounted || data == null || revision != _discoveryLoadRevision) {
+        return;
+      }
       setState(() {
         _property = _labelForCode(_propertyCodes, data['tipo_propiedad']);
         _locations
@@ -689,7 +726,11 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     }
   }
 
-  Future<bool> _persist(String section, Map<String, dynamic> fields) async {
+  Future<bool> _persist(
+    String section,
+    Map<String, dynamic> fields, {
+    ProspectRecord? optimisticProspect,
+  }) async {
     if (widget.prospectId == null) return true;
     setState(() {
       _savingSection = section;
@@ -700,7 +741,11 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       final prospect = widget.prospect;
       final result = prospect == null
           ? null
-          : await _repository.saveDiscoverySection(prospect, payload);
+          : await _repository.saveDiscoverySection(
+              prospect,
+              payload,
+              optimisticProspect: optimisticProspect,
+            );
       if (prospect == null) {
         await _service.saveDiscoverySection(widget.prospectId!, payload);
         await _repository.rememberDiscovery(widget.prospectId!, payload);
@@ -855,6 +900,20 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
     if (needsDevelopment || _decisionMakers.isEmpty || needsLot || needsOther) {
       return;
     }
+    final development = _developments.cast<Map<String, dynamic>?>().firstWhere(
+      (item) => item?['id'] == _selectedDevelopmentId,
+      orElse: () => null,
+    );
+    final lot = _selectedLot;
+    final optimistic = widget.prospect?.copyWith(
+      interestDevelopmentId: _selectedDevelopmentId,
+      interestDevelopment:
+          development?['nombre']?.toString() ??
+          widget.prospect!.interestDevelopment,
+      interestLotId: _hasSpecificLot ? _selectedLotId : null,
+      interestLot: lot == null ? null : _lotLabel(lot),
+      clearInterestLot: !_hasSpecificLot || _selectedLotId == null,
+    );
     final saved = await _persist('proceso_seguimiento', {
       'acepta_promociones': _acceptsPromotions,
       'desarrollo_interes_id': _selectedDevelopmentId,
@@ -867,7 +926,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           ? _participantsOther.text.trim()
           : null,
       'notas_adicionales': _additionalNotes.text.trim(),
-    });
+    }, optimisticProspect: optimistic);
     if (!saved || !mounted) return;
     _saved = {
       ...?_saved,
@@ -881,6 +940,7 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
           : '',
       'additionalNotes': _additionalNotes.text.trim(),
     };
+    if (optimistic != null) widget.onProspectUpdated?.call(optimistic);
     _notify('Proceso y seguimiento');
   }
 

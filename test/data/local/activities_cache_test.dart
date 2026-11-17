@@ -76,7 +76,7 @@ void main() {
     expect(restored.prospect, activity.prospect);
     expect(restored.description, activity.description);
     expect(restored.date, activity.date);
-    expect(restored.tags, activity.tags);
+    expect(restored.tags, ['Nuevo', 'CALIENTE']);
     expect(restored.location, activity.location);
     expect(restored.reminderMinutes, activity.reminderMinutes);
     expect(restored.hasReminder, isTrue);

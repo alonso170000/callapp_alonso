@@ -130,6 +130,7 @@ class AppColors {
   // Paleta principal para la pantalla Profile.
   static const Color profileDatos = Color.fromRGBO(186, 248, 157, 1);
   static const Color profileSincronizacion = Color.fromRGBO(157, 248, 227, 1);
+  static const Color profileNotificaciones = Color.fromRGBO(248, 236, 157, 1);
   static const Color profileConfiguracion = Color.fromRGBO(242, 176, 255, 1);
 
   // Colores compartidos por las pantallas de autenticación.

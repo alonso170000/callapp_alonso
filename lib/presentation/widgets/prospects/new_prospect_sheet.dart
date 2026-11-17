@@ -20,6 +20,15 @@ class NewProspectSheet extends StatefulWidget {
 }
 
 class _NewProspectSheetState extends State<NewProspectSheet> {
+  static const _statusOrder = [
+    'Nuevo',
+    'Contactado y validado',
+    'Seguimiento',
+    'Cotización',
+    'Negociación',
+    'Venta realizada',
+  ];
+
   final _form = GlobalKey<FormState>();
   final _fields = <String, TextEditingController>{
     for (final name in [
@@ -99,7 +108,7 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       if (!mounted) return;
       setState(() {
         _origins = catalogs.origins;
-        _statuses = catalogs.statuses;
+        _statuses = _allowedStatuses(catalogs.statuses);
         _developments = developments;
         _development = selectedDevelopment;
         _lots = lots;
@@ -131,6 +140,32 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  List<Map<String, dynamic>> _allowedStatuses(
+    List<Map<String, dynamic>> statuses,
+  ) {
+    final byName = <String, Map<String, dynamic>>{};
+    for (final status in statuses) {
+      final name = status['nombre'];
+      if (name is! String) continue;
+      final key = _statusKey(name);
+      byName[key == 'validado' ? 'contactado y validado' : key] = status;
+    }
+    return [
+      for (final name in _statusOrder)
+        if (byName[_statusKey(name)] case final status?)
+          {...status, 'nombre': name},
+    ];
+  }
+
+  String _statusKey(String value) => value
+      .trim()
+      .toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u');
 
   void _selectDevelopment(int developmentId) {
     _development = developmentId;

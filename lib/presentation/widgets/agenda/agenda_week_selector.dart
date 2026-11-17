@@ -15,6 +15,24 @@ class AgendaWeekSelector extends StatelessWidget {
     required this.onSelected,
   });
 
+  Future<void> _showTodayAction(BuildContext context, DateTime today) async {
+    final itemBox = context.findRenderObject() as RenderBox;
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final offset = itemBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final selected = await showMenu<bool>(
+      context: context,
+      position: RelativeRect.fromRect(
+        offset & itemBox.size,
+        Offset.zero & overlayBox.size,
+      ),
+      items: const [
+        PopupMenuItem<bool>(value: true, child: Text('Regresar a hoy')),
+      ],
+    );
+    if (selected == true) onSelected(today);
+  }
+
   @override
   Widget build(BuildContext context) {
     const labels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
@@ -31,7 +49,9 @@ class AgendaWeekSelector extends StatelessWidget {
         final selected = DateUtils.isSameDay(date, selectedDate);
         final isToday = DateUtils.isSameDay(date, today);
         final daily = activities.where(
-          (item) => DateUtils.isSameDay(item.date, date),
+          (item) =>
+              DateUtils.isSameDay(item.date, date) &&
+              item.status != AgendaStatus.cancelled,
         );
         final completed =
             daily.isNotEmpty &&
@@ -65,51 +85,54 @@ class AgendaWeekSelector extends StatelessWidget {
                       ? BorderSide(color: palette.todayBorder, width: 2)
                       : BorderSide.none,
                 ),
-                child: InkWell(
-                  key: ValueKey('agenda-week-day-$index'),
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => onSelected(date),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    child: Column(
-                      children: [
-                        Text(
-                          labels[index],
-                          style: TextStyle(
-                            fontFamily: 'SulphurPoint',
-                            fontSize: 14,
-                            color: foreground,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${date.day}',
-                          style: TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: 23,
-                            height: 1.1,
-                            color: foreground,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        if (daily.isNotEmpty)
-                          Icon(
-                            key: ValueKey(
-                              'agenda-week-activity-${date.year}-${date.month}-${date.day}',
+                child: Builder(
+                  builder: (dayContext) => InkWell(
+                    key: ValueKey('agenda-week-day-$index'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => onSelected(date),
+                    onLongPress: () => _showTodayAction(dayContext, today),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      child: Column(
+                        children: [
+                          Text(
+                            labels[index],
+                            style: TextStyle(
+                              fontFamily: 'SulphurPoint',
+                              fontSize: 14,
+                              color: foreground,
                             ),
-                            completed
-                                ? Icons.task_alt_rounded
-                                : Icons.update_rounded,
-                            size: 17,
-                            color: selected
-                                ? palette.activityDotSelected
-                                : completed
-                                ? palette.completedIcon
-                                : palette.pendingIcon,
-                          )
-                        else
-                          const SizedBox(height: 17),
-                      ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${date.day}',
+                            style: TextStyle(
+                              fontFamily: 'BebasNeue',
+                              fontSize: 23,
+                              height: 1.1,
+                              color: foreground,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          if (daily.isNotEmpty)
+                            Icon(
+                              key: ValueKey(
+                                'agenda-week-activity-${date.year}-${date.month}-${date.day}',
+                              ),
+                              completed
+                                  ? Icons.task_alt_rounded
+                                  : Icons.update_rounded,
+                              size: 17,
+                              color: selected
+                                  ? palette.activityDotSelected
+                                  : completed
+                                  ? palette.completedIcon
+                                  : palette.pendingIcon,
+                            )
+                          else
+                            const SizedBox(height: 17),
+                        ],
+                      ),
                     ),
                   ),
                 ),

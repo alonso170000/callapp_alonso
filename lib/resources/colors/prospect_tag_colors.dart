@@ -22,7 +22,7 @@ class ProspectTagColors {
     'negociacion' => AppColors.prospectStatusNegotiation,
     'cotizacion' => AppColors.prospectStatusQuote,
     'seguimiento' => AppColors.prospectStatusFollowUp,
-    'contactado y validado' => AppColors.prospectStatusContacted,
+    'validado' || 'contactado y validado' => AppColors.prospectStatusContacted,
     'venta realizada' => AppColors.prospectStatusSale,
     'atrasados' => AppColors.prospectStatusOverdue,
     'por eliminar' => AppColors.prospectStatusOverdueInk,

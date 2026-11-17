@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/presentation/models/guion_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 class ScriptsException implements Exception {
   const ScriptsException(this.message);
@@ -29,20 +30,25 @@ class ScriptsService {
   final http.Client _client;
   final AuthService _auth;
   int? get userId => _auth.userId;
-  int? get developmentId => _auth.developmentId;
 
-  Future<GuionesBundle> fetch({String? tipoProspecto}) async {
+  Future<GuionesBundle> fetch({
+    required int developmentId,
+    String? tipoProspecto,
+  }) async {
     final token = _auth.token;
     if (token == null) {
       throw const ScriptsSessionException('Inicia sesión nuevamente.');
     }
-    final query = tipoProspecto == null || tipoProspecto.isEmpty
-        ? ''
-        : '?tipo_prospecto=${Uri.encodeQueryComponent(tipoProspecto)}';
+    final query = <String, String>{
+      'desarrollo_id': '$developmentId',
+      if (tipoProspecto != null && tipoProspecto.isNotEmpty)
+        'tipo_prospecto': tipoProspecto,
+    };
     try {
       final response = await _client
           .get(
-            Uri.parse('${_auth.baseUrl}/api/v1/guiones$query'),
+            Uri.parse('${_auth.baseUrl}/api/v1/guiones')
+                .replace(queryParameters: query),
             headers: {
               'Authorization': 'Bearer $token',
               'Accept': 'application/json',
@@ -55,10 +61,15 @@ class ScriptsService {
       } on FormatException {
         throw const ScriptsException('La respuesta de guiones no es válida.');
       }
-      if (response.statusCode == 401 || response.statusCode == 403) {
+      if (response.statusCode == 401) {
         await _auth.expireSession();
         throw const ScriptsSessionException(
           'Tu sesión expiró. Vuelve a iniciar sesión.',
+        );
+      }
+      if (response.statusCode == 403) {
+        throw const ScriptsException(
+          'No tienes acceso a los guiones de este desarrollo.',
         );
       }
       if (response.statusCode >= 500) {
@@ -78,7 +89,7 @@ class ScriptsService {
       try {
         return GuionesBundle.fromJson(
           Map<String, dynamic>.from(decoded['data'] as Map),
-          fetchedAt: DateTime.now(),
+          fetchedAt: businessNow(),
         );
       } on FormatException {
         throw const ScriptsException('El guion recibido no es válido.');

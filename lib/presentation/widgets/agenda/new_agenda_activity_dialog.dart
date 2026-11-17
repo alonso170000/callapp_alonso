@@ -17,6 +17,7 @@ class NewAgendaActivityDialog extends StatefulWidget {
   final ProspectRecord? initialProspect;
   final bool lockActivityType;
   final bool lockProspect;
+  final ValueChanged<AgendaActivity>? onActivityUpdated;
   const NewAgendaActivityDialog({
     super.key,
     required this.initialDate,
@@ -27,6 +28,7 @@ class NewAgendaActivityDialog extends StatefulWidget {
     this.initialProspect,
     this.lockActivityType = false,
     this.lockProspect = false,
+    this.onActivityUpdated,
   });
   @override
   State<NewAgendaActivityDialog> createState() =>
@@ -193,6 +195,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
           await _agenda.create(fields);
         } else {
           await _agenda.update(activityId, fields);
+          widget.onActivityUpdated?.call(_updatedActivity(scheduled));
         }
         if (mounted) {
           setState(() => _saving = false);
@@ -223,24 +226,13 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
         );
       } else {
         final current = widget.activity!;
-        await _repository.update(
+        final updated = _updatedActivity(scheduled);
+        final result = await _repository.update(
           current,
           fields,
-          optimisticActivity: current.copyWith(
-            type: _type,
-            medium: _type == 'seguimiento' ? _medium : null,
-            title: _type.replaceAll('_', ' ').toUpperCase(),
-            prospect: _prospectLabel(_prospect),
-            description: _descriptionController.text.trim().isEmpty
-                ? 'Sin descripción'
-                : _descriptionController.text.trim(),
-            date: scheduled,
-            location: _type == 'visita_presencial'
-                ? _location
-                : 'Sin ubicación',
-            reminderMinutes: _reminder,
-          ),
+          optimisticActivity: updated,
         );
+        widget.onActivityUpdated?.call(result.activity ?? updated);
       }
       if (mounted) {
         setState(() => _saving = false);
@@ -253,6 +245,22 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  AgendaActivity _updatedActivity(DateTime scheduled) {
+    final current = widget.activity!;
+    return current.copyWith(
+      type: _type,
+      medium: _type == 'seguimiento' ? _medium : null,
+      title: _type.replaceAll('_', ' ').toUpperCase(),
+      prospect: _prospectLabel(_prospect),
+      description: _descriptionController.text.trim().isEmpty
+          ? 'Sin descripción'
+          : _descriptionController.text.trim(),
+      date: scheduled,
+      location: _type == 'visita_presencial' ? _location : 'Sin ubicación',
+      reminderMinutes: _reminder,
+    );
   }
 
   @override
@@ -369,7 +377,8 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                             _type != 'tarea' && (id == null || id == 0)
                             ? 'Selecciona un prospecto'
                             : null,
-                        enabled: !widget.lockProspect,
+                        enabled:
+                            widget.activity == null && !widget.lockProspect,
                         onChanged: (v) => setState(() => _prospect = v),
                       ),
                       if (_type == 'seguimiento')

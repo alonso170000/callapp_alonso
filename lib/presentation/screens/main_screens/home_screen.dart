@@ -273,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
         ],
         onRetry: (_) async {
-          await outbox.flush();
+          await outbox.flush(force: true);
           _refreshSyncedViews();
         },
       ),

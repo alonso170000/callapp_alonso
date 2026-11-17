@@ -226,7 +226,13 @@ void main() {
       {'id': 9, 'nombre': 'Referido'},
     ]);
     await cache.write(scope, 'estatus-prospecto', const [
+      {'id': 28, 'nombre': 'Venta realizada'},
+      {'id': 25, 'nombre': 'Cotizacion'},
+      {'id': 29, 'nombre': 'Descartado'},
       {'id': 22, 'nombre': 'Nuevo'},
+      {'id': 24, 'nombre': 'Seguimiento'},
+      {'id': 27, 'nombre': 'Negociación'},
+      {'id': 23, 'nombre': 'Validado'},
     ]);
     final service = _OfflineCatalogService(auth: auth);
     final repository = ProspectsRepository(
@@ -247,6 +253,31 @@ void main() {
 
     expect(find.text('Origen*'), findsOneWidget);
     expect(find.text('Status*'), findsOneWidget);
+    final statusDropdown = find.widgetWithText(
+      DropdownButtonFormField<int>,
+      'Nuevo',
+    );
+    await tester.ensureVisible(statusDropdown);
+    await tester.tap(statusDropdown);
+    await tester.pumpAndSettle();
+    const expectedStatuses = [
+      'Nuevo',
+      'Contactado y validado',
+      'Seguimiento',
+      'Cotización',
+      'Negociación',
+      'Venta realizada',
+    ];
+    final positions = <double>[];
+    for (final status in expectedStatuses) {
+      final option = find.text(status).last;
+      expect(option, findsOneWidget);
+      positions.add(tester.getTopLeft(option).dy);
+    }
+    expect(positions, orderedEquals([...positions]..sort()));
+    expect(find.text('Descartado'), findsNothing);
+    await tester.tap(find.text('Nuevo').last);
+    await tester.pumpAndSettle();
     expect(
       tester
           .widget<FilledButton>(find.byKey(const ValueKey('save-prospect')))

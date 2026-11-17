@@ -116,6 +116,7 @@ class ProspectRecord {
     String? interestDevelopment,
     int? interestLotId,
     String? interestLot,
+    bool clearInterestLot = false,
     List<String>? qualification,
     DateTime? nextContact,
     String? lastContactResult,
@@ -166,8 +167,12 @@ class ProspectRecord {
     campaignId: campaignId ?? this.campaignId,
     interestDevelopmentId: interestDevelopmentId ?? this.interestDevelopmentId,
     interestDevelopment: interestDevelopment ?? this.interestDevelopment,
-    interestLotId: interestLotId ?? this.interestLotId,
-    interestLot: interestLot ?? this.interestLot,
+    interestLotId: clearInterestLot
+        ? null
+        : interestLotId ?? this.interestLotId,
+    interestLot: clearInterestLot
+        ? 'Sin lote seleccionado'
+        : interestLot ?? this.interestLot,
     qualification: qualification ?? this.qualification,
     tipoProspecto: tipoProspecto ?? this.tipoProspecto,
     isClient: isClient ?? this.isClient,
