@@ -11,9 +11,9 @@ import 'package:callerapp_frontend/presentation/widgets/agenda/new_agenda_activi
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_follow_up_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_discovery_form.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_data_form.dart';
-import 'package:callerapp_frontend/presentation/models/call_script_models.dart';
+import 'package:callerapp_frontend/presentation/models/guion_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
-import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_scripts.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/scripts_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_history.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_options_sheet.dart';
@@ -27,6 +27,9 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/repositories/agenda_repository.dart';
+import 'package:callerapp_frontend/repositories/scripts_repository.dart';
+import 'package:callerapp_frontend/services/scripts_service.dart';
+import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/phone_call_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
 import 'package:callerapp_frontend/services/contact_launcher.dart';
@@ -69,6 +72,7 @@ class ProspectDetailScreen extends StatefulWidget {
   final Future<void> Function(ProspectRecord)? showCallReminder;
   final ProspectsRepository? prospectsRepository;
   final AgendaRepository? agendaRepository;
+  final ScriptsRepository? scriptsRepository;
   const ProspectDetailScreen({
     super.key,
     required this.prospect,
@@ -83,6 +87,7 @@ class ProspectDetailScreen extends StatefulWidget {
     this.showCallReminder,
     this.prospectsRepository,
     this.agendaRepository,
+    this.scriptsRepository,
   });
   @override
   State<ProspectDetailScreen> createState() => _ProspectDetailScreenState();
@@ -104,8 +109,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   late final bool _ownsProspectsRepository;
   late final AgendaRepository _agendaRepository;
   late final bool _ownsAgendaRepository;
+  late final ScriptsRepository _scriptsRepository;
+  late final bool _ownsScriptsRepository;
+  GuionesBundle? _guiones;
+  bool _scriptsLoading = false;
+  String? _scriptsError;
+  bool _scriptsOffline = false;
   AgendaActivity? _sourceActivity;
   AgendaActivity? _pendingReminderActivity;
+  AgendaActivity? _pendingFollowUpActivity;
+  bool _activityContextResolved = false;
   int _activityContextRevision = 0;
   final _dirtyForms = <ProspectSection>{};
   bool _allowDirtyPop = false;
@@ -295,6 +308,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         NotificationService.shouldRemindFollowUp(_sourceActivity)
         ? _sourceActivity
         : null;
+    if (_sourceActivity?.isFollowUp == true &&
+        (_sourceActivity?.status == AgendaStatus.pending ||
+            _sourceActivity?.status == AgendaStatus.overdue)) {
+      _pendingFollowUpActivity = _sourceActivity;
+      _activityContextResolved = true;
+    }
     final sourceMedium = ContactMedium.parse(_sourceActivity?.medium);
     _primaryMedium = widget.callStarted ? ContactMedium.llamada : sourceMedium;
     _mediumResolved =
@@ -306,6 +325,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _ownsProspectsRepository = widget.prospectsRepository == null;
     _agendaRepository = widget.agendaRepository ?? AgendaRepository();
     _ownsAgendaRepository = widget.agendaRepository == null;
+    _scriptsRepository = widget.scriptsRepository ?? ScriptsRepository();
+    _ownsScriptsRepository = widget.scriptsRepository == null;
+    unawaited(_loadScripts());
     _telephoneCallCompleted = widget.callStarted;
     _telephoneCallSuccessful = widget.callSuccessful;
     _callRegistered = widget.callStarted;
@@ -339,6 +361,90 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       _primaryMedium = value;
       _mediumResolved = true;
     });
+  }
+
+  Future<void> _loadScripts({bool force = false}) async {
+    if (_scriptsLoading) return;
+    setState(() {
+      _scriptsLoading = true;
+      _scriptsError = null;
+    });
+    GuionesBundle? cached;
+    try {
+      cached = await _scriptsRepository.readCache();
+      if (!mounted) return;
+      if (cached != null) setState(() => _guiones = cached);
+      final fresh = await _scriptsRepository.refresh(
+        tipoProspecto: _prospect.tipoProspecto,
+      );
+      if (!mounted) return;
+      setState(() {
+        _guiones = fresh;
+        _scriptsOffline = false;
+      });
+    } on ScriptsException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        if (cached != null || _guiones != null) {
+          _scriptsOffline = true;
+        } else {
+          _scriptsError = error.message;
+        }
+      });
+    } finally {
+      if (mounted) setState(() => _scriptsLoading = false);
+    }
+  }
+
+  void _pendingActivityChanged(AgendaActivity? activity) {
+    if (!mounted) return;
+    setState(() {
+      _pendingReminderActivity = activity;
+      _pendingFollowUpActivity = activity;
+      _activityContextResolved = true;
+    });
+  }
+
+  Future<void> _scheduleFollowUp() async {
+    if (!_activityContextResolved ||
+        _pendingFollowUpActivity != null ||
+        _prospect.id == null) {
+      return;
+    }
+    final scheduled = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => NewAgendaActivityDialog(
+        initialDate: businessNow(),
+        agendaRepository: _agendaRepository,
+        initialProspect: _prospect,
+        lockActivityType: true,
+        lockProspect: true,
+      ),
+    );
+    if (scheduled == null || !mounted) return;
+    final activity = AgendaActivity(
+      prospectId: _prospect.id,
+      type: 'seguimiento',
+      title: 'SEGUIMIENTO',
+      prospect: _prospect.name,
+      description: 'Seguimiento agendado',
+      date: scheduled,
+      status: AgendaStatus.pending,
+    );
+    setState(() {
+      _prospect = _prospect.copyWith(nextContact: scheduled);
+      _pendingFollowUpActivity = activity;
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Seguimiento agendado.')));
   }
 
   void _openProspectData() => setState(() {
@@ -554,6 +660,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     _emailService.dispose();
     if (_ownsProspectsRepository) _prospectsRepository.dispose();
     if (_ownsAgendaRepository) _agendaRepository.dispose();
+    if (_ownsScriptsRepository) _scriptsRepository.dispose();
     super.dispose();
   }
 
@@ -1124,6 +1231,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                         prospect: p,
                         selected: _selected,
                         onToggle: _toggleSection,
+                        onScheduleFollowUp:
+                            _activityContextResolved &&
+                                _pendingFollowUpActivity == null &&
+                                p.id != null
+                            ? _scheduleFollowUp
+                            : null,
                       ),
                       Expanded(
                         child: RefreshIndicator(
@@ -1132,6 +1245,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                               _commentsKey.currentState != null &&
                               notification.depth == 0,
                           onRefresh: () async {
+                            await _loadScripts(force: true);
                             await _commentsKey.currentState?.refresh();
                             await _loadEmails();
                             final id = _prospect.id;
@@ -1171,8 +1285,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       loadActivities: widget.loadActivities,
                                       onOpenActivity: _openActivity,
                                       onMediumChanged: _resolvePrimaryMedium,
-                                      onPendingActivityChanged: (activity) =>
-                                          _pendingReminderActivity = activity,
+                                      onPendingActivityChanged:
+                                          _pendingActivityChanged,
                                       onDirtyChanged: (dirty) => _setFormDirty(
                                         ProspectSection.followUp,
                                         dirty,
@@ -1217,26 +1331,18 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                   ),
                                   _section(
                                     ProspectSection.scripts,
-                                    AbsorbPointer(
-                                      absorbing: _formsReadOnly,
-                                      child: Column(
-                                        children: [
-                                          ProspectCallScripts(
-                                            script: demoAlanCallScript,
-                                            prospectName: p.name,
-                                          ),
-                                          const SizedBox(height: 12),
-                                          ProspectFollowUpCallScript(
-                                            prospectName: p.name,
-                                            onContinue: () => setState(
-                                              () => _history.insert(
-                                                0,
-                                                'Guiones · Continuar al cierre',
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                    ProspectScriptsPanel(
+                                      guiones: _guiones,
+                                      loading: _scriptsLoading,
+                                      error: _scriptsError,
+                                      offline: _scriptsOffline,
+                                      onRetry: () => _loadScripts(force: true),
+                                      prospectName: p.name,
+                                      asesorName: AuthService.instance.userName,
+                                      desarrolloName: AuthService
+                                          .instance
+                                          .activeDevelopment?['nombre']
+                                          ?.toString(),
                                     ),
                                   ),
                                   _section(

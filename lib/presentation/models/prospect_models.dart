@@ -27,6 +27,7 @@ class ProspectRecord {
   final Duration? lastCallDuration;
   final DateTime? lastCallAt;
   final String? lastCallStatus;
+  final String? lastCallAudioName;
   final String city;
   final String company;
   final String occupation;
@@ -70,6 +71,7 @@ class ProspectRecord {
     this.lastCallDuration,
     this.lastCallAt,
     this.lastCallStatus,
+    this.lastCallAudioName,
     this.city = 'Sin registro de ciudad',
     this.company = 'Sin registro de Empresa',
     this.occupation = 'Sin registro de ocupación',
@@ -120,6 +122,7 @@ class ProspectRecord {
     Duration? lastCallDuration,
     DateTime? lastCallAt,
     String? lastCallStatus,
+    String? lastCallAudioName,
     int? daysSinceContact,
     bool? discoveryComplete,
     String? tipoProspecto,
@@ -153,6 +156,7 @@ class ProspectRecord {
     lastCallDuration: lastCallDuration ?? this.lastCallDuration,
     lastCallAt: lastCallAt ?? this.lastCallAt,
     lastCallStatus: lastCallStatus ?? this.lastCallStatus,
+    lastCallAudioName: lastCallAudioName ?? this.lastCallAudioName,
     city: city ?? this.city,
     company: company ?? this.company,
     occupation: occupation ?? this.occupation,

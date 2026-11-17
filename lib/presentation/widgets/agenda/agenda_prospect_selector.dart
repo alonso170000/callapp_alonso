@@ -16,6 +16,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
   final ValueChanged<T> onChanged;
   final FormFieldValidator<T>? validator;
   final String searchHint;
+  final bool enabled;
 
   const AgendaProspectSelector({
     super.key,
@@ -24,6 +25,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
     required this.onChanged,
     this.validator,
     this.searchHint = 'Buscar prospecto',
+    this.enabled = true,
   });
 
   String _labelFor(T selected) =>
@@ -50,12 +52,14 @@ class AgendaProspectSelector<T> extends StatelessWidget {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(9),
-            onTap: () async {
-              final selected = await _showOptions(context);
-              if (selected == null || !context.mounted) return;
-              field.didChange(selected);
-              onChanged(selected);
-            },
+            onTap: !enabled
+                ? null
+                : () async {
+                    final selected = await _showOptions(context);
+                    if (selected == null || !context.mounted) return;
+                    field.didChange(selected);
+                    onChanged(selected);
+                  },
             child: InputDecorator(
               decoration: InputDecoration(
                 filled: true,
@@ -85,7 +89,9 @@ class AgendaProspectSelector<T> extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    Icons.keyboard_arrow_down_rounded,
+                    enabled
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Iconsax.lock_copy,
                     color: AppColors.homeBackground,
                   ),
                 ],

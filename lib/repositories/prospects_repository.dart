@@ -399,6 +399,9 @@ class ProspectsRepository {
       lastCallAt: call.endedAt,
       lastCallDuration: duration,
       lastCallStatus: call.outcome.label,
+      lastCallAudioName: call.audioName?.trim().isEmpty == false
+          ? call.audioName!.trim()
+          : null,
       lastContactResult: call.outcome.successful
           ? 'Contacto exitoso'
           : 'Sin respuesta',

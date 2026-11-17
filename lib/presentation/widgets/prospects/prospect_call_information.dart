@@ -43,6 +43,8 @@ class ProspectCallInformation extends StatelessWidget {
         ),
         child: Text(
           text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.prospectFormFieldText,
             fontSize: 16,
@@ -117,6 +119,12 @@ class ProspectCallInformation extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (prospect.lastCallAudioName?.trim().isNotEmpty == true)
+                    _field(
+                      context,
+                      'Audio registrado',
+                      _value(context, prospect.lastCallAudioName!.trim()),
+                    ),
                 ],
               ),
       ),

@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 /// Recordatorio discreto para que el vendedor registre el resultado de una
 /// llamada que ya se realizó fuera de la app. No muestra cronómetro ni
@@ -85,7 +86,7 @@ class CallRegistrationBar extends StatelessWidget {
               const SizedBox(width: 4),
               FilledButton.icon(
                 onPressed: onRegister,
-                icon: const Icon(Icons.assignment_turned_in_outlined, size: 18),
+                icon: const Icon(Iconsax.note_1_copy, size: 18),
                 label: const Text(
                   'REGISTRAR',
                   style: TextStyle(fontFamily: 'BebasNeue'),

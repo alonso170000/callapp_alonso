@@ -14,6 +14,9 @@ class NewAgendaActivityDialog extends StatefulWidget {
   final AgendaService? agendaService;
   final AgendaRepository? agendaRepository;
   final ProspectsService? prospectsService;
+  final ProspectRecord? initialProspect;
+  final bool lockActivityType;
+  final bool lockProspect;
   const NewAgendaActivityDialog({
     super.key,
     required this.initialDate,
@@ -21,6 +24,9 @@ class NewAgendaActivityDialog extends StatefulWidget {
     this.agendaService,
     this.agendaRepository,
     this.prospectsService,
+    this.initialProspect,
+    this.lockActivityType = false,
+    this.lockProspect = false,
   });
   @override
   State<NewAgendaActivityDialog> createState() =>
@@ -62,6 +68,10 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
       _loadProspects();
       return;
     }
+    final initialProspect = widget.initialProspect;
+    if (initialProspect?.id != null) {
+      _prospect = initialProspect!.id!;
+    }
     final now = businessNow();
     final next = DateTime(
       now.year,
@@ -74,7 +84,12 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
         ? DateUtils.dateOnly(widget.initialDate)
         : DateUtils.dateOnly(next);
     _time = TimeOfDay.fromDateTime(next);
-    _loadProspects();
+    if (widget.lockProspect && initialProspect?.id != null) {
+      _prospects = [initialProspect!];
+      _loading = false;
+    } else {
+      _loadProspects();
+    }
   }
 
   Future<void> _loadProspects() async {
@@ -135,7 +150,9 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
     for (final prospect in _prospects) {
       if (prospect.id == id) return prospect.name;
     }
-    return widget.activity?.prospect ?? 'Prospecto';
+    return widget.initialProspect?.name ??
+        widget.activity?.prospect ??
+        'Prospecto';
   }
 
   Future<void> _save() async {
@@ -309,15 +326,18 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                           'visita_presencial' => 'Visita presencial',
                           _ => 'Tarea',
                         },
-                        enabled: widget.activity == null,
+                        enabled:
+                            widget.activity == null && !widget.lockActivityType,
                         onChanged: (v) => setState(() => _type = v),
                       ),
-                      if (widget.activity != null)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 6),
+                      if (widget.activity != null || widget.lockActivityType)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            'El tipo de actividad no puede cambiarse después de crearla.',
-                            style: TextStyle(fontFamily: 'SulphurPoint'),
+                            widget.activity != null
+                                ? 'El tipo de actividad no puede cambiarse después de crearla.'
+                                : 'El tipo de actividad está fijado como seguimiento.',
+                            style: const TextStyle(fontFamily: 'SulphurPoint'),
                           ),
                         ),
                       _FieldLabel(
@@ -349,6 +369,7 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                             _type != 'tarea' && (id == null || id == 0)
                             ? 'Selecciona un prospecto'
                             : null,
+                        enabled: !widget.lockProspect,
                         onChanged: (v) => setState(() => _prospect = v),
                       ),
                       if (_type == 'seguimiento')
@@ -585,7 +606,7 @@ class _PickerButton extends StatelessWidget {
     onPressed: onPressed,
     child: Text(
       label,
-      style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 20),
+      style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 16),
     ),
   );
 }

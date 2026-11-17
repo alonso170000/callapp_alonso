@@ -27,7 +27,6 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //.router hace que cambie su forma de navegacion a una mas moderna en su manejo automatico de rutas
     return ListenableBuilder(
       listenable: AppearanceController.instance,
       builder: (context, _) => MaterialApp.router(

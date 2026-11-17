@@ -21,6 +21,7 @@ class AppDatabase {
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
   static const catalogsResource = 'catalogs';
+  static const scriptsResource = 'scripts';
   static const preferencesResource = 'profile_preferences';
   static const maintenanceKey = 'last_maintenance_at_ms';
 

@@ -48,75 +48,171 @@ class ProspectDetailHeader extends StatelessWidget {
   final ProspectRecord prospect;
   final Set<String> selected;
   final ValueChanged<String> onToggle;
+  final VoidCallback? onScheduleFollowUp;
   const ProspectDetailHeader({
     super.key,
     required this.prospect,
     required this.selected,
     required this.onToggle,
+    this.onScheduleFollowUp,
   });
 
-  Widget _date(BuildContext context, DateTime? date) {
-    const days = [
-      'lunes',
-      'martes',
-      'miércoles',
-      'jueves',
-      'viernes',
-      'sábado',
-      'domingo',
-    ];
+  Widget _dateBadge(BuildContext context, DateTime? date) {
+    const days = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
     const months = [
-      'Ene',
-      'Feb',
-      'Mar',
-      'Abr',
-      'May',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dic',
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
     ];
-    return _badge(
+    if (date == null) return _textBadge(context, 'Sin fecha', fontSize: 15);
+    return _badgeSurface(
       context,
-      date == null
-          ? const Text('Sin fecha')
-          : Column(
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       days[date.weekday - 1],
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 12, height: 1.3),
                     ),
                     Text(
-                      '${date.day}'.padLeft(2, '0'),
-                      style: const TextStyle(fontSize: 15, height: 1),
+                      months[date.month - 1],
+                      style: const TextStyle(fontSize: 12, height: 0.75),
                     ),
                   ],
                 ),
+                const SizedBox(width: 3),
                 Text(
-                  '${months[date.month - 1]} ${date.year}',
-                  style: const TextStyle(fontSize: 13, height: 1.2),
+                  date.day.toString().padLeft(2, '0'),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w500,
+                    height: 0.95,
+                  ),
                 ),
               ],
             ),
+            Text(
+              '${date.year}',
+              maxLines: 1,
+              style: const TextStyle(fontSize: 11, height: 0.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _badge(BuildContext context, Widget child) {
+  Widget _timeBadge(BuildContext context, DateTime date) => _badgeSurface(
+    context,
+    FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${date.hour % 12 == 0 ? 12 : date.hour % 12}:${date.minute.toString().padLeft(2, '0')}',
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w500,
+              height: 1,
+            ),
+          ),
+          Text(
+            date.hour < 12 ? 'am' : 'pm',
+            maxLines: 1,
+            style: const TextStyle(fontSize: 12, height: 0.5),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _textBadge(
+    BuildContext context,
+    String text, {
+    required double fontSize,
+    double height = 0.95,
+  }) {
+    final isStaggered = text == 'Sin\nventa' || text == 'Venta\nrealizada';
+    final lines = text.split('\n');
+
+    return _badgeSurface(
+      context,
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: isStaggered && lines.length == 2
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    lines[0], // "Sin" o "Venta"
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      height: height,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                    ), // Desplaza la 2da palabra a la derecha
+                    child: Text(
+                      lines[1], // "venta" o "realizada"
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        height: 0.7,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  height: height,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _badgeSurface(BuildContext context, Widget child) {
     final palette = AppPalette.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      height: 56,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: palette.headerBadgeFill,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: DefaultTextStyle(
         style: TextStyle(
@@ -128,24 +224,45 @@ class ProspectDetailHeader extends StatelessWidget {
     );
   }
 
-  Widget _group(BuildContext context, String label, Widget child) => Column(
+  Widget _indicator(
+    BuildContext context, {
+    required Widget badge,
+    String? label,
+    Key? key,
+  }) => Column(
+    key: key,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      child,
-      const SizedBox(height: 6),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          color: AppPalette.of(context).headerForeground,
-        ),
-      ),
+      badge,
+      const SizedBox(height: 5),
+      _indicatorLabel(context, label),
     ],
+  );
+
+  Widget _indicatorLabel(BuildContext context, String? label) => SizedBox(
+    height: 18,
+    child: label == null
+        ? const SizedBox.shrink()
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'SulphurPoint',
+                fontSize: 13,
+                color: AppColors.whiteColor,
+              ),
+            ),
+          ),
   );
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final next = prospect.nextContact;
+    final showNextTime = next != null && (next.hour != 0 || next.minute != 0);
     return Container(
       decoration: BoxDecoration(
         color: palette.brandFill,
@@ -207,61 +324,77 @@ class ProspectDetailHeader extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 12,
-              runSpacing: 16,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _group(
-                  context,
-                  'Próximo contacto',
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _date(context, next),
-                      if (next != null) ...[
-                        _badge(
-                          context,
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  flex: showNextTime ? 2 : 1,
+                  child: Semantics(
+                    button: true,
+                    enabled: onScheduleFollowUp != null,
+                    label: next == null
+                        ? 'Agendar próximo contacto'
+                        : 'Próximo contacto agendado',
+                    child: InkWell(
+                      key: const ValueKey('schedule-follow-up-indicator'),
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: onScheduleFollowUp,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
                             children: [
-                              Text(
-                                '${next.hour % 12 == 0 ? 12 : next.hour % 12}:${next.minute.toString().padLeft(2, '0')}',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.1,
-                                ),
+                              Expanded(
+                                child: next == null
+                                    ? _textBadge(
+                                        context,
+                                        'Sin agendar',
+                                        fontSize: 17,
+                                      )
+                                    : _dateBadge(context, next),
                               ),
-                              Text(
-                                next.hour < 12 ? 'am' : 'pm',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  height: 1.2,
+                              if (showNextTime) ...[
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: KeyedSubtree(
+                                    key: const ValueKey(
+                                      'next-contact-time-indicator',
+                                    ),
+                                    child: _timeBadge(context, next),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
-                        ),
-                      ],
-                    ],
+                          const SizedBox(height: 5),
+                          _indicatorLabel(context, 'Próximo contacto'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                _group(
-                  context,
-                  'Fecha de asignación',
-                  _date(context, prospect.assignedAt),
-                ),
-                _group(
-                  context,
-                  'Venta',
-                  _badge(
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _indicator(
                     context,
-                    Text(
-                      prospect.status == 'Venta realizada' ? 'SÍ' : 'NO',
-                      style: const TextStyle(fontSize: 24),
+                    key: const ValueKey('assignment-date-indicator'),
+                    label: 'Asignación',
+                    badge: _dateBadge(context, prospect.assignedAt),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _indicator(
+                    context,
+                    key: const ValueKey('sale-indicator'),
+                    label: 'Venta',
+                    badge: _textBadge(
+                      context,
+                      prospect.status == 'Venta realizada'
+                          ? 'Venta\nrealizada'
+                          : 'Sin\nventa',
+                      fontSize: 20,
+                      height: 0.95,
                     ),
                   ),
                 ),

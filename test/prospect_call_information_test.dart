@@ -28,12 +28,37 @@ void main() {
         .widgetList<Text>(find.byType(Text))
         .where((text) => text.style?.color == AppColors.prospectFormFieldText)
         .toList();
-    expect(values, hasLength(4));
+    expect(values, hasLength(5));
     expect(
       values.every(
         (text) => text.style?.color == AppColors.prospectFormFieldText,
       ),
       isTrue,
     );
+  });
+
+  testWidgets('muestra el nombre del audio registrado', (tester) async {
+    final prospect = ProspectRecord(
+      name: 'Ana Real',
+      phone: '9981234567',
+      email: '',
+      status: 'Nuevo',
+      temperature: 'Caliente',
+      avatarColor: Colors.teal,
+      statusColor: Colors.orange,
+      lastCallAt: DateTime(2026, 11, 15, 19, 44),
+      lastCallStatus: 'Contestada',
+      lastCallAudioName: 'llamada_ana_20261115.m4a',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ProspectCallInformation(prospect: prospect)),
+      ),
+    );
+
+    expect(find.text('Audio registrado'), findsOneWidget);
+    expect(find.text('llamada_ana_20261115.m4a'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
