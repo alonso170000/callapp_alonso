@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_avatar_badge.dart';
@@ -169,7 +170,7 @@ class ProspectDetailHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    lines[0], 
+                    lines[0],
                     style: TextStyle(
                       fontSize: fontSize,
                       height: height,
@@ -177,9 +178,7 @@ class ProspectDetailHeader extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16,
-                    ), 
+                    padding: const EdgeInsets.only(left: 16),
                     child: Text(
                       lines[1], //
                       style: TextStyle(
@@ -274,16 +273,18 @@ class ProspectDetailHeader extends StatelessWidget {
           children: [
             Row(
               children: [
-                IconButton(
-                  tooltip: 'Volver',
-                  color: palette.headerForeground,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 40,
-                    height: 40,
+                AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Volver',
+                    color: palette.headerForeground,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 40,
+                      height: 40,
+                    ),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 24),
                   ),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 24),
                 ),
                 Expanded(
                   child: Column(

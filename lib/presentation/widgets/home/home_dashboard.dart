@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
@@ -346,28 +347,35 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 const SizedBox(height: 20),
                 if (_error != null) ...[
                   Text(_error!),
-                  TextButton(onPressed: _load, child: const Text('Reintentar')),
+                  AppPressBounce(
+                    child: TextButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
+                    ),
+                  ),
                 ],
                 if (data != null) ...[
                   Row(
                     children: [
-                      IconButton.filled(
-                        style: IconButton.styleFrom(
-                          backgroundColor: palette.navSelectedFill,
-                          foregroundColor: palette.navSelectedForeground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      AppPressBounce(
+                        child: IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: palette.navSelectedFill,
+                            foregroundColor: palette.navSelectedForeground,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        ),
-                        tooltip: 'Semana anterior',
-                        onPressed: () => _selectDate(
-                          DateTime(
-                            _selectedDate.year,
-                            _selectedDate.month,
-                            _selectedDate.day - 7,
+                          tooltip: 'Semana anterior',
+                          onPressed: () => _selectDate(
+                            DateTime(
+                              _selectedDate.year,
+                              _selectedDate.month,
+                              _selectedDate.day - 7,
+                            ),
                           ),
+                          icon: const Icon(Icons.chevron_left),
                         ),
-                        icon: const Icon(Icons.chevron_left),
                       ),
                       Expanded(
                         child: Text(
@@ -378,23 +386,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           ),
                         ),
                       ),
-                      IconButton.filled(
-                        style: IconButton.styleFrom(
-                          backgroundColor: palette.navSelectedFill,
-                          foregroundColor: palette.navSelectedForeground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      AppPressBounce(
+                        child: IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: palette.navSelectedFill,
+                            foregroundColor: palette.navSelectedForeground,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        ),
-                        tooltip: 'Semana siguiente',
-                        onPressed: () => _selectDate(
-                          DateTime(
-                            _selectedDate.year,
-                            _selectedDate.month,
-                            _selectedDate.day + 7,
+                          tooltip: 'Semana siguiente',
+                          onPressed: () => _selectDate(
+                            DateTime(
+                              _selectedDate.year,
+                              _selectedDate.month,
+                              _selectedDate.day + 7,
+                            ),
                           ),
+                          icon: const Icon(Icons.chevron_right),
                         ),
-                        icon: const Icon(Icons.chevron_right),
                       ),
                     ],
                   ),

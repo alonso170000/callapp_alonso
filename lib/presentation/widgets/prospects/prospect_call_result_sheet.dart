@@ -1,8 +1,12 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:flutter/material.dart';
+
+import '../app_bottom_sheet.dart';
 
 class ProspectCallClosure {
   const ProspectCallClosure({
@@ -104,17 +108,20 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
       }
       var selected = candidates.first;
       if (candidates.length > 1) {
-        final changed = await showDialog<CubeAcrAudioCandidate>(
+        final changed = await showAppBottomSheet<CubeAcrAudioCandidate>(
           context: context,
-          builder: (dialogContext) => SimpleDialog(
-            title: const Text('Selecciona la grabación'),
-            children: [
-              for (final candidate in candidates)
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(dialogContext, candidate),
-                  child: Text(candidate.name),
-                ),
-            ],
+          builder: (sheetContext) => AppBottomSheet(
+            title: 'Selecciona la grabación',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final candidate in candidates)
+                  ListTile(
+                    onTap: () => Navigator.pop(sheetContext, candidate),
+                    title: Text(candidate.name),
+                  ),
+              ],
+            ),
           ),
         );
         if (changed != null) selected = changed;
@@ -196,7 +203,12 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          TextButton(onPressed: _findAudio, child: const Text('BUSCAR')),
+          AppPressBounce(
+            child: TextButton(
+              onPressed: _findAudio,
+              child: const Text('BUSCAR'),
+            ),
+          ),
         ],
       ),
     );
@@ -294,9 +306,11 @@ class _ProspectCallResultSheetState extends State<ProspectCallResultSheet> {
               child: Text(_audioMessage!),
             ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _submit,
-            child: const Text('GUARDAR RESULTADO'),
+          AppPressBounce(
+            child: FilledButton(
+              onPressed: _submit,
+              child: const Text('GUARDAR RESULTADO'),
+            ),
           ),
         ],
       ),

@@ -118,13 +118,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Cancelar'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Cancelar actividad'), findsOneWidget);
     await tester.tap(find.text('VOLVER'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('EDITAR'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byType(NewAgendaActivityDialog), findsOneWidget);
   });
 

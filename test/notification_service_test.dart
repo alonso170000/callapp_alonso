@@ -77,6 +77,10 @@ void main() {
     expect(reminders.map((item) => item.activityId), [2, 1]);
     expect(reminders.first.reminderAt, DateTime(2026, 10, 20, 9, 45));
     expect(reminders.last.reminderAt, DateTime(2026, 10, 20, 11, 30));
+    expect(
+      NotificationService.activityReminderBody(reminders.first),
+      'Prospecto 2 · Actividad en 15 minutos, programada a las 10:00.',
+    );
   });
 
   test('does not schedule a reminder whose configured time already passed', () {

@@ -1,5 +1,8 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
+
+import '../../../resources/styles/styles.dart';
 
 /// Estado vacío, sin conexión o sin resultados del buscador.
 class SearchEmptyState extends StatelessWidget {
@@ -63,23 +66,17 @@ class SearchEmptyState extends StatelessWidget {
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: onAction,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: palette.brandFill,
-                    foregroundColor: palette.onBrand,
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                AppPressBounce(
+                  child: FilledButton(
+                    onPressed: onAction,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: palette.brandFill,
+                      foregroundColor: palette.onBrand,
+                      minimumSize: const Size(0, 48),
+                      shape: appButtonShape(),
+                      textStyle: appButtonTextStyle,
                     ),
-                  ),
-                  child: Text(
-                    actionLabel!,
-                    style: const TextStyle(
-                      fontFamily: 'SulphurPoint',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    child: Text(actionLabel!),
                   ),
                 ),
               ],

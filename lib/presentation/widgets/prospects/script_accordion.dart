@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/guion_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
@@ -46,6 +47,7 @@ class _ScriptAccordionState extends State<ScriptAccordion> {
       _history.clear();
       _currentId = widget.guion.pasoInicial?.id;
     }
+
     if (notify && mounted) {
       setState(action);
     } else {
@@ -94,9 +96,11 @@ class _ScriptAccordionState extends State<ScriptAccordion> {
                 child: Column(
                   children: [
                     const Text('No se encontró el paso del guion.'),
-                    TextButton(
-                      onPressed: _restart,
-                      child: const Text('Volver al inicio'),
+                    AppPressBounce(
+                      child: TextButton(
+                        onPressed: _restart,
+                        child: const Text('Volver al inicio'),
+                      ),
                     ),
                   ],
                 ),

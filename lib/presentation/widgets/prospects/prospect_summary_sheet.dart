@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 
@@ -56,9 +57,11 @@ class ProspectSummarySheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
+            AppPressBounce(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:flutter/material.dart';
 
@@ -124,17 +125,22 @@ class _ProspectDeletionRequestSheetState
             Row(
               children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('CANCELAR'),
+                  child: AppPressBounce(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCELAR'),
+                    ),
                   ),
                 ),
                 SizedBox(width: AppStyles.spacingSmall(context)),
                 Expanded(
-                  child: FilledButton(
-                    key: const ValueKey('submit-deletion-request'),
-                    onPressed: _canSubmit ? _submit : null,
-                    child: const Text('SOLICITAR'),
+                  child: AppPressBounce(
+                    enabled: _canSubmit,
+                    child: FilledButton(
+                      key: const ValueKey('submit-deletion-request'),
+                      onPressed: _canSubmit ? _submit : null,
+                      child: const Text('SOLICITAR'),
+                    ),
                   ),
                 ),
               ],

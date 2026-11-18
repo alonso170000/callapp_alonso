@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_filters.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -151,21 +152,24 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
     Color foreground,
     VoidCallback? onPressed,
   ) => Expanded(
-    child: FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: background,
-        foregroundColor: foreground,
-        minimumSize: const Size.fromHeight(42),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+    child: AppPressBounce(
+      enabled: onPressed != null,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: background,
+          foregroundColor: foreground,
+          minimumSize: const Size.fromHeight(42),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+          ),
         ),
       ),
     ),
@@ -203,10 +207,12 @@ class _ProspectFiltersSheetState extends State<ProspectFiltersSheet> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Cerrar filtros',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, size: 28),
+                  AppPressBounce(
+                    child: IconButton(
+                      tooltip: 'Cerrar filtros',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, size: 28),
+                    ),
                   ),
                 ],
               ),

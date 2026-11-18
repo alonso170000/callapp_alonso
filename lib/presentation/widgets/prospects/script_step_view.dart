@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/models/guion_models.dart';
@@ -62,10 +63,12 @@ class ScriptStepView extends StatelessWidget {
               Semantics(
                 label: 'Volver al paso anterior',
                 button: true,
-                child: IconButton(
-                  tooltip: 'Volver al paso anterior',
-                  onPressed: onBack,
-                  icon: const Icon(Iconsax.arrow_left_copy),
+                child: AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Volver al paso anterior',
+                    onPressed: onBack,
+                    icon: const Icon(Iconsax.arrow_left_copy),
+                  ),
                 ),
               ),
             Expanded(
@@ -114,15 +117,17 @@ class ScriptStepView extends StatelessWidget {
                       width: constraints.maxWidth < 360
                           ? constraints.maxWidth
                           : (constraints.maxWidth - 10) / 2,
-                      child: OutlinedButton.icon(
-                        style: callScriptButtonStyle(AppColors.scriptBlue),
-                        onPressed: () => onNavigate(option.siguientePasoId),
-                        icon: _icon(option.icono) == null
-                            ? const SizedBox.shrink()
-                            : Icon(_icon(option.icono)),
-                        label: Text(
-                          option.etiqueta,
-                          textAlign: TextAlign.center,
+                      child: AppPressBounce(
+                        child: OutlinedButton.icon(
+                          style: callScriptButtonStyle(AppColors.scriptBlue),
+                          onPressed: () => onNavigate(option.siguientePasoId),
+                          icon: _icon(option.icono) == null
+                              ? const SizedBox.shrink()
+                              : Icon(_icon(option.icono)),
+                          label: Text(
+                            option.etiqueta,
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),
@@ -133,12 +138,14 @@ class ScriptStepView extends StatelessWidget {
         else if (paso.siguientePasoId != null)
           SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
-              style: callScriptButtonStyle(AppColors.scriptBlue),
-              onPressed: () => onNavigate(paso.siguientePasoId!),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Iconsax.arrow_right_3_copy),
-              label: const Text('SEGUIR LEYENDO'),
+            child: AppPressBounce(
+              child: FilledButton.icon(
+                style: callScriptButtonStyle(AppColors.scriptBlue),
+                onPressed: () => onNavigate(paso.siguientePasoId!),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Iconsax.arrow_right_3_copy),
+                label: const Text('SEGUIR LEYENDO'),
+              ),
             ),
           )
         else
@@ -146,9 +153,11 @@ class ScriptStepView extends StatelessWidget {
             child: Column(
               children: [
                 const Text('Fin del guion'),
-                TextButton(
-                  onPressed: onRestart,
-                  child: const Text('Volver al inicio'),
+                AppPressBounce(
+                  child: TextButton(
+                    onPressed: onRestart,
+                    child: const Text('Volver al inicio'),
+                  ),
                 ),
               ],
             ),

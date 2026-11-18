@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 
 import 'dart:async';
@@ -30,6 +31,7 @@ import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/contact_launcher.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/data_change_bus.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 
 class ProspectsController {
   void Function(Set<int>, String)? _show;
@@ -245,8 +247,72 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
     if (mounted) await _load();
   }
 
+  Future<void> _selectSort() async {
+    final selected = await showAppBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => AppBottomSheet(
+        title: 'Ordenar prospectos',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ProspectFilters.sorts
+              .map(
+                (value) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Material(
+                    color: value == _advanced.sort
+                        ? AppColors.homeWarmText
+                        : AppPalette.of(sheetContext).chipFill,
+                    borderRadius: BorderRadius.circular(10),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      key: ValueKey('prospect-sort-$value'),
+                      onTap: () => Navigator.pop(sheetContext, value),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                value,
+                                style: TextStyle(
+                                  fontFamily: 'SulphurPoint',
+                                  fontSize: 18,
+                                  fontWeight: value == _advanced.sort
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: value == _advanced.sort
+                                      ? AppColors.primaryColor
+                                      : Theme.of(sheetContext)
+                                            .colorScheme
+                                            .onSurface,
+                                ),
+                              ),
+                            ),
+                            if (value == _advanced.sort)
+                              const Icon(
+                                Icons.check_rounded,
+                                color: AppColors.primaryColor,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _advanced.sort = selected);
+  }
+
   Future<void> _addProspect() async {
-    final created = await showModalBottomSheet<bool>(
+    final created = await showAppBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -324,7 +390,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   ) async {
     final activity = action.activity;
     final medium = action.medium;
-    final confirmed = await showModalBottomSheet<bool>(
+    final confirmed = await showAppBottomSheet<bool>(
       context: context,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -375,29 +441,37 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   Text(question),
                   const SizedBox(height: 20),
                   if (medium != ContactMedium.llamada)
-                    FilledButton(
-                      onPressed: () => Navigator.pop(sheetContext, true),
-                      child: Text(switch (medium) {
-                        ContactMedium.whatsapp => 'ABRIR WHATSAPP',
-                        ContactMedium.correo => 'ABRIR CORREO',
-                        ContactMedium.facebook => 'ENTENDIDO',
-                        ContactMedium.llamada => 'SÍ, LLAMAR',
-                      }),
+                    AppPressBounce(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(sheetContext, true),
+                        child: Text(switch (medium) {
+                          ContactMedium.whatsapp => 'ABRIR WHATSAPP',
+                          ContactMedium.correo => 'ABRIR CORREO',
+                          ContactMedium.facebook => 'ENTENDIDO',
+                          ContactMedium.llamada => 'SÍ, LLAMAR',
+                        }),
+                      ),
                     )
                   else
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(sheetContext, false),
-                            child: const Text('NO LLAMAR'),
+                          child: AppPressBounce(
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  Navigator.pop(sheetContext, false),
+                              child: const Text('NO LLAMAR'),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: FilledButton(
-                            onPressed: () => Navigator.pop(sheetContext, true),
-                            child: const Text('SÍ, LLAMAR'),
+                          child: AppPressBounce(
+                            child: FilledButton(
+                              onPressed: () =>
+                                  Navigator.pop(sheetContext, true),
+                              child: const Text('SÍ, LLAMAR'),
+                            ),
                           ),
                         ),
                       ],
@@ -460,7 +534,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
   }
 
   Future<void> _showContactOptions(ProspectRecord prospect) async {
-    final medium = await showModalBottomSheet<ContactMedium>(
+    final medium = await showAppBottomSheet<ContactMedium>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -562,24 +636,12 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
       );
       return null;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Antes de marcar'),
-        content: const Text(
-          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('MARCAR'),
-          ),
-        ],
-      ),
+      title: 'Antes de marcar',
+      message: 'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+      secondaryLabel: 'CANCELAR',
+      primaryLabel: 'MARCAR',
     );
     if (confirmed != true || !mounted) return null;
     _calling = true;
@@ -625,7 +687,7 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
 
   Future<void> _showFilters() async {
     FocusScope.of(context).unfocus();
-    final selection = await showModalBottomSheet<ProspectFilters>(
+    final selection = await showAppBottomSheet<ProspectFilters>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -718,17 +780,19 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                           child: Semantics(
                             container: true,
                             value: '${activeFilters.length} filtros activos',
-                            child: IconButton.filled(
-                              tooltip: 'Filtrar prospectos',
-                              style: IconButton.styleFrom(
-                                backgroundColor: palette.brandFill,
-                                foregroundColor: palette.onBrand,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            child: AppPressBounce(
+                              child: IconButton.filled(
+                                tooltip: 'Filtrar prospectos',
+                                style: IconButton.styleFrom(
+                                  backgroundColor: palette.brandFill,
+                                  foregroundColor: palette.onBrand,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
+                                onPressed: _showFilters,
+                                icon: const Icon(Icons.tune_rounded, size: 20),
                               ),
-                              onPressed: _showFilters,
-                              icon: const Icon(Icons.tune_rounded, size: 20),
                             ),
                           ),
                         ),
@@ -826,90 +890,45 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      PopupMenuButton<String>(
-                        tooltip: 'Ordenar prospectos',
-                        color: AppColors.primaryColor,
-                        surfaceTintColor: Colors.transparent,
-                        elevation: 8,
-                        clipBehavior: Clip.antiAlias,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: const BorderSide(color: AppColors.homeDeepTeal),
-                        ),
-                        initialValue: _advanced.sort,
-                        onSelected: (value) =>
-                            setState(() => _advanced.sort = value),
-                        itemBuilder: (_) => ProspectFilters.sorts
-                            .map(
-                              (value) => PopupMenuItem(
-                                value: value,
-                                padding: EdgeInsets.zero,
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minHeight: 48,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 14,
-                                  ),
-                                  color: value == _advanced.sort
-                                      ? AppColors.homeWarmText
-                                      : AppColors.primaryColor,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          value,
-                                          style: TextStyle(
-                                            fontFamily: 'SulphurPoint',
-                                            fontSize: 18,
-                                            fontWeight: value == _advanced.sort
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                            color: value == _advanced.sort
-                                                ? AppColors.primaryColor
-                                                : AppColors.homeBackground,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                      Tooltip(
+                        message: 'Ordenar prospectos',
+                        child: InkWell(
+                          key: const ValueKey('prospect-sort-selector'),
+                          onTap: _selectSort,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.chipFill,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _advanced.sort,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: 'SulphurPoint',
+                                      fontSize: 12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.chipFill,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  _advanced.sort,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontFamily: 'SulphurPoint',
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary,
-                                  ),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 18,
                                 ),
-                              ),
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 18,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -928,9 +947,11 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                 child: Row(
                   children: [
                     Expanded(child: Text(_error!)),
-                    TextButton(
-                      onPressed: _load,
-                      child: const Text('Reintentar'),
+                    AppPressBounce(
+                      child: TextButton(
+                        onPressed: _load,
+                        child: const Text('Reintentar'),
+                      ),
                     ),
                   ],
                 ),
@@ -959,15 +980,17 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    TextButton(
-                      onPressed: _load,
-                      child: Text(
-                        'Actualizar',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontFamily: 'SulphurPoint',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 20,
+                    AppPressBounce(
+                      child: TextButton(
+                        onPressed: _load,
+                        child: Text(
+                          'Actualizar',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontFamily: 'BebasNeue',
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -1002,17 +1025,21 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _search.clear();
-                        _advanced = ProspectFilters.all();
-                      }),
-                      child: const Text('Ver todos'),
+                    AppPressBounce(
+                      child: TextButton(
+                        onPressed: () => setState(() {
+                          _search.clear();
+                          _advanced = ProspectFilters.all();
+                        }),
+                        child: const Text('Ver todos'),
+                      ),
                     ),
                     if (_search.text.isNotEmpty)
-                      TextButton(
-                        onPressed: () => setState(_search.clear),
-                        child: const Text('Limpiar búsqueda'),
+                      AppPressBounce(
+                        child: TextButton(
+                          onPressed: () => setState(_search.clear),
+                          child: const Text('Limpiar búsqueda'),
+                        ),
                       ),
                   ],
                 ),

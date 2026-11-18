@@ -1,7 +1,10 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+import '../app_bottom_sheet.dart';
 
 /// Recordatorio discreto para que el vendedor registre el resultado de una
 /// llamada que ya se realizó fuera de la app. No muestra cronómetro ni
@@ -19,22 +22,12 @@ class CallRegistrationBar extends StatelessWidget {
   final VoidCallback? onDiscard;
 
   Future<void> _confirmDiscard(BuildContext context) async {
-    final discard = await showDialog<bool>(
+    final discard = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Descartar llamada'),
-        content: const Text('¿Deseas descartar esta llamada sin registrarla?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('DESCARTAR'),
-          ),
-        ],
-      ),
+      title: 'Descartar llamada',
+      message: '¿Deseas descartar esta llamada sin registrarla?',
+      secondaryLabel: 'CANCELAR',
+      primaryLabel: 'DESCARTAR',
     );
     if (discard == true) onDiscard?.call();
   }
@@ -78,23 +71,27 @@ class CallRegistrationBar extends StatelessWidget {
                 ),
               ),
               if (onDiscard != null)
-                IconButton(
-                  tooltip: 'Descartar llamada',
-                  onPressed: () => _confirmDiscard(context),
-                  icon: Icon(Icons.delete_outline, color: palette.onBrand),
+                AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Descartar llamada',
+                    onPressed: () => _confirmDiscard(context),
+                    icon: Icon(Icons.delete_outline, color: palette.onBrand),
+                  ),
                 ),
               const SizedBox(width: 4),
-              FilledButton.icon(
-                onPressed: onRegister,
-                icon: const Icon(Iconsax.note_1_copy, size: 18),
-                label: const Text(
-                  'REGISTRAR',
-                  style: TextStyle(fontFamily: 'BebasNeue'),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.onBrand,
-                  foregroundColor: palette.callbar,
-                  visualDensity: VisualDensity.compact,
+              AppPressBounce(
+                child: FilledButton.icon(
+                  onPressed: onRegister,
+                  icon: const Icon(Iconsax.note_1_copy, size: 18),
+                  label: const Text(
+                    'REGISTRAR',
+                    style: TextStyle(fontFamily: 'BebasNeue'),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: palette.onBrand,
+                    foregroundColor: palette.callbar,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ),
             ],

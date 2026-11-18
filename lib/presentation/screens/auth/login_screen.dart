@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/presentation/widgets/auth/login_illustration.dart';
 import 'package:flutter/material.dart';
@@ -174,22 +175,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 const SizedBox(height: 28),
-                                FilledButton(
-                                  onPressed: _submitting ? null : _submit,
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: AppColors.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size.fromHeight(50),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(9),
+                                AppPressBounce(
+                                  enabled: !_submitting,
+                                  child: FilledButton(
+                                    onPressed: _submitting ? null : _submit,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      minimumSize: const Size.fromHeight(50),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontFamily: 'BebasNeue',
+                                        fontSize: 24,
+                                      ),
                                     ),
-                                    textStyle: const TextStyle(
-                                      fontFamily: 'BebasNeue',
-                                      fontSize: 24,
+                                    child: Text(
+                                      _submitting ? 'CONECTANDO…' : 'INGRESAR',
                                     ),
-                                  ),
-                                  child: Text(
-                                    _submitting ? 'CONECTANDO…' : 'INGRESAR',
                                   ),
                                 ),
                               ],

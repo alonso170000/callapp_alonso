@@ -84,6 +84,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.scriptSurfaceFill,
     required this.scriptSurfaceInk,
     required this.textColor,
+    required this.actionProfileForeground,
+    required this.actionProfileBackground,
   });
 
   /// Texto oscuro que se usa sobre las tarjetas pastel en ambos modos.
@@ -206,6 +208,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color panelSyncAlert;
   final Color textColor;
 
+  /// Colores para los botones de acción en el perfil.
+  final Color actionProfileForeground;
+  final Color actionProfileBackground;
+
   static const AppPalette light = AppPalette(
     cardInk: Colors.black,
     brandFill: AppColors.primaryColor,
@@ -284,6 +290,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     scriptSurfaceFill: AppColors.scriptBackground,
     scriptSurfaceInk: AppColors.scriptHeading,
     textColor: AppColors.textDarkColor,
+    actionProfileForeground: Color.fromARGB(255, 141, 209, 205),
+    actionProfileBackground: Color.fromARGB(255, 10, 173, 165),
   );
 
   static const AppPalette dark = AppPalette(
@@ -368,6 +376,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     scriptSurfaceFill: Color.fromARGB(255, 168, 152, 72),
     scriptSurfaceInk: Color(0xFFF0E2A6),
     textColor: AppColors.textDarkColor,
+    actionProfileForeground: Color.fromARGB(255, 141, 209, 205),
+    actionProfileBackground: Color.fromARGB(255, 10, 173, 165),
   );
 
   static AppPalette of(BuildContext context) =>
@@ -452,6 +462,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? scriptSurfaceFill,
     Color? scriptSurfaceInk,
     Color? textColor,
+    Color? actionProfileForeground,
+    Color? actionProfileBackground,
   }) => AppPalette(
     cardInk: cardInk ?? this.cardInk,
     brandFill: brandFill ?? this.brandFill,
@@ -532,6 +544,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
     scriptSurfaceFill: scriptSurfaceFill ?? this.scriptSurfaceFill,
     scriptSurfaceInk: scriptSurfaceInk ?? this.scriptSurfaceInk,
     textColor: textColor ?? this.textColor,
+    actionProfileForeground:
+        actionProfileForeground ?? this.actionProfileForeground,
+    actionProfileBackground:
+        actionProfileBackground ?? this.actionProfileBackground,
   );
 
   @override
@@ -640,6 +656,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
       scriptSurfaceFill: mix(scriptSurfaceFill, other.scriptSurfaceFill),
       scriptSurfaceInk: mix(scriptSurfaceInk, other.scriptSurfaceInk),
       textColor: mix(textColor, other.textColor),
+      actionProfileForeground: mix(
+        actionProfileForeground,
+        other.actionProfileForeground,
+      ),
+      actionProfileBackground: mix(
+        actionProfileBackground,
+        other.actionProfileBackground,
+      ),
     );
   }
 }

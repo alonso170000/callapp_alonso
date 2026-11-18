@@ -51,7 +51,7 @@ void main() {
         expect(find.text('1'), findsOneWidget);
         await tester.tap(find.byTooltip('Notificaciones'));
         await tester.pumpAndSettle();
-        expect(find.text('NOTIFICACIONES'), findsOneWidget);
+        expect(find.text('Notificaciones'), findsOneWidget);
         expect(find.text('SEGUIMIENTO'), findsOneWidget);
         expect(find.text('ALAN DORANTES'), findsOneWidget);
         expect(find.text('3m'), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.tap(find.byKey(const ValueKey('notification-91')));
         await tester.pumpAndSettle();
-        expect(find.text('NOTIFICACIONES'), findsNothing);
+        expect(find.text('Notificaciones'), findsNothing);
         expect(opened?.id, 91);
         expect(NotificationService.instance.reminders.single.isRead, isTrue);
       },
@@ -105,9 +105,6 @@ void main() {
     await tester.tap(find.byTooltip('Notificaciones'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Todas'), findsOneWidget);
-    expect(find.text('Pendientes'), findsOneWidget);
-    expect(find.text('Leídas'), findsOneWidget);
     expect(find.text('HOY'), findsOneWidget);
     expect(find.text('AYER'), findsOneWidget);
     expect(
@@ -115,16 +112,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(find.text('Leídas'));
-    await tester.tap(find.text('Leídas'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('notification-2')), findsOneWidget);
-    expect(find.byKey(const ValueKey('notification-1')), findsNothing);
-
-    await tester.ensureVisible(find.text('Todas'));
-    await tester.tap(find.text('Todas'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Marcar todas como leídas'));
+    await tester.tap(find.byKey(const ValueKey('mark-all-notifications-read')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('new-notification-1')), findsNothing);
 

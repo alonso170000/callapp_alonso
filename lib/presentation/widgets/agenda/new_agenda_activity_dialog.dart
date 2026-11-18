@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
@@ -5,6 +6,7 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_prospect_selector.dart';
 import 'package:flutter/material.dart';
 
@@ -294,10 +296,15 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Cerrar',
-                      onPressed: _saving ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded, size: 30),
+                    AppPressBounce(
+                      enabled: !_saving,
+                      child: IconButton(
+                        tooltip: 'Cerrar',
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 30),
+                      ),
                     ),
                   ],
                 ),
@@ -310,9 +317,12 @@ class _NewAgendaActivityDialogState extends State<NewAgendaActivityDialog> {
                     ),
                   ),
                   if (_prospects.isEmpty)
-                    TextButton(
-                      onPressed: _saving ? null : _loadProspects,
-                      child: const Text('Reintentar carga de prospectos'),
+                    AppPressBounce(
+                      enabled: !_saving,
+                      child: TextButton(
+                        onPressed: _saving ? null : _loadProspects,
+                        child: const Text('Reintentar carga de prospectos'),
+                      ),
                     ),
                 ],
                 AbsorbPointer(
@@ -605,17 +615,18 @@ class _PickerButton extends StatelessWidget {
   const _PickerButton({required this.label, required this.onPressed});
 
   @override
-  Widget build(BuildContext context) => FilledButton(
-    style: FilledButton.styleFrom(
-      backgroundColor: AppColors.primaryColor,
-      foregroundColor: AppColors.homeBackground,
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-    ),
-    onPressed: onPressed,
-    child: Text(
-      label,
-      style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 16),
+  Widget build(BuildContext context) => AppPressBounce(
+    enabled: onPressed != null,
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.primaryColor,
+        foregroundColor: AppColors.homeBackground,
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        shape: appButtonShape(),
+        textStyle: appButtonTextStyle,
+      ),
+      onPressed: onPressed,
+      child: Text(label),
     ),
   );
 }
@@ -633,17 +644,18 @@ class _DialogButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => FilledButton(
-    style: FilledButton.styleFrom(
-      backgroundColor: color,
-      foregroundColor: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
-    ),
-    onPressed: onPressed,
-    child: Text(
-      label,
-      style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+  Widget build(BuildContext context) => AppPressBounce(
+    enabled: onPressed != null,
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 4),
+        shape: appButtonShape(),
+        textStyle: appButtonTextStyle,
+      ),
+      onPressed: onPressed,
+      child: Text(label),
     ),
   );
 }

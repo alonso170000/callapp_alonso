@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 
 class ProspectContactSheet extends StatelessWidget {
@@ -32,14 +33,18 @@ class ProspectContactSheet extends StatelessWidget {
           const SizedBox(height: 4),
           SelectableText(email, textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: onCopyPhone,
-            icon: const Icon(Icons.copy_outlined),
-            label: const Text('COPIAR TELÉFONO'),
+          AppPressBounce(
+            child: OutlinedButton.icon(
+              onPressed: onCopyPhone,
+              icon: const Icon(Icons.copy_outlined),
+              label: const Text('COPIAR TELÉFONO'),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CERRAR'),
+          AppPressBounce(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CERRAR'),
+            ),
           ),
         ],
       ),

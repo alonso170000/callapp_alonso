@@ -44,6 +44,25 @@ void main() {
     },
   );
 
+  testWidgets('Prospect sorting is selected from a bottom sheet', (
+    tester,
+  ) async {
+    await openProspects(tester);
+
+    await tester.tap(find.byKey(const ValueKey('prospect-sort-selector')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ordenar prospectos'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('prospect-sort-Nombre')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ordenar prospectos'), findsNothing);
+    expect(find.text('Nombre'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Home redirect keeps its selection chip visible', (tester) async {
     final controller = ProspectsController();
     tester.view.devicePixelRatio = 1;

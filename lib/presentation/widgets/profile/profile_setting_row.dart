@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
@@ -42,20 +44,23 @@ class ProfileSettingRow extends StatelessWidget {
         ),
       ),
       if (icon != null && actionLabel != null)
-        IconButton(
-          tooltip: actionLabel,
-          onPressed: onPressed,
-          icon: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary
-                  .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              size: 34,
-              color: Theme.of(context).colorScheme.primary,
+        AppPressBounce(
+          enabled: onPressed != null,
+          child: IconButton(
+            tooltip: actionLabel,
+            onPressed: onPressed,
+            icon: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppPalette.of(context).actionProfileBackground
+                    .withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 34,
+                color: AppPalette.of(context).actionProfileForeground,
+              ),
             ),
           ),
         ),

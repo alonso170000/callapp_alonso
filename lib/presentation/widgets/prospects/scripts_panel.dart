@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/guion_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/script_accordion.dart';
@@ -46,7 +47,12 @@ class ProspectScriptsPanel extends StatelessWidget {
           children: [
             Text(error!, textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
+            AppPressBounce(
+              child: FilledButton(
+                onPressed: onRetry,
+                child: const Text('Reintentar'),
+              ),
+            ),
           ],
         ),
       );

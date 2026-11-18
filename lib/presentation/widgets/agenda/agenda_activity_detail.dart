@@ -1,8 +1,10 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 
@@ -192,33 +194,37 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
       ContactMedium.facebook => Iconsax.facebook_copy,
       ContactMedium.correo => Iconsax.sms_copy,
     };
-    return IconButton(
-      tooltip: '${medium.actionLabel} a ${activity.prospect}$suffix',
-      onPressed: available
-          ? () {
-              final callback = widget.onContact;
-              if (callback != null) {
-                callback(medium);
-              } else if (medium == ContactMedium.llamada) {
-                onCall();
-              } else {
-                onMessage();
+    return AppPressBounce(
+      child: IconButton(
+        tooltip: '${medium.actionLabel} a ${activity.prospect}$suffix',
+        onPressed: available
+            ? () {
+                final callback = widget.onContact;
+                if (callback != null) {
+                  callback(medium);
+                } else if (medium == ContactMedium.llamada) {
+                  onCall();
+                } else {
+                  onMessage();
+                }
               }
-            }
-          : null,
-      style: IconButton.styleFrom(
-        backgroundColor: switch (medium) {
-          ContactMedium.llamada => AppColors.prospectActionCall,
-          ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
-          ContactMedium.facebook => AppColors.prospectActionFacebook,
-          ContactMedium.correo => AppColors.prospectActionMail,
-        },
-        foregroundColor: AppColors.primaryColor,
-        minimumSize: const Size(38, 38),
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            : null,
+        style: IconButton.styleFrom(
+          backgroundColor: switch (medium) {
+            ContactMedium.llamada => AppColors.prospectActionCall,
+            ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
+            ContactMedium.facebook => AppColors.prospectActionFacebook,
+            ContactMedium.correo => AppColors.prospectActionMail,
+          },
+          foregroundColor: AppColors.primaryColor,
+          minimumSize: const Size(38, 38),
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        icon: Icon(icon, size: 20),
       ),
-      icon: Icon(icon, size: 20),
     );
   }
 
@@ -400,18 +406,20 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
               alignment: Alignment.centerRight,
               child: Padding(
                 padding: EdgeInsetsGeometry.zero,
-                child: IconButton(
-                  tooltip: 'Ver prospecto',
-                  onPressed: onOpenProspect,
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    fixedSize: const Size.square(52),
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                child: AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Ver prospecto',
+                    onPressed: onOpenProspect,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      fixedSize: const Size.square(52),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
+                    icon: const HomeCardArrow(),
                   ),
-                  icon: const HomeCardArrow(),
                 ),
               ),
             ),
@@ -424,24 +432,30 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
   Widget _secondaryAction(String label, IconData icon, VoidCallback onPressed) {
     final palette = AppPalette.of(context);
     return Expanded(
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 52),
-          backgroundColor: palette.secondaryActionForeground,
-          foregroundColor: palette.secondaryActionFill,
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+      child: AppPressBounce(
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 52),
+            backgroundColor: palette.secondaryActionForeground.withValues(
+              alpha: 0.2,
+            ),
+            foregroundColor: palette.secondaryActionForeground.withValues(
+              alpha: 0.7,
+            ),
+            side: BorderSide.none,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-        ),
-        icon: Icon(icon, size: 19),
-        label: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 15),
+          icon: Icon(icon, size: 19),
+          label: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 15),
+            ),
           ),
         ),
       ),
@@ -466,11 +480,13 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  tooltip: 'Cerrar detalle',
-                  onPressed: onClose,
-                  color: Colors.white,
-                  icon: const Icon(Icons.arrow_back_ios_new),
+                AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Cerrar detalle',
+                    onPressed: onClose,
+                    color: Colors.white,
+                    icon: const Icon(Icons.arrow_back_ios_new),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -653,32 +669,33 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 SizedBox(
                   width: double.infinity,
                   height: 56,
-                  child: FilledButton.icon(
-                    onPressed: activity.status == AgendaStatus.completed
-                        ? onOpenProspect
-                        : onComplete,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      foregroundColor: AppColors.homeWarmText,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  child: AppPressBounce(
+                    child: FilledButton.icon(
+                      onPressed: activity.status == AgendaStatus.completed
+                          ? onOpenProspect
+                          : onComplete,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.homeWarmText,
+                        shape: appButtonShape(),
+                        textStyle: appButtonTextStyle,
                       ),
-                    ),
-                    icon: Icon(
-                      activity.status == AgendaStatus.completed
-                          ? Icons.visibility_outlined
-                          : Icons.check_circle_outline,
-                      size: 25,
-                    ),
-                    label: Text(
-                      activity.status == AgendaStatus.completed
-                          ? 'VER SEGUIMIENTO'
-                          : activity.isFollowUp
-                          ? 'ATENDER ACTIVIDAD'
-                          : 'COMPLETAR ACTIVIDAD',
-                      style: const TextStyle(
-                        fontFamily: 'BebasNeue',
-                        fontSize: 18,
+                      icon: Icon(
+                        activity.status == AgendaStatus.completed
+                            ? Icons.visibility_outlined
+                            : Icons.check_circle_outline,
+                        size: 25,
+                      ),
+                      label: Text(
+                        activity.status == AgendaStatus.completed
+                            ? 'VER SEGUIMIENTO'
+                            : activity.isFollowUp
+                            ? 'ATENDER ACTIVIDAD'
+                            : 'COMPLETAR ACTIVIDAD',
+                        style: const TextStyle(
+                          fontFamily: 'BebasNeue',
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ),

@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -113,18 +114,23 @@ class _ProspectContactOptionsSheetState
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('CANCELAR'),
+                  child: AppPressBounce(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCELAR'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: _selected == null
-                        ? null
-                        : () => Navigator.pop(context, _selected),
-                    child: const Text('SÍ, CONTINUAR'),
+                  child: AppPressBounce(
+                    enabled: _selected != null,
+                    child: FilledButton(
+                      onPressed: _selected == null
+                          ? null
+                          : () => Navigator.pop(context, _selected),
+                      child: const Text('SÍ, CONTINUAR'),
+                    ),
                   ),
                 ),
               ],

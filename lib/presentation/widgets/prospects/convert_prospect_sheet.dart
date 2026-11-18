@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:flutter/material.dart';
 
@@ -31,16 +32,20 @@ class ConvertProspectSheet extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('CANCELAR'),
+                  child: AppPressBounce(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('CANCELAR'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('CONVERTIR'),
+                  child: AppPressBounce(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('CONVERTIR'),
+                    ),
                   ),
                 ),
               ],

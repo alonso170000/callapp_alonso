@@ -656,7 +656,7 @@ void main() {
     final save = find.widgetWithText(FilledButton, 'GUARDAR').last;
     await tester.ensureVisible(save);
     await tester.tap(save);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
       find.text(
@@ -666,11 +666,11 @@ void main() {
     );
     expect(service.fields, isNull);
     await tester.tap(find.widgetWithText(TextButton, 'CANCELAR'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(service.fields, isNull);
 
     await tester.tap(save);
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'GUARDAR').last);
     await tester.pumpAndSettle();
     expect(service.fields, isNotNull);

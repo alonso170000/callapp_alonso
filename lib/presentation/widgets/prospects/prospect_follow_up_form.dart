@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_information.dart';
@@ -14,6 +15,8 @@ import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+import '../app_bottom_sheet.dart';
 
 class _FollowUpActivityDraft {
   const _FollowUpActivityDraft({
@@ -558,19 +561,25 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     ),
   );
 
-  Widget _scheduleButton(String label, VoidCallback onPressed) => TextButton(
-    style: TextButton.styleFrom(
-      backgroundColor: const Color(0xFF398FA3),
-      foregroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      minimumSize: Size.zero,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      textStyle: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 17),
-    ),
-    onPressed: widget.readOnly ? null : onPressed,
-    child: Text(label),
-  );
+  Widget _scheduleButton(String label, VoidCallback onPressed) =>
+      AppPressBounce(
+        enabled: !widget.readOnly,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            backgroundColor: const Color(0xFF398FA3),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            textStyle: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+          ),
+          onPressed: widget.readOnly ? null : onPressed,
+          child: Text(label),
+        ),
+      );
 
   Widget _lockedField(String label, String value) => _label(
     label,
@@ -639,24 +648,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
       return;
     }
     if (_notes.text.trim().isEmpty) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showAppConfirmationSheet(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Confirmar seguimiento'),
-          content: const Text(
+        title: 'Confirmar seguimiento',
+        message:
             'Notas de interaccion esta vacio ¿desea guardar el seguimiento?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('CANCELAR'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('GUARDAR'),
-            ),
-          ],
-        ),
+        secondaryLabel: 'CANCELAR',
+        primaryLabel: 'GUARDAR',
       );
       if (confirmed != true || !mounted) return;
     }
@@ -842,10 +840,12 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: FilledButton(
-              key: const ValueKey('save-follow-up-activity'),
-              onPressed: _saveActivityDraft,
-              child: const Text('GUARDAR ACTIVIDAD'),
+            child: AppPressBounce(
+              child: FilledButton(
+                key: const ValueKey('save-follow-up-activity'),
+                onPressed: _saveActivityDraft,
+                child: const Text('GUARDAR ACTIVIDAD'),
+              ),
             ),
           ),
         ],
@@ -879,11 +879,13 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         Text(activity.description, style: const TextStyle(color: Colors.white)),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            key: const ValueKey('edit-follow-up-activity'),
-            onPressed: () => setState(() => _activityDraft = null),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('EDITAR'),
+          child: AppPressBounce(
+            child: TextButton.icon(
+              key: const ValueKey('edit-follow-up-activity'),
+              onPressed: () => setState(() => _activityDraft = null),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('EDITAR'),
+            ),
           ),
         ),
       ],
@@ -908,19 +910,21 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
         child: Column(
           children: [
             Text(_contextError!),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _loadingContext = true;
-                  _contextError = null;
-                });
-                _loadActivityContext();
-              },
-              child: Text(
-                'REINTENTAR',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.accentColor,
+            AppPressBounce(
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _loadingContext = true;
+                    _contextError = null;
+                  });
+                  _loadActivityContext();
+                },
+                child: Text(
+                  'REINTENTAR',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accentColor,
+                  ),
                 ),
               ),
             ),
@@ -954,44 +958,48 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
             runSpacing: 6,
             children: [
               if (activity != null && widget.onOpenActivity != null)
-                FilledButton.icon(
-                  key: const ValueKey('open-follow-up-completion-activity'),
-                  onPressed: () => widget.onOpenActivity!(activity),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 21, 93, 226),
-                    foregroundColor: AppColors.whiteColor,
+                AppPressBounce(
+                  child: FilledButton.icon(
+                    key: const ValueKey('open-follow-up-completion-activity'),
+                    onPressed: () => widget.onOpenActivity!(activity),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 21, 93, 226),
+                      foregroundColor: AppColors.whiteColor,
+                    ),
+                    icon: const Icon(Iconsax.document_text_copy),
+                    label: const Text('VER ACTIVIDAD'),
                   ),
-                  icon: const Icon(Iconsax.document_text_copy),
-                  label: const Text('VER ACTIVIDAD'),
                 ),
               if (activity != null)
-                FilledButton.icon(
-                  key: const ValueKey('acknowledge-follow-up-completion'),
-                  onPressed: _completionAcknowledged
-                      ? null
-                      : () => setState(() {
-                          _completionAcknowledged = true;
-                          _error = null;
-                        }),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _completionAcknowledged
-                        ? const Color.fromARGB(255, 90, 125, 195)
-                        : const Color.fromARGB(255, 22, 163, 224),
-                  ),
-                  icon: Icon(
-                    _completionAcknowledged
-                        ? Iconsax.tick_circle
-                        : Icons.info_outline,
-                    color: _completionAcknowledged
-                        ? Color.fromARGB(255, 170, 237, 255)
-                        : Colors.white,
-                  ),
-                  label: Text(
-                    _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
-                    style: TextStyle(
+                AppPressBounce(
+                  child: FilledButton.icon(
+                    key: const ValueKey('acknowledge-follow-up-completion'),
+                    onPressed: _completionAcknowledged
+                        ? null
+                        : () => setState(() {
+                            _completionAcknowledged = true;
+                            _error = null;
+                          }),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _completionAcknowledged
+                          ? const Color.fromARGB(255, 90, 125, 195)
+                          : const Color.fromARGB(255, 22, 163, 224),
+                    ),
+                    icon: Icon(
+                      _completionAcknowledged
+                          ? Iconsax.tick_circle
+                          : Icons.info_outline,
                       color: _completionAcknowledged
                           ? Color.fromARGB(255, 170, 237, 255)
                           : Colors.white,
+                    ),
+                    label: Text(
+                      _completionAcknowledged ? 'CONFIRMADO' : 'ENTENDIDO',
+                      style: TextStyle(
+                        color: _completionAcknowledged
+                            ? Color.fromARGB(255, 170, 237, 255)
+                            : Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -1164,13 +1172,16 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFA34D4D),
-                          foregroundColor: Colors.white,
+                      child: AppPressBounce(
+                        enabled: !_saving,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFA34D4D),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: _saving ? null : _cancel,
+                          child: const Text('CANCELAR'),
                         ),
-                        onPressed: _saving ? null : _cancel,
-                        child: const Text('CANCELAR'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1187,18 +1198,20 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
                           onTap: _requiresCompletedCall
                               ? _showCallRequiredNotice
                               : null,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CA382),
-                              foregroundColor: Colors.white,
+                          child: AppPressBounce(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF4CA382),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed:
+                                  _saving ||
+                                      _requiresCompletedCall ||
+                                      widget.callInProgress
+                                  ? null
+                                  : _saveFollowUp,
+                              child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                             ),
-                            onPressed:
-                                _saving ||
-                                    _requiresCompletedCall ||
-                                    widget.callInProgress
-                                ? null
-                                : _saveFollowUp,
-                            child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                           ),
                         ),
                       ),

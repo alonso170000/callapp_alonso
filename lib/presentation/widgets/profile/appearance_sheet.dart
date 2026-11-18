@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/appearance_controller.dart';
 
@@ -24,9 +25,12 @@ class AppearanceSheet extends StatelessWidget {
                 controller.error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              TextButton(
-                onPressed: controller.saving ? null : controller.reload,
-                child: const Text('Reintentar'),
+              AppPressBounce(
+                enabled: !controller.saving,
+                child: TextButton(
+                  onPressed: controller.saving ? null : controller.reload,
+                  child: const Text('Reintentar'),
+                ),
               ),
             ],
             for (final value in AppAppearance.values)

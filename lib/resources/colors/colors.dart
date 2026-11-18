@@ -99,6 +99,12 @@ class AppColors {
   static const Color notificationTitleVisit = Color(0xFFFF8E8E);
   static const Color notificationTagVisit = Color(0xFFFF9C9C);
   static const Color notificationOverdueTag = Color(0xFFFF9FA4);
+  static const Color notificationOverdueTitle = Color(0xFFFF8E8E);
+  static const Color notificationDateTimeTag = Color(0xFF9CECF1);
+  static const Color notificationMediumCall = Color(0xFFFFE75C);
+  static const Color notificationMediumWhatsapp = Color(0xFF55F394);
+  static const Color notificationMediumFacebook = Color(0xFF68DFF2);
+  static const Color notificationMediumEmail = Color(0xFFE58BE8);
   static const Color notificationUnread = Color(0xFF78F0A1);
   static const Color notificationDismissBackground = Color(0xFFB94D52);
 

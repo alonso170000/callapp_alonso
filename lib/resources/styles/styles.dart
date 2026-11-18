@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class AppStyles {
+  static const double sheetRadius = 24;
   static const double authContentTop = 120;
   static const double authCharacterTop = 42;
   static const double authCharacterSize = 130;
@@ -159,6 +160,27 @@ class AppStyles {
     return h(context, 0.018);
   }
 }
+
+const sheetHeadingStyle = TextStyle(
+  fontFamily: 'SulphurPoint',
+  fontSize: 22,
+  fontWeight: FontWeight.w700,
+);
+
+const sheetSectionStyle = TextStyle(
+  fontFamily: 'SulphurPoint',
+  fontSize: 19,
+  fontWeight: FontWeight.w700,
+);
+
+const sheetActionTextStyle = TextStyle(fontFamily: 'BebasNeue', fontSize: 18);
+
+const appButtonTextStyle = TextStyle(fontFamily: 'BebasNeue', fontSize: 18);
+
+const appButtonMinimumSize = Size(0, 44);
+
+RoundedRectangleBorder appButtonShape() =>
+    RoundedRectangleBorder(borderRadius: BorderRadius.circular(8));
 
 const agendaHeadingStyle = TextStyle(
   fontFamily: 'BebasNeue',

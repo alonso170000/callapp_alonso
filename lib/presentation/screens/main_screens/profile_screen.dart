@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:callerapp_frontend/services/auth_service.dart';
@@ -7,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/models/profile_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/profile_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/services/appearance_controller.dart';
 import 'package:callerapp_frontend/presentation/widgets/profile/appearance_sheet.dart';
@@ -18,6 +21,7 @@ import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
@@ -101,24 +105,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _linkAudioFolder() async {
     if (_audioFolder != null) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showAppConfirmationSheet(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Cambiar carpeta de grabaciones'),
-          content: const Text(
-            'Los audios se buscarán en la nueva carpeta. Elige la carpeta raíz de Cube ACR.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('CANCELAR'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('CONTINUAR'),
-            ),
-          ],
-        ),
+        title: 'Cambiar carpeta de grabaciones',
+        message: 'Los audios se buscarán en la nueva carpeta. Elige la carpeta raíz de Cube ACR.',
+        secondaryLabel: 'CANCELAR',
+        primaryLabel: 'CONTINUAR',
       );
       if (confirmed != true || !mounted) return;
     }
@@ -162,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _chooseAppearance() => showModalBottomSheet<void>(
+  void _chooseAppearance() => showAppBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -170,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 
   Future<void> _chooseReminder() async {
-    final result = await showModalBottomSheet<int>(
+    final result = await showAppBottomSheet<int>(
       context: context,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -251,19 +243,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            IconButton.filled(
-              tooltip: 'Notificaciones',
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                foregroundColor: AppColors.homeWarmText,
+            AppPressBounce(
+              child: IconButton.filled(
+                tooltip: 'Notificaciones',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: AppColors.homeWarmText,
+                ),
+                onPressed: () async {
+                  final activity = await showNotificationsSheet(context);
+                  if (activity != null) {
+                    widget.onNotificationActivity?.call(activity);
+                  }
+                },
+                icon: const Icon(Iconsax.notification),
               ),
-              onPressed: () async {
-                final activity = await showNotificationsSheet(context);
-                if (activity != null) {
-                  widget.onNotificationActivity?.call(activity);
-                }
-              },
-              icon: const Icon(Iconsax.notification),
             ),
           ],
         ),
@@ -389,21 +383,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 28),
         Center(
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFAA3034),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(9),
+          child: AppPressBounce(
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFAA3034),
+                foregroundColor: Colors.white,
+                shape: appButtonShape(),
+                textStyle: appButtonTextStyle,
               ),
-            ),
-            onPressed: () {
-              AuthService.instance.logout();
-              context.go('/login');
-            },
-            child: const Text(
-              'CERRAR SESIÓN',
-              style: TextStyle(fontFamily: 'BebasNeue', fontSize: 19),
+              onPressed: () {
+                AuthService.instance.logout();
+                context.go('/login');
+              },
+              child: const Text(
+                'CERRAR SESIÓN',
+                style: TextStyle(fontFamily: 'BebasNeue', fontSize: 19),
+              ),
             ),
           ),
         ),

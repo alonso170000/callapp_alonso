@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -38,9 +39,11 @@ class ProspectEmailHistoryPanel extends StatelessWidget {
                 children: [
                   Text(error!),
                   if (onRetry != null)
-                    TextButton(
-                      onPressed: onRetry,
-                      child: const Text('Reintentar'),
+                    AppPressBounce(
+                      child: TextButton(
+                        onPressed: onRetry,
+                        child: const Text('Reintentar'),
+                      ),
                     ),
                 ],
               )

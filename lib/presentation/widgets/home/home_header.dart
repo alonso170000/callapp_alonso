@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/widgets/notifications/notifications_sheet.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -130,26 +131,28 @@ class _UserAvatar extends StatelessWidget {
                       ),
                     ),
                   ),
-                  child: IconButton(
-                    tooltip: 'Notificaciones',
-                    padding: EdgeInsets.zero,
-                    onPressed: () => _openNotifications(context),
-                    icon: unread > 0
-                        ? Text(
-                            unread > 99 ? '99+' : '$unread',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'BebasNeue',
-                              fontSize: 17,
-                              height: 1,
+                  child: AppPressBounce(
+                    child: IconButton(
+                      tooltip: 'Notificaciones',
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _openNotifications(context),
+                      icon: unread > 0
+                          ? Text(
+                              unread > 99 ? '99+' : '$unread',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'BebasNeue',
+                                fontSize: 17,
+                                height: 1,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.notifications_rounded,
+                              color: AppColors.homeWarmText,
+                              size: 20,
                             ),
-                          )
-                        : const Icon(
-                            Icons.notifications_rounded,
-                            color: AppColors.homeWarmText,
-                            size: 20,
-                          ),
+                    ),
                   ),
                 ),
               ),

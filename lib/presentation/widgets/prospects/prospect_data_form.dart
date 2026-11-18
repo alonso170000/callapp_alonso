@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -599,24 +600,30 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
             Row(
               children: [
                 Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFAC4549),
-                      foregroundColor: Colors.white,
+                  child: AppPressBounce(
+                    enabled: !_saving,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFAC4549),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _saving ? null : _cancel,
+                      child: const Text('CANCELAR'),
                     ),
-                    onPressed: _saving ? null : _cancel,
-                    child: const Text('CANCELAR'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CA382),
-                      foregroundColor: Colors.white,
+                  child: AppPressBounce(
+                    enabled: !_saving,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CA382),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _saving ? null : _save,
+                      child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                     ),
-                    onPressed: _saving ? null : _save,
-                    child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR'),
                   ),
                 ),
               ],

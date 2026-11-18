@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'package:callerapp_frontend/presentation/models/prospect_catalog_models.d
 import 'package:callerapp_frontend/presentation/widgets/prospects/selected_lot_card.dart';
 import 'package:callerapp_frontend/presentation/validators/prospect_validators.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 
 class NewProspectSheet extends StatefulWidget {
   const NewProspectSheet({super.key, this.service, this.repository});
@@ -389,15 +392,19 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
     ),
   );
 
-  Widget _dateTimeButton(String label, VoidCallback onPressed) => FilledButton(
-    style: FilledButton.styleFrom(
-      backgroundColor: AppColors.primaryColor,
-      foregroundColor: AppColors.homeBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-    ),
-    onPressed: onPressed,
-    child: Text(label),
-  );
+  Widget _dateTimeButton(String label, VoidCallback onPressed) =>
+      AppPressBounce(
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primaryColor,
+            foregroundColor: AppColors.homeBackground,
+            shape: appButtonShape(),
+            textStyle: appButtonTextStyle,
+          ),
+          onPressed: onPressed,
+          child: Text(label),
+        ),
+      );
 
   String _lotLabel(int id) =>
       LotCatalog.lotLabel(_lots.firstWhere((lot) => lot['id'] == id));
@@ -518,10 +525,13 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar',
-                  onPressed: _saving ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded, size: 30),
+                AppPressBounce(
+                  enabled: !_saving,
+                  child: IconButton(
+                    tooltip: 'Cerrar',
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, size: 30),
+                  ),
                 ),
               ],
             ),
@@ -593,9 +603,11 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                         ),
                       ),
                       if (_origins.isEmpty)
-                        TextButton(
-                          onPressed: _loadCatalogs,
-                          child: const Text('Reintentar'),
+                        AppPressBounce(
+                          child: TextButton(
+                            onPressed: _loadCatalogs,
+                            child: const Text('Reintentar'),
+                          ),
                         ),
                     ],
                     _heading('Califica tu lead'),
@@ -777,39 +789,43 @@ class _NewProspectSheetState extends State<NewProspectSheet> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF696969),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(7),
+                      child: AppPressBounce(
+                        enabled: !_saving && !_loading && _origin != null,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF696969),
+                            foregroundColor: Colors.white,
+                            shape: appButtonShape(),
+                            textStyle: appButtonTextStyle,
                           ),
-                          textStyle: const TextStyle(fontFamily: 'BebasNeue'),
+                          onPressed: _saving
+                              ? null
+                              : () => Navigator.pop(context),
+                          child: Text(
+                            'Cancelar',
+                            style: TextStyle(fontSize: 18),
+                          ),
                         ),
-                        onPressed: _saving
-                            ? null
-                            : () => Navigator.pop(context),
-                        child: Text('Cancelar', style: TextStyle(fontSize: 18)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: FilledButton(
-                        key: const ValueKey('save-prospect'),
-                        onPressed: _saving || _loading || _origin == null
-                            ? null
-                            : _save,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF008FA0),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(7),
+                      child: AppPressBounce(
+                        child: FilledButton(
+                          key: const ValueKey('save-prospect'),
+                          onPressed: _saving || _loading || _origin == null
+                              ? null
+                              : _save,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF008FA0),
+                            foregroundColor: Colors.white,
+                            shape: appButtonShape(),
+                            textStyle: appButtonTextStyle,
                           ),
-                          textStyle: const TextStyle(fontFamily: 'BebasNeue'),
-                        ),
-                        child: Text(
-                          _saving ? 'Guardando…' : 'Guardar',
-                          style: TextStyle(fontSize: 18),
+                          child: Text(
+                            _saving ? 'Guardando…' : 'Guardar',
+                            style: TextStyle(fontSize: 18),
+                          ),
                         ),
                       ),
                     ),

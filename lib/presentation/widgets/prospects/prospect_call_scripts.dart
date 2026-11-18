@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
@@ -69,20 +70,22 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
             Row(
               children: [
                 if (_history.isNotEmpty)
-                  IconButton(
-                    tooltip: 'Volver al paso anterior',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 36,
-                      height: 36,
+                  AppPressBounce(
+                    child: IconButton(
+                      tooltip: 'Volver al paso anterior',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 36,
+                        height: 36,
+                      ),
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      iconSize: 20,
+                      onPressed: () => setState(() => _history.removeLast()),
+                      color: AppPalette.of(context).scriptSurfaceInk,
+                      icon: const Icon(Iconsax.arrow_left_copy),
                     ),
-                    style: IconButton.styleFrom(
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    iconSize: 20,
-                    onPressed: () => setState(() => _history.removeLast()),
-                    color: AppPalette.of(context).scriptSurfaceInk,
-                    icon: const Icon(Iconsax.arrow_left_copy),
                   ),
                 Expanded(
                   child: Text(
@@ -217,24 +220,26 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  style: callScriptButtonStyle(AppColors.scriptBlue),
-                  onPressed: () {
-                    if (current.nextStep case final next?) {
-                      _advance(next);
-                    } else {
-                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'El siguiente texto del guion aún no está disponible.',
+                child: AppPressBounce(
+                  child: FilledButton.icon(
+                    style: callScriptButtonStyle(AppColors.scriptBlue),
+                    onPressed: () {
+                      if (current.nextStep case final next?) {
+                        _advance(next);
+                      } else {
+                        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'El siguiente texto del guion aún no está disponible.',
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                  },
-                  label: const Text('SEGUIR LEYENDO'),
-                  iconAlignment: IconAlignment.end,
+                        );
+                      }
+                    },
+                    label: const Text('SEGUIR LEYENDO'),
+                    iconAlignment: IconAlignment.end,
+                  ),
                 ),
               ),
             ],
@@ -258,45 +263,50 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
                           : (constraints.maxWidth -
                                     10 * (current.responses.length - 1)) /
                                 current.responses.length,
-                      child: OutlinedButton(
-                        style: callScriptButtonStyle(color),
-                        onPressed: () {
-                          if (response.nextStep case final next?) {
-                            _advance(next);
-                          } else {
-                            ScaffoldMessenger.of(context)
-                                .removeCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'El guion de ${response.label.toLowerCase()} aún no está disponible.',
+                      child: AppPressBounce(
+                        child: OutlinedButton(
+                          style: callScriptButtonStyle(color),
+                          onPressed: () {
+                            if (response.nextStep case final next?) {
+                              _advance(next);
+                            } else {
+                              ScaffoldMessenger.of(context)
+                                  .removeCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'El guion de ${response.label.toLowerCase()} aún no está disponible.',
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        },
-                        child: response.icon == null
-                            ? Text(response.label, textAlign: TextAlign.center)
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
+                              );
+                            }
+                          },
+                          child: response.icon == null
+                              ? Text(
+                                  response.label,
+                                  textAlign: TextAlign.center,
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(switch (response.icon!) {
+                                        CallScriptResponseIcon.investment =>
+                                          Iconsax.chart_2_copy,
+                                        CallScriptResponseIcon.housing =>
+                                          Iconsax.home_2_copy,
+                                        CallScriptResponseIcon.rental =>
+                                          Iconsax.key_copy,
+                                      }, size: 28),
+                                      const SizedBox(height: 6),
+                                      Text(response.label),
+                                    ],
+                                  ),
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(switch (response.icon!) {
-                                      CallScriptResponseIcon.investment =>
-                                        Iconsax.chart_2_copy,
-                                      CallScriptResponseIcon.housing =>
-                                        Iconsax.home_2_copy,
-                                      CallScriptResponseIcon.rental =>
-                                        Iconsax.key_copy,
-                                    }, size: 28),
-                                    const SizedBox(height: 6),
-                                    Text(response.label),
-                                  ],
-                                ),
-                              ),
+                        ),
                       ),
                     );
                   }).toList(),
@@ -306,10 +316,12 @@ class _ProspectCallScriptsState extends State<ProspectCallScripts> {
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  style: callScriptButtonStyle(AppColors.scriptBlue),
-                  onPressed: () => _advance(widget.script.steps[index + 1]),
-                  child: const Text('SIGUIENTE'),
+                child: AppPressBounce(
+                  child: FilledButton(
+                    style: callScriptButtonStyle(AppColors.scriptBlue),
+                    onPressed: () => _advance(widget.script.steps[index + 1]),
+                    child: const Text('SIGUIENTE'),
+                  ),
                 ),
               ),
             ],

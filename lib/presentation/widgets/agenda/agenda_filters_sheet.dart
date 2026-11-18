@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_filters.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
@@ -50,19 +51,21 @@ class _AgendaFiltersSheetState extends State<AgendaFiltersSheet> {
   }
 
   Widget _button(String label, Color color, VoidCallback onPressed) => Expanded(
-    child: FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(42),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+    child: AppPressBounce(
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(42),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+        ),
       ),
     ),
   );
@@ -90,10 +93,12 @@ class _AgendaFiltersSheetState extends State<AgendaFiltersSheet> {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar filtros',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, size: 28),
+                AppPressBounce(
+                  child: IconButton(
+                    tooltip: 'Cerrar filtros',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 28),
+                  ),
                 ),
               ],
             ),

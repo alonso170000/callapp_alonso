@@ -1,4 +1,7 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
+
+import '../../../resources/styles/styles.dart';
 
 /// Encabezado de una sección del buscador, con una acción opcional a la derecha.
 class SearchSectionHeader extends StatelessWidget {
@@ -30,20 +33,17 @@ class SearchSectionHeader extends StatelessWidget {
           ),
         ),
         if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              foregroundColor: colorScheme.primary,
-              minimumSize: const Size(0, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            child: Text(
-              actionLabel!,
-              style: const TextStyle(
-                fontFamily: 'SulphurPoint',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+          AppPressBounce(
+            child: TextButton(
+              onPressed: onAction,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                minimumSize: const Size(0, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                shape: appButtonShape(),
+                textStyle: appButtonTextStyle,
               ),
+              child: Text(actionLabel!),
             ),
           ),
       ],

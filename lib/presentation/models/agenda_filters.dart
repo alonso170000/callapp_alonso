@@ -39,16 +39,30 @@ class AgendaFilters {
 
   bool matches(AgendaActivity activity) =>
       (activityIds == null || activityIds!.contains(activity.id)) &&
-      selectedTypes.any(
-        (type) =>
-            type.toUpperCase() ==
-            (activity.type ?? activity.title).toUpperCase(),
-      ) &&
+      selectedTypes
+          .map(_canonicalType)
+          .contains(_canonicalType(activity.type ?? activity.title)) &&
       statuses.contains(activity.status) &&
-      (prospect == null || prospect == activity.prospect) &&
+      (prospect == null ||
+          _canonicalText(prospect!) == _canonicalText(activity.prospect)) &&
       switch (time) {
         AgendaTimeFilter.all => true,
         AgendaTimeFilter.morning => activity.date.hour < 12,
         AgendaTimeFilter.afternoon => activity.date.hour >= 12,
       };
+
+  static String _canonicalType(String value) {
+    final normalized = _canonicalText(value);
+    return switch (normalized) {
+      'visita' || 'visita presencial' => 'visita presencial',
+      'llamada' => 'seguimiento',
+      _ => normalized,
+    };
+  }
+
+  static String _canonicalText(String value) => value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[_-]+'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ');
 }

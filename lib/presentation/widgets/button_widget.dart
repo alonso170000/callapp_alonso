@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 
+import 'app_press_bounce.dart';
+
 class CustomButton extends StatelessWidget {
   final String texto;
   final VoidCallback? accion;
@@ -106,41 +108,44 @@ class CustomButton extends StatelessWidget {
           : Border.all(color: colorBorde!, width: anchoBorde),
     );
 
-    return Opacity(
-      opacity: estaActivo ? 1 : 0.68,
-      child: Container(
-        width: double.infinity,
-        height: altoBoton,
-        decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          boxShadow: colorSombra == null
-              ? null
-              : [
-                  BoxShadow(
-                    color: colorSombra!,
-                    blurRadius: sombraBlur,
-                    offset: sombraOffset,
+    return AppPressBounce(
+      enabled: estaActivo,
+      child: Opacity(
+        opacity: estaActivo ? 1 : 0.68,
+        child: Container(
+          width: double.infinity,
+          height: altoBoton,
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: colorSombra == null
+                ? null
+                : [
+                    BoxShadow(
+                      color: colorSombra!,
+                      blurRadius: sombraBlur,
+                      offset: sombraOffset,
+                    ),
+                  ],
+          ),
+          child: gradienteBorde == null
+              ? Container(decoration: decoracionFondo, child: contenido)
+              : Container(
+                  padding: EdgeInsets.all(anchoBorde),
+                  decoration: BoxDecoration(
+                    gradient: gradienteBorde,
+                    borderRadius: borderRadius,
                   ),
-                ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      (radioBoton - anchoBorde).clamp(0, radioBoton).toDouble(),
+                    ),
+                    child: Container(
+                      decoration: decoracionFondo.copyWith(border: null),
+                      child: contenido,
+                    ),
+                  ),
+                ),
         ),
-        child: gradienteBorde == null
-            ? Container(decoration: decoracionFondo, child: contenido)
-            : Container(
-                padding: EdgeInsets.all(anchoBorde),
-                decoration: BoxDecoration(
-                  gradient: gradienteBorde,
-                  borderRadius: borderRadius,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    (radioBoton - anchoBorde).clamp(0, radioBoton).toDouble(),
-                  ),
-                  child: Container(
-                    decoration: decoracionFondo.copyWith(border: null),
-                    child: contenido,
-                  ),
-                ),
-              ),
       ),
     );
   }
@@ -162,42 +167,45 @@ class OutlinedAuthButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
 
-    return Opacity(
-      opacity: enabled ? 1 : 0.65,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            width: double.infinity,
-            height: AppStyles.buttonHeight(context),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.whiteColor.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppColors.whiteColor.withValues(alpha: 0.5),
-                width: 1.5,
+    return AppPressBounce(
+      enabled: enabled,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.65,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: double.infinity,
+              height: AppStyles.buttonHeight(context),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.whiteColor.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: AppColors.whiteColor.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                icon,
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    text,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.whiteColor,
-                      fontSize: AppStyles.textButtom(context),
-                      fontWeight: FontWeight.w800,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  icon,
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      text,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.whiteColor,
+                        fontSize: AppStyles.textButtom(context),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

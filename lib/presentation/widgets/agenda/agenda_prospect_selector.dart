@@ -1,6 +1,10 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
+
+import '../app_bottom_sheet.dart';
+
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AgendaProspectOption<T> {
@@ -31,7 +35,7 @@ class AgendaProspectSelector<T> extends StatelessWidget {
   String _labelFor(T selected) =>
       options.firstWhere((option) => option.value == selected).label;
 
-  Future<T?> _showOptions(BuildContext context) => showModalBottomSheet<T>(
+  Future<T?> _showOptions(BuildContext context) => showAppBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -153,15 +157,6 @@ class _ProspectOptionsSheetState<T> extends State<_ProspectOptionsSheet<T>> {
         height: MediaQuery.sizeOf(context).height * 0.65,
         child: Column(
           children: [
-            Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 14),
             TextField(
               key: const ValueKey('agenda-prospect-search'),
               controller: _search,
@@ -173,13 +168,15 @@ class _ProspectOptionsSheetState<T> extends State<_ProspectOptionsSheet<T>> {
                 prefixIcon: const Icon(Iconsax.search_normal_1_copy),
                 suffixIcon: _query.isEmpty
                     ? null
-                    : IconButton(
-                        tooltip: 'Limpiar búsqueda',
-                        onPressed: () {
-                          _search.clear();
-                          setState(() => _query = '');
-                        },
-                        icon: const Icon(Icons.close_rounded),
+                    : AppPressBounce(
+                        child: IconButton(
+                          tooltip: 'Limpiar búsqueda',
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
                       ),
               ),
             ),

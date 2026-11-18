@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/repositories/prospects_repository.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
@@ -24,6 +25,7 @@ import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
 import 'package:callerapp_frontend/services/contact_launcher.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/services/data_change_bus.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
@@ -245,7 +247,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Future<void> _showNewActivityDialog() async {
-    final scheduled = await showModalBottomSheet<DateTime>(
+    final scheduled = await showAppBottomSheet<DateTime>(
       context: context,
       barrierColor: Colors.black54,
       isScrollControlled: true,
@@ -271,10 +273,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Future<void> _showFilters() async {
-    final prospects =
-        _activities.map((activity) => activity.prospect).toSet().toList()
-          ..sort();
-    final result = await showModalBottomSheet<AgendaFilters>(
+    final prospectsByKey = <String, String>{};
+    for (final activity in _activities) {
+      final prospect = activity.prospect.trim();
+      if (prospect.isEmpty) continue;
+      prospectsByKey.putIfAbsent(prospect.toLowerCase(), () => prospect);
+    }
+    final prospects = prospectsByKey.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final initial = _filters.activityIds == null ? _filters : AgendaFilters();
+    final result = await showAppBottomSheet<AgendaFilters>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -284,7 +292,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       ),
       clipBehavior: Clip.antiAlias,
       builder: (_) => AgendaFiltersSheet(
-        initial: _filters,
+        initial: initial,
         prospects: prospects,
         count: (filters) => _activities.where(filters.matches).length,
       ),
@@ -399,7 +407,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       );
       return;
     }
-    final scheduled = await showModalBottomSheet<DateTime>(
+    final scheduled = await showAppBottomSheet<DateTime>(
       context: detailContext,
       barrierColor: Colors.black54,
       isScrollControlled: true,
@@ -518,24 +526,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
         );
         return;
       }
-      final confirmed = await showDialog<bool>(
-        context: detailContext,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Antes de marcar'),
-          content: const Text(
-            'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('CANCELAR'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('MARCAR'),
-            ),
-          ],
-        ),
+      if (!mounted) return;
+      final confirmed = await showAppConfirmationSheet(
+        context: context,
+        title: 'Antes de marcar',
+        message: 'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta. Si aún no lo sabes, puedes marcar y confirmarlo al terminar.',
+        secondaryLabel: 'CANCELAR',
+        primaryLabel: 'MARCAR',
       );
       if (confirmed != true || !detailContext.mounted) return;
       _calling = true;
@@ -658,22 +655,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
     final id = activity.id;
     if (id == null || !_deleting.add(id)) return;
     try {
-      final confirmed = await showDialog<bool>(
-        context: detailContext,
-        builder: (context) => AlertDialog(
-          title: const Text('Eliminar actividad'),
-          content: const Text('¿Eliminar esta actividad creada por error?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Volver'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        ),
+      final confirmed = await showAppConfirmationSheet(
+        context: context,
+        title: 'Eliminar actividad',
+        message: '¿Eliminar esta actividad creada por error?',
+        secondaryLabel: 'Volver',
+        primaryLabel: 'Eliminar',
       );
       if (confirmed != true || !detailContext.mounted) return;
       final result = await _repository.delete(activity);
@@ -708,8 +695,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     required String message,
     required String confirmLabel,
   }) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: detailContext,
+    final confirmed = await showAppBottomSheet<bool>(
+      context: context,
       barrierColor: Colors.black54,
       useSafeArea: true,
       backgroundColor: Theme.of(detailContext).colorScheme.surface,
@@ -739,10 +726,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Cerrar confirmación',
-                    onPressed: () => Navigator.pop(sheetContext, false),
-                    icon: const Icon(Icons.close, size: 28),
+                  AppPressBounce(
+                    child: IconButton(
+                      tooltip: 'Cerrar confirmación',
+                      onPressed: () => Navigator.pop(sheetContext, false),
+                      icon: const Icon(Icons.close, size: 28),
+                    ),
                   ),
                 ],
               ),
@@ -760,41 +749,48 @@ class _AgendaScreenState extends State<AgendaScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(sheetContext, false),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.grey.shade600,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(44),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: AppPressBounce(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(sheetContext, false),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.grey.shade600,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'VOLVER',
-                        style: TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
+                        child: const Text(
+                          'VOLVER',
+                          style: TextStyle(
+                            fontFamily: 'BebasNeue',
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: FilledButton(
-                      key: const ValueKey('confirm-activity-action'),
-                      onPressed: () => Navigator.pop(sheetContext, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        foregroundColor: AppColors.homeBackground,
-                        minimumSize: const Size.fromHeight(44),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: AppPressBounce(
+                      child: FilledButton(
+                        key: const ValueKey('confirm-activity-action'),
+                        onPressed: () => Navigator.pop(sheetContext, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          foregroundColor: AppColors.homeBackground,
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        confirmLabel,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'BebasNeue',
-                          fontSize: 18,
+                        child: Text(
+                          confirmLabel,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'BebasNeue',
+                            fontSize: 18,
+                          ),
                         ),
                       ),
                     ),
@@ -940,7 +936,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   ),
                 if (_error != null) ...[
                   Text(_error!, textAlign: TextAlign.center),
-                  TextButton(onPressed: _load, child: const Text('Reintentar')),
+                  AppPressBounce(
+                    child: TextButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
+                    ),
+                  ),
                 ],
                 AgendaPeriodSelector(
                   selected: _period,
@@ -949,17 +950,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: palette.navSelectedFill,
-                        foregroundColor: palette.navSelectedForeground,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    AppPressBounce(
+                      child: IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: palette.navSelectedFill,
+                          foregroundColor: palette.navSelectedForeground,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        tooltip: 'Periodo anterior',
+                        onPressed: () => _move(-1),
+                        icon: const Icon(Icons.chevron_left),
                       ),
-                      tooltip: 'Periodo anterior',
-                      onPressed: () => _move(-1),
-                      icon: const Icon(Icons.chevron_left),
                     ),
                     Expanded(
                       child: Text(
@@ -970,17 +973,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ),
                       ),
                     ),
-                    IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: palette.navSelectedFill,
-                        foregroundColor: palette.navSelectedForeground,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    AppPressBounce(
+                      child: IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: palette.navSelectedFill,
+                          foregroundColor: palette.navSelectedForeground,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        tooltip: 'Periodo siguiente',
+                        onPressed: () => _move(1),
+                        icon: const Icon(Icons.chevron_right),
                       ),
-                      tooltip: 'Periodo siguiente',
-                      onPressed: () => _move(1),
-                      icon: const Icon(Icons.chevron_right),
                     ),
                   ],
                 ),
@@ -1012,23 +1017,27 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Ir a hoy',
-                      onPressed: () => setState(
-                        () => _date = DateUtils.dateOnly(businessNow()),
-                      ),
-                      icon: Icon(
-                        Iconsax.calendar_copy,
-                        color: Theme.of(context).colorScheme.primary,
+                    AppPressBounce(
+                      child: IconButton(
+                        tooltip: 'Ir a hoy',
+                        onPressed: () => setState(
+                          () => _date = DateUtils.dateOnly(businessNow()),
+                        ),
+                        icon: Icon(
+                          Iconsax.calendar_copy,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Filtrar actividades',
-                      icon: Icon(
-                        _filters.active ? Icons.filter_alt : Icons.tune,
-                        color: Theme.of(context).colorScheme.primary,
+                    AppPressBounce(
+                      child: IconButton(
+                        tooltip: 'Filtrar actividades',
+                        icon: Icon(
+                          _filters.active ? Icons.filter_alt : Icons.tune,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: _showFilters,
                       ),
-                      onPressed: _showFilters,
                     ),
                   ],
                 ),
@@ -1066,18 +1075,20 @@ class _AgendaScreenState extends State<AgendaScreen> {
                               : 'No hay actividades para este periodo.',
                           textAlign: TextAlign.center,
                         ),
-                        TextButton(
-                          onPressed: () => setState(() {
-                            _date = DateUtils.dateOnly(businessNow());
-                            _filters = AgendaFilters();
-                          }),
-                          child: Text(
-                            'Volver a hoy',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontFamily: 'SulphurPoint',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
+                        AppPressBounce(
+                          child: TextButton(
+                            onPressed: () => setState(() {
+                              _date = DateUtils.dateOnly(businessNow());
+                              _filters = AgendaFilters();
+                            }),
+                            child: Text(
+                              'Volver a hoy',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontFamily: 'BebasNeue',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                         ),

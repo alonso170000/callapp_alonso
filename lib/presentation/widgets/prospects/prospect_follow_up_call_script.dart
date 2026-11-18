@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:flutter/material.dart';
@@ -106,19 +107,21 @@ class ProspectFollowUpCallScript extends StatelessWidget {
           const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              style: callScriptButtonStyle(AppColors.scriptBlue),
-              onPressed: () {
-                onContinue();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Continuación al cierre registrada en esta vista.',
+            child: AppPressBounce(
+              child: FilledButton(
+                style: callScriptButtonStyle(AppColors.scriptBlue),
+                onPressed: () {
+                  onContinue();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Continuación al cierre registrada en esta vista.',
+                      ),
                     ),
-                  ),
-                );
-              },
-              child: const Text('CONTINUAR AL CIERRE'),
+                  );
+                },
+                child: const Text('CONTINUAR AL CIERRE'),
+              ),
             ),
           ),
         ],

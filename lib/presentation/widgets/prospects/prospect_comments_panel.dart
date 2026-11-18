@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/screens/screens.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
@@ -77,11 +78,13 @@ class ProspectCommentsPanelState extends State<ProspectCommentsPanel> {
                       ? (snapshot.error as ProspectsException).message
                       : 'No se pudo cargar el historial.',
                 ),
-                TextButton(
-                  onPressed: () => setState(() {
-                    _comments = _load();
-                  }),
-                  child: const Text('Reintentar'),
+                AppPressBounce(
+                  child: TextButton(
+                    onPressed: () => setState(() {
+                      _comments = _load();
+                    }),
+                    child: const Text('Reintentar'),
+                  ),
                 ),
               ],
             );

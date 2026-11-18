@@ -15,6 +15,15 @@ import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 
 class NotificationService extends ChangeNotifier {
+  static String _formatTime(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
+
+  @visibleForTesting
+  static String activityReminderBody(ActivityNotification reminder) =>
+      '${reminder.prospect} · Actividad en ${reminder.minutesBefore} minutos, '
+      'programada a las ${_formatTime(reminder.activityAt)}.';
+
   NotificationService._({
     NotificationsStore? store,
     ProfilePreferencesStore? preferences,
@@ -228,8 +237,7 @@ class NotificationService extends ChangeNotifier {
         await _plugin.zonedSchedule(
           id: _notificationId(reminder.activityId),
           title: 'Recordatorio: ${reminder.title}',
-          body:
-              '${reminder.prospect} · Actividad en ${reminder.minutesBefore} minutos.',
+          body: activityReminderBody(reminder),
           scheduledDate: scheduled,
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(

@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
 
@@ -72,9 +73,19 @@ class SyncStatusIndicator extends StatelessWidget {
                 ),
               ),
               if (hasConflicts)
-                TextButton(onPressed: onConflicts, child: const Text('REVISAR'))
+                AppPressBounce(
+                  child: TextButton(
+                    onPressed: onConflicts,
+                    child: const Text('REVISAR'),
+                  ),
+                )
               else if (pendingCount > 0)
-                TextButton(onPressed: onPending, child: const Text('VER')),
+                AppPressBounce(
+                  child: TextButton(
+                    onPressed: onPending,
+                    child: const Text('VER'),
+                  ),
+                ),
             ],
           ),
         ),

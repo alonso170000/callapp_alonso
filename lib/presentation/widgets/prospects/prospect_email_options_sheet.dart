@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/presentation/models/prospect_email_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -34,15 +35,18 @@ class ProspectEmailOptionsSheet extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: SizedBox(
                   width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    onPressed: email.isEmpty
-                        ? null
-                        : () => Navigator.pop(context, template),
-                    icon: const Icon(Iconsax.sms_copy),
-                    label: Text(template.label),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: palette.secondaryActionFill,
-                      foregroundColor: palette.secondaryActionForeground,
+                  child: AppPressBounce(
+                    enabled: email.isNotEmpty,
+                    child: FilledButton.tonalIcon(
+                      onPressed: email.isEmpty
+                          ? null
+                          : () => Navigator.pop(context, template),
+                      icon: const Icon(Iconsax.sms_copy),
+                      label: Text(template.label),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: palette.secondaryActionFill,
+                        foregroundColor: palette.secondaryActionForeground,
+                      ),
                     ),
                   ),
                 ),

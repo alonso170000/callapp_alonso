@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -261,18 +262,20 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 ),
         ),
         suffixIcon: widget.isPassword
-            ? IconButton(
-                icon: Icon(
-                  _obscureText
-                      ? FluentIcons.eye_off_16_regular
-                      : FluentIcons.eye_16_regular,
-                  color: widget.iconColor,
+            ? AppPressBounce(
+                child: IconButton(
+                  icon: Icon(
+                    _obscureText
+                        ? FluentIcons.eye_off_16_regular
+                        : FluentIcons.eye_16_regular,
+                    color: widget.iconColor,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscureText = !_obscureText;
-                  });
-                },
               )
             : null,
       ),

@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:convert';
 
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -475,34 +477,40 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
       : Row(
           children: [
             Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.discoveryCancel,
-                  foregroundColor: Colors.white,
+              child: AppPressBounce(
+                enabled: _savingSection != section,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.discoveryCancel,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _savingSection == null
+                      ? () {
+                          cancel();
+                          _clearDirty();
+                        }
+                      : null,
+                  child: const Text('CANCELAR'),
                 ),
-                onPressed: _savingSection == null
-                    ? () {
-                        cancel();
-                        _clearDirty();
-                      }
-                    : null,
-                child: const Text('CANCELAR'),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.discoverySave,
-                  foregroundColor: Colors.white,
+              child: AppPressBounce(
+                enabled: _savingSection == null,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.discoverySave,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _savingSection == null ? save : null,
+                  child: _savingSection == section
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('GUARDAR'),
                 ),
-                onPressed: _savingSection == null ? save : null,
-                child: _savingSection == section
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('GUARDAR'),
               ),
             ),
           ],

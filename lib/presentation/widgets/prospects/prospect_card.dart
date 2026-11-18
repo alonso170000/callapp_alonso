@@ -1,5 +1,9 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:flutter/material.dart';
+
+import '../app_bottom_sheet.dart';
+
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -28,7 +32,7 @@ class ProspectCard extends StatelessWidget {
   });
 
   Future<void> _contact(BuildContext context, ContactMedium medium) async {
-    await showModalBottomSheet<void>(
+    await showAppBottomSheet<void>(
       context: context,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -69,22 +73,24 @@ class ProspectCard extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-              TextButton.icon(
-                onPressed: prospect.phone.isEmpty
-                    ? null
-                    : () async {
-                        await Clipboard.setData(
-                          ClipboardData(text: prospect.phone),
-                        );
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Número copiado')),
+              AppPressBounce(
+                child: TextButton.icon(
+                  onPressed: prospect.phone.isEmpty
+                      ? null
+                      : () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: prospect.phone),
                           );
-                        }
-                      },
-                icon: const Icon(Icons.copy),
-                label: const Text('Copiar teléfono'),
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Número copiado')),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copiar teléfono'),
+                ),
               ),
             ],
           ),
@@ -218,24 +224,26 @@ class ProspectCard extends StatelessWidget {
       return Semantics(
         button: true,
         label: label,
-        child: IconButton(
-          tooltip: label,
-          onPressed:
-              onContactOptions ??
-              () => onContact != null
-                  ? onContact!(medium)
-                  : _contact(context, medium),
-          style: IconButton.styleFrom(
-            backgroundColor: AppColors.prospectActionOptions,
-            foregroundColor: AppColors.textDarkColor,
-            minimumSize: const Size(40, 40),
-            maximumSize: const Size(40, 40),
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(9),
+        child: AppPressBounce(
+          child: IconButton(
+            tooltip: label,
+            onPressed:
+                onContactOptions ??
+                () => onContact != null
+                    ? onContact!(medium)
+                    : _contact(context, medium),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.prospectActionOptions,
+              foregroundColor: AppColors.textDarkColor,
+              minimumSize: const Size(40, 40),
+              maximumSize: const Size(40, 40),
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(9),
+              ),
             ),
+            icon: const Icon(Iconsax.more_copy, size: 22),
           ),
-          icon: const Icon(Iconsax.more_copy, size: 22),
         ),
       );
     }
@@ -249,32 +257,34 @@ class ProspectCard extends StatelessWidget {
     };
     final available =
         medium == ContactMedium.facebook || medium.isAvailable(prospect);
-    return IconButton(
-      tooltip: '${medium.actionLabel} a ${prospect.name}$suffix',
-      onPressed: !available
-          ? null
-          : () async {
-              final action = onContact;
-              if (action != null) {
-                await action(medium);
-              } else {
-                await _contact(context, medium);
-              }
-            },
-      style: IconButton.styleFrom(
-        backgroundColor: switch (medium) {
-          ContactMedium.llamada => AppColors.prospectActionCall,
-          ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
-          ContactMedium.facebook => AppColors.prospectActionFacebook,
-          ContactMedium.correo => AppColors.prospectActionMail,
-        },
-        foregroundColor: AppColors.textDarkColor,
-        minimumSize: const Size(40, 40),
-        maximumSize: const Size(40, 40),
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+    return AppPressBounce(
+      child: IconButton(
+        tooltip: '${medium.actionLabel} a ${prospect.name}$suffix',
+        onPressed: !available
+            ? null
+            : () async {
+                final action = onContact;
+                if (action != null) {
+                  await action(medium);
+                } else {
+                  await _contact(context, medium);
+                }
+              },
+        style: IconButton.styleFrom(
+          backgroundColor: switch (medium) {
+            ContactMedium.llamada => AppColors.prospectActionCall,
+            ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
+            ContactMedium.facebook => AppColors.prospectActionFacebook,
+            ContactMedium.correo => AppColors.prospectActionMail,
+          },
+          foregroundColor: AppColors.textDarkColor,
+          minimumSize: const Size(40, 40),
+          maximumSize: const Size(40, 40),
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        ),
+        icon: Icon(icon, size: 22),
       ),
-      icon: Icon(icon, size: 22),
     );
   }
 

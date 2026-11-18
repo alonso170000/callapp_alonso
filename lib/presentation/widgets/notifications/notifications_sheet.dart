@@ -1,18 +1,22 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../app_bottom_sheet.dart';
+
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
-import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 
 Future<AgendaActivity?> showNotificationsSheet(BuildContext context) =>
-    showModalBottomSheet<AgendaActivity>(
+    showAppBottomSheet<AgendaActivity>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -84,13 +88,18 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
         widgets.add(
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
-            child: Text(
-              section,
-              style: TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: 18,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  section,
+                  style: TextStyle(
+                    fontFamily: 'BebasNeue',
+                    fontSize: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -165,25 +174,31 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'NOTIFICACIONES',
-                          style: profileHeading.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Notificaciones',
+                        style: TextStyle(
+                          fontFamily: 'SulphurPoint',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Cerrar notificaciones',
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: AppPressBounce(
+                        child: IconButton(
+                          tooltip: 'Cerrar notificaciones',
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, size: 28),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 if (!service.enabled || service.permissionGranted == false)
                   Container(
@@ -206,20 +221,6 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                       ),
                     ),
                   ),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed:
-                        service.reminders.any(
-                          (notification) => !notification.isRead,
-                        )
-                        ? service.markAllRead
-                        : null,
-                    icon: const Icon(Icons.done_all),
-                    label: const Text('Marcar todas como leídas'),
-                  ),
-                ),
                 if (notifications.isEmpty)
                   const Flexible(child: _EmptyNotifications())
                 else
@@ -230,6 +231,23 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                       children: _notificationSections(notifications, now),
                     ),
                   ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: AppPressBounce(
+                    child: IconButton(
+                      key: const ValueKey('mark-all-notifications-read'),
+                      tooltip: 'Marcar todas como leídas',
+                      onPressed:
+                          service.reminders.any(
+                            (notification) => !notification.isRead,
+                          )
+                          ? service.markAllRead
+                          : null,
+                      icon: const Icon(Icons.done_all),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -308,16 +326,31 @@ class _NotificationCard extends StatelessWidget {
     return '${elapsed.inMinutes.clamp(0, 59)}m';
   }
 
-  Color get _titleColor => switch (notification.activity.type) {
-    'seguimiento' => AppColors.homeYellowCard,
-    NotificationService.assignmentType => AppColors.notificationAssignment,
-    _ => AppColors.notificationTitleVisit,
-  };
+  bool get _dateExpired =>
+      DateUtils.dateOnly(notification.activity.date)
+          .isBefore(DateUtils.dateOnly(now));
 
-  Color get _tagColor => switch (notification.activity.type) {
-    'seguimiento' => AppColors.homeYellowCard,
-    NotificationService.assignmentType => AppColors.notificationAssignmentTag,
-    _ => AppColors.notificationTagVisit,
+  bool get _timeExpired {
+    final date = notification.activity.date;
+    return date.hour < now.hour ||
+        (date.hour == now.hour && date.minute < now.minute);
+  }
+
+  Color get _titleColor {
+    if (notification.activity.type == NotificationService.assignmentType) {
+      return AppColors.notificationAssignment;
+    }
+    return _dateExpired && _timeExpired
+        ? AppColors.notificationOverdueTitle
+        : AppColors.homeYellowCard;
+  }
+
+  Color get _mediumColor => switch (notification.activity.medium) {
+    'llamada' => AppColors.notificationMediumCall,
+    'whatsapp' => AppColors.notificationMediumWhatsapp,
+    'facebook' => AppColors.notificationMediumFacebook,
+    'correo' => AppColors.notificationMediumEmail,
+    _ => AppColors.notificationDateTimeTag,
   };
 
   @override
@@ -350,6 +383,9 @@ class _NotificationCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
+                            key: ValueKey(
+                              'notification-title-${notification.activityId}',
+                            ),
                             notification.title.toUpperCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -416,7 +452,13 @@ class _NotificationCard extends StatelessWidget {
                       runSpacing: 5,
                       children: [
                         if (_medium.isNotEmpty)
-                          _NotificationTag(label: _medium, color: _tagColor),
+                          _NotificationTag(
+                            key: ValueKey(
+                              'notification-medium-${notification.activityId}',
+                            ),
+                            label: _medium,
+                            color: _mediumColor,
+                          ),
                         _NotificationTag(
                           key: ValueKey(
                             'notification-date-${notification.activityId}',
@@ -446,18 +488,20 @@ class _NotificationCard extends StatelessWidget {
 
   Color _dateTagColor(DateTime date) {
     if (notification.activity.type == NotificationService.assignmentType) {
-      return _tagColor;
+      return AppColors.notificationAssignmentTag;
     }
-    return DateUtils.dateOnly(date).isBefore(DateUtils.dateOnly(now))
+    return _dateExpired
         ? AppColors.notificationOverdueTag
-        : _tagColor;
+        : AppColors.notificationDateTimeTag;
   }
 
   Color _timeTagColor(DateTime date) {
     if (notification.activity.type == NotificationService.assignmentType) {
-      return _tagColor;
+      return AppColors.notificationAssignmentTag;
     }
-    return date.isBefore(now) ? AppColors.notificationOverdueTag : _tagColor;
+    return _timeExpired
+        ? AppColors.notificationOverdueTag
+        : AppColors.notificationDateTimeTag;
   }
 }
 

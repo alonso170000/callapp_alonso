@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/sync_models.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
@@ -97,18 +98,27 @@ class _SyncConflictsSheetState extends State<SyncConflictsSheet> {
                             spacing: AppStyles.spacingSmall(context),
                             runSpacing: AppStyles.spacingSmall(context),
                             children: [
-                              OutlinedButton(
-                                onPressed: _workingId == null
-                                    ? () => _run(conflict.id, widget.onDiscard)
-                                    : null,
-                                child: const Text('USAR VERSIÓN DEL SERVIDOR'),
+                              AppPressBounce(
+                                enabled: _workingId == null,
+                                child: OutlinedButton(
+                                  onPressed: _workingId == null
+                                      ? () =>
+                                            _run(conflict.id, widget.onDiscard)
+                                      : null,
+                                  child: const Text(
+                                    'USAR VERSIÓN DEL SERVIDOR',
+                                  ),
+                                ),
                               ),
-                              FilledButton(
-                                onPressed: _workingId == null
-                                    ? () => _run(conflict.id, widget.onRetry)
-                                    : null,
-                                child: Text(
-                                  working ? 'PROCESANDO…' : 'REINTENTAR',
+                              AppPressBounce(
+                                enabled: _workingId == null,
+                                child: FilledButton(
+                                  onPressed: _workingId == null
+                                      ? () => _run(conflict.id, widget.onRetry)
+                                      : null,
+                                  child: Text(
+                                    working ? 'PROCESANDO…' : 'REINTENTAR',
+                                  ),
                                 ),
                               ),
                             ],

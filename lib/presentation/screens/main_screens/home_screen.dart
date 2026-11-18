@@ -23,6 +23,7 @@ import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:callerapp_frontend/presentation/widgets/navigation_bar_widget.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   static const name = 'home-screen';
@@ -75,24 +76,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _offerStaleCallDiscard() async {
-    final discard = await showDialog<bool>(
+    final discard = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Llamada anterior'),
-        content: const Text(
-          'La llamada guardada tiene más de 4 horas. ¿Deseas descartarla?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CONSERVAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('DESCARTAR'),
-          ),
-        ],
-      ),
+      title: 'Llamada anterior',
+      message: 'La llamada guardada tiene más de 4 horas. ¿Deseas descartarla?',
+      secondaryLabel: 'CONSERVAR',
+      primaryLabel: 'DESCARTAR',
     );
     if (discard == true) await _callSession.discardStale();
   }
@@ -117,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _openingCallResult = false;
       return;
     }
-    final closure = await showModalBottomSheet<ProspectCallClosure>(
+    final closure = await showAppBottomSheet<ProspectCallClosure>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -211,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .where((operation) => operation.state == PendingOperationState.conflict)
         .toList();
     if (conflicts.isEmpty || !mounted) return;
-    await showModalBottomSheet<void>(
+    await showAppBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -255,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .where((operation) => operation.state != PendingOperationState.conflict)
         .toList();
     if (pending.isEmpty || !mounted) return;
-    await showModalBottomSheet<void>(
+    await showAppBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

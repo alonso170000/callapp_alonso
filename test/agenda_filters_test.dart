@@ -26,6 +26,70 @@ void main() {
     filters.statuses.clear();
     expect(filters.matches(activity), isFalse);
   });
+
+  test('normaliza tipos de API, llamadas y nombres de prospecto', () {
+    final visit = AgendaActivity(
+      type: 'visita_presencial',
+      title: 'VISITA',
+      prospect: '  Ana Pérez  ',
+      description: '',
+      date: DateTime(2026, 11, 18, 10),
+      status: AgendaStatus.pending,
+    );
+    final visitFilters = AgendaFilters(
+      selectedTypes: {'Visita presencial'},
+      prospect: 'ana pérez',
+    );
+    expect(visitFilters.matches(visit), isTrue);
+
+    final call = AgendaActivity(
+      type: 'llamada',
+      title: 'LLAMADA',
+      prospect: 'Ana',
+      description: '',
+      date: DateTime(2026, 11, 18, 12),
+      status: AgendaStatus.pending,
+    );
+    expect(AgendaFilters(selectedTypes: {'Seguimiento'}).matches(call), isTrue);
+  });
+
+  testWidgets('abrir filtros libera la selección oculta de un atajo', (
+    tester,
+  ) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final controller = AgendaController();
+    addTearDown(controller.dispose);
+    final activities = [
+      for (final id in [1, 2])
+        AgendaActivity(
+          id: id,
+          type: 'tarea',
+          title: 'TAREA',
+          prospect: 'Prospecto $id',
+          description: '',
+          date: DateTime(today.year, today.month, today.day, 9 + id),
+          status: AgendaStatus.pending,
+        ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaScreen(
+            controller: controller,
+            loadActivities: () async => activities,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    controller.showFromHome(today, {1}, 'Atajo');
+    await tester.pumpAndSettle();
+    expect(find.text('MOSTRANDO 1 ACTIVIDAD'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Filtrar actividades'));
+    await tester.pumpAndSettle();
+    expect(find.text('VER 2 RESULTADOS'), findsOneWidget);
+  });
   for (final width in [320.0, 390.0]) {
     testWidgets('Filters apply, cancel and clear at $width', (tester) async {
       tester.view.devicePixelRatio = 1;

@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
@@ -12,6 +14,8 @@ import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+import '../../widgets/app_bottom_sheet.dart';
 
 /// Pantalla del buscador global de prospectos.
 ///
@@ -183,24 +187,12 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _confirmClearHistory() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Borrar historial'),
-        content: const Text(
-          '¿Deseas eliminar todos los términos buscados recientemente?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('BORRAR'),
-          ),
-        ],
-      ),
+      title: 'Borrar historial',
+      message: '¿Deseas eliminar todos los términos buscados recientemente?',
+      secondaryLabel: 'CANCELAR',
+      primaryLabel: 'BORRAR',
     );
     if (confirmed != true) return;
     try {
@@ -255,18 +247,20 @@ class _SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
                 children: [
-                  IconButton(
-                    tooltip: 'Volver',
-                    onPressed: _close,
-                    style: IconButton.styleFrom(
-                      backgroundColor: palette.brandFill,
-                      foregroundColor: palette.onBrand,
-                      minimumSize: const Size(48, 48),
-                      shape: const CircleBorder(),
-                    ),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
+                  AppPressBounce(
+                    child: IconButton(
+                      tooltip: 'Volver',
+                      onPressed: _close,
+                      style: IconButton.styleFrom(
+                        backgroundColor: palette.brandFill,
+                        foregroundColor: palette.onBrand,
+                        minimumSize: const Size(48, 48),
+                        shape: const CircleBorder(),
+                      ),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -335,13 +329,15 @@ class _SearchScreenState extends State<SearchScreen> {
           minHeight: 24,
         ),
         suffixIcon: _query.isNotEmpty
-            ? IconButton(
-                tooltip: 'Limpiar búsqueda',
-                onPressed: _clearQuery,
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: palette.fieldForeground,
-                  size: 22,
+            ? AppPressBounce(
+                child: IconButton(
+                  tooltip: 'Limpiar búsqueda',
+                  onPressed: _clearQuery,
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: palette.fieldForeground,
+                    size: 22,
+                  ),
                 ),
               )
             : null,

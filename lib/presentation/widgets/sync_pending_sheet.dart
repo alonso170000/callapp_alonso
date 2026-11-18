@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/sync_models.dart';
 import 'package:callerapp_frontend/resources/styles/styles.dart';
@@ -92,12 +93,15 @@ class _SyncPendingSheetState extends State<SyncPendingSheet> {
                           SizedBox(height: AppStyles.spacingSmall(context)),
                           Align(
                             alignment: Alignment.centerRight,
-                            child: FilledButton(
-                              onPressed: _workingId == null
-                                  ? () => _run(issue.id)
-                                  : null,
-                              child: Text(
-                                working ? 'PROCESANDO…' : 'REINTENTAR',
+                            child: AppPressBounce(
+                              enabled: _workingId == null,
+                              child: FilledButton(
+                                onPressed: _workingId == null
+                                    ? () => _run(issue.id)
+                                    : null,
+                                child: Text(
+                                  working ? 'PROCESANDO…' : 'REINTENTAR',
+                                ),
                               ),
                             ),
                           ),

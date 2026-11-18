@@ -1,3 +1,4 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/presentation/validators/login_validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -81,17 +82,19 @@ class LoginField extends StatelessWidget {
               minHeight: 44,
             ),
             suffixIcon: password
-                ? IconButton(
-                    tooltip: obscurePassword
-                        ? 'Mostrar contraseña'
-                        : 'Ocultar contraseña',
-                    onPressed: onTogglePassword,
-                    icon: Icon(
-                      obscurePassword
-                          ? Iconsax.eye_copy
-                          : Iconsax.eye_slash_copy,
-                      color: Colors.white,
-                      size: 21,
+                ? AppPressBounce(
+                    child: IconButton(
+                      tooltip: obscurePassword
+                          ? 'Mostrar contraseña'
+                          : 'Ocultar contraseña',
+                      onPressed: onTogglePassword,
+                      icon: Icon(
+                        obscurePassword
+                            ? Iconsax.eye_copy
+                            : Iconsax.eye_slash_copy,
+                        color: Colors.white,
+                        size: 21,
+                      ),
                     ),
                   )
                 : null,

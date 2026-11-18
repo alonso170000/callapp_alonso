@@ -1,3 +1,5 @@
+import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
+
 import 'dart:async';
 
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
@@ -41,7 +43,9 @@ import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
+import 'package:callerapp_frontend/resources/styles/styles.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 
 class ProspectDetailArguments {
   const ProspectDetailArguments({
@@ -169,27 +173,30 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     return Expanded(
       child: SizedBox(
         height: 48,
-        child: IconButton.filledTonal(
-          tooltip: label,
-          style: IconButton.styleFrom(
-            backgroundColor: palette.secondaryActionForeground.withValues(
-              alpha: 0.2,
+        child: AppPressBounce(
+          enabled: onPressed != null,
+          child: IconButton.filledTonal(
+            tooltip: label,
+            style: IconButton.styleFrom(
+              backgroundColor: palette.secondaryActionForeground.withValues(
+                alpha: 0.2,
+              ),
+              foregroundColor: palette.secondaryActionForeground.withValues(
+                alpha: 0.7,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            foregroundColor: palette.secondaryActionForeground.withValues(
-              alpha: 0.7,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            onPressed: onPressed,
+            icon: busy
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(icon, size: 30),
           ),
-          onPressed: onPressed,
-          icon: busy
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(icon, size: 30),
         ),
       ),
     );
@@ -206,12 +213,15 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
             label: 'Cargando canal de contacto',
             button: true,
             enabled: false,
-            child: FilledButton(
-              onPressed: null,
-              child: const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppPressBounce(
+              enabled: false,
+              child: FilledButton(
+                onPressed: null,
+                child: const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
             ),
           ),
@@ -223,26 +233,27 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         flex: 2,
         child: SizedBox(
           height: 54,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: palette.brandFill,
-              foregroundColor: palette.onBrand,
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          child: AppPressBounce(
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.brandFill,
+                foregroundColor: palette.onBrand,
+                padding: EdgeInsets.zero,
+                shape: appButtonShape(),
+                textStyle: appButtonTextStyle,
               ),
-            ),
-            onPressed: _openProspectData,
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Iconsax.profile_tick_copy, size: 25),
-                SizedBox(height: 2),
-                Text(
-                  'Completar datos',
-                  style: TextStyle(fontFamily: 'SulphurPoint', fontSize: 12),
-                ),
-              ],
+              onPressed: _openProspectData,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.profile_tick_copy, size: 25),
+                  SizedBox(height: 2),
+                  Text(
+                    'Completar datos',
+                    style: TextStyle(fontFamily: 'SulphurPoint', fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -260,36 +271,38 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
           label: '${medium.actionLabel} a ${_prospect.name}',
           button: true,
           enabled: enabled,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: palette.brandFill,
-              foregroundColor: palette.onBrand,
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          child: AppPressBounce(
+            enabled: enabled,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.brandFill,
+                foregroundColor: palette.onBrand,
+                padding: EdgeInsets.zero,
+                shape: appButtonShape(),
+                textStyle: appButtonTextStyle,
               ),
-            ),
-            onPressed: enabled ? () => _runMediumAction(medium) : null,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (busy)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Icon(medium.icon, size: 25),
-                const SizedBox(height: 2),
-                Text(
-                  medium.actionLabel,
-                  style: const TextStyle(
-                    fontFamily: 'SulphurPoint',
-                    fontSize: 13,
+              onPressed: enabled ? () => _runMediumAction(medium) : null,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (busy)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(medium.icon, size: 25),
+                  const SizedBox(height: 2),
+                  Text(
+                    medium.actionLabel,
+                    style: const TextStyle(
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 13,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -445,7 +458,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         _prospect.id == null) {
       return;
     }
-    final scheduled = await showModalBottomSheet<DateTime>(
+    final scheduled = await showAppBottomSheet<DateTime>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -543,30 +556,19 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final template = await showModalBottomSheet<ProspectEmailTemplate>(
+    final template = await showAppBottomSheet<ProspectEmailTemplate>(
       context: context,
       showDragHandle: true,
       builder: (_) => ProspectEmailOptionsSheet(email: prospect.email),
     );
     if (template == null || !mounted) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirmar envío'),
-        content: Text(
+      title: 'Confirmar envío',
+      message:
           '¿Deseas enviar ${template.label.toLowerCase()} a ${prospect.email}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Enviar'),
-          ),
-        ],
-      ),
+      secondaryLabel: 'Cancelar',
+      primaryLabel: 'Enviar',
     );
     if (confirmed == true && mounted) await _sendEmail(template);
   }
@@ -654,33 +656,19 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         _emails = [sent, ..._emails];
         _emailError = null;
       });
-      await showDialog<void>(
+      await showAppMessageSheet(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Correo enviado'),
-          content: Text('${template.label} enviado a ${_prospect.email}.'),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
+        title: 'Correo enviado',
+        message: '${template.label} enviado a ${_prospect.email}.',
+        actionLabel: 'Aceptar',
       );
     } on ProspectsException catch (error) {
       if (!mounted) return;
-      await showDialog<void>(
+      await showAppMessageSheet(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('No se pudo enviar el correo'),
-          content: Text(error.message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        ),
+        title: 'No se pudo enviar el correo',
+        message: error.message,
+        actionLabel: 'Cerrar',
       );
     } finally {
       if (mounted) setState(() => _sendingEmail = false);
@@ -700,7 +688,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
 
   Future<void> _convertToClient() async {
     if (_convertingClient) return;
-    final confirmed = await showModalBottomSheet<bool>(
+    final confirmed = await showAppBottomSheet<bool>(
       context: context,
       showDragHandle: true,
       builder: (_) => ConvertProspectSheet(prospect: _prospect),
@@ -735,7 +723,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         _prospect.status.toLowerCase() == 'por eliminar') {
       return;
     }
-    final reason = await showModalBottomSheet<String>(
+    final reason = await showAppBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -803,24 +791,12 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Antes de marcar'),
-        content: const Text(
-          'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('MARCAR'),
-          ),
-        ],
-      ),
+      title: 'Antes de marcar',
+      message: 'Recuerda informar al prospecto que la llamada será grabada y preguntarle si acepta.',
+      secondaryLabel: 'CANCELAR',
+      primaryLabel: 'MARCAR',
     );
     if (confirmed != true || !mounted) return;
     final startedAt = businessNow();
@@ -870,7 +846,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       _openingCallResult = false;
       return;
     }
-    final closure = await showModalBottomSheet<ProspectCallClosure>(
+    final closure = await showAppBottomSheet<ProspectCallClosure>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -959,7 +935,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       );
       return;
     }
-    final scheduled = await showModalBottomSheet<DateTime>(
+    final scheduled = await showAppBottomSheet<DateTime>(
       context: detailContext,
       isScrollControlled: true,
       useSafeArea: true,
@@ -999,25 +975,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: detailContext,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancelar actividad'),
-        content: const Text(
-          '¿Seguro que deseas cancelar esta actividad? Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('VOLVER'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirm-cancel-opened-activity'),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('SÍ, CANCELAR'),
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirmationSheet(
+      context: context,
+      title: 'Cancelar actividad',
+      message: '¿Seguro que deseas cancelar esta actividad? Esta acción no se puede deshacer.',
+      secondaryLabel: 'VOLVER',
+      primaryLabel: 'SÍ, CANCELAR',
+      primaryKey: const ValueKey('confirm-cancel-opened-activity'),
     );
     if (confirmed != true || !detailContext.mounted) return;
     try {
@@ -1109,20 +1073,11 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   Future<void> _handlePendingCallExit(bool didPop, Object? _) async {
     if (didPop) return;
     if (_requiresFollowUp) {
-      await showDialog<void>(
+      await showAppMessageSheet(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Seguimiento obligatorio'),
-          content: const Text(
-            'Después de una llamada debes completar y guardar el formulario de seguimiento antes de salir.',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('LLENAR SEGUIMIENTO'),
-            ),
-          ],
-        ),
+        title: 'Seguimiento obligatorio',
+        message: 'Después de una llamada debes completar y guardar el formulario de seguimiento antes de salir.',
+        actionLabel: 'LLENAR SEGUIMIENTO',
       );
       if (mounted) {
         setState(() => _selected.add(ProspectSection.followUp.label));
@@ -1130,7 +1085,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       return;
     }
     if (!_hasDirtyForms) return;
-    final leave = await showModalBottomSheet<bool>(
+    final leave = await showAppBottomSheet<bool>(
       context: context,
       useSafeArea: true,
       showDragHandle: true,
@@ -1166,19 +1121,23 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
               Row(
                 children: [
                   Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(sheetContext, false),
-                      child: const Text('SEGUIR EDITANDO'),
+                    child: AppPressBounce(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(sheetContext, false),
+                        child: const Text('SEGUIR EDITANDO'),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: FilledButton(
-                      key: const ValueKey('discard-pending-form-changes'),
-                      onPressed: () => Navigator.pop(sheetContext, true),
-                      child: const Text(
-                        'SALIR SIN GUARDAR',
-                        style: TextStyle(fontSize: 13),
+                    child: AppPressBounce(
+                      child: FilledButton(
+                        key: const ValueKey('discard-pending-form-changes'),
+                        onPressed: () => Navigator.pop(sheetContext, true),
+                        child: const Text(
+                          'SALIR SIN GUARDAR',
+                          style: TextStyle(fontSize: 13),
+                        ),
                       ),
                     ),
                   ),

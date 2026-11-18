@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../colors/colors.dart';
 import 'app_palette.dart';
 import 'picker_theme.dart';
+import 'styles.dart';
 
 class AppThemes {
   static ThemeData build(Brightness brightness) {
@@ -42,7 +43,38 @@ class AppThemes {
         backgroundColor: surface,
         foregroundColor: foreground,
       ),
-      bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: appButtonMinimumSize,
+          textStyle: appButtonTextStyle,
+          shape: appButtonShape(),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: appButtonMinimumSize,
+          textStyle: appButtonTextStyle,
+          shape: appButtonShape(),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: appButtonMinimumSize,
+          textStyle: appButtonTextStyle,
+          shape: appButtonShape(),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        modalBackgroundColor: surface,
+        modalBarrierColor: scheme.scrim.withValues(alpha: 0.54),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppStyles.sheetRadius),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+      ),
       dialogTheme: DialogThemeData(backgroundColor: surface),
       datePickerTheme: dark
           ? appDatePickerTheme.copyWith(
