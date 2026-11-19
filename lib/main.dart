@@ -30,6 +30,7 @@ class MainApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: AppearanceController.instance,
       builder: (context, _) => MaterialApp.router(
+        title: 'CallApp',
         routerConfig: appRouter,
         debugShowCheckedModeBanner: false,
         locale: const Locale('es', 'MX'),

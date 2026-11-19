@@ -1,6 +1,6 @@
 {
-    "name": "callerapp_frontend",
-    "short_name": "callerapp_frontend",
+    "name": "CallApp",
+    "short_name": "CallApp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
