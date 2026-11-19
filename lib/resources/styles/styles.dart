@@ -3,6 +3,7 @@ import 'package:callerapp_frontend/resources/colors/colors.dart';
 
 class AppStyles {
   static const double sheetRadius = 24;
+  static const double agendaInfoCardHeight = 168;
   static const double authContentTop = 120;
   static const double authCharacterTop = 42;
   static const double authCharacterSize = 130;

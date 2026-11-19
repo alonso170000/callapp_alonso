@@ -1087,7 +1087,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                 color: Theme.of(context).colorScheme.primary,
                                 fontFamily: 'BebasNeue',
                                 fontSize: 18,
-                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ),

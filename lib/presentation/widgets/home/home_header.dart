@@ -51,7 +51,7 @@ class HomeHeader extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  userName.toUpperCase(),
+                  userName.toUpperCase().split(' ').take(2).join(' '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -98,12 +98,12 @@ class _UserAvatar extends StatelessWidget {
                 right: 8,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 137, 118),
+                    color: Color(0xFFE9573F),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
                     child: Icon(
-                      Iconsax.user,
+                      Icons.person,
                       color: Color(0xFFFFD486),
                       size: 48,
                     ),

@@ -25,19 +25,27 @@ class ProfileIdentity extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      const CircleAvatar(
-        radius: 54,
-        backgroundColor: Color(0xFFE9573F),
-        child: Icon(
-          Icons.person_rounded,
-          size: 88,
-          color: AppColors.homeWarmText,
-        ),
-      ),
-      _badge(
-        profile.name.split(' ').take(2).join(' '),
-        size: 30,
-        color: AppColors.homeWarmText,
+      Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Padding(
+            padding: EdgeInsetsGeometry.only(bottom: 30),
+            child: CircleAvatar(
+              radius: 54,
+              backgroundColor: Color(0xFFE9573F),
+              child: Icon(
+                Icons.person_rounded,
+                size: 88,
+                color: AppColors.homeWarmText,
+              ),
+            ),
+          ),
+          _badge(
+            profile.name.split(' ').take(2).join(' '),
+            size: 30,
+            color: AppColors.homeWarmText,
+          ),
+        ],
       ),
       const SizedBox(height: 9),
       Wrap(

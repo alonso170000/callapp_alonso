@@ -260,8 +260,8 @@ class _ProspectsScreenState extends State<ProspectsScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: value == _advanced.sort
-                        ? AppColors.homeWarmText
-                        : AppPalette.of(sheetContext).chipFill,
+                        ? AppColors.secondaryColor
+                        : AppPalette.of(sheetContext).selectedForeground,
                     borderRadius: BorderRadius.circular(10),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(

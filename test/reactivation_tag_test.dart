@@ -43,6 +43,7 @@ void main() {
       description: 'Descripción',
       date: DateTime(2026, 11, 11, 10),
       status: AgendaStatus.pending,
+      tags: prospectId == null ? const [] : const ['Caliente', 'CLIENTE'],
     );
 
     await tester.pumpWidget(
@@ -53,6 +54,16 @@ void main() {
       ),
     );
     expect(find.text('REACTIVACIÓN'), findsOneWidget);
+    expect(find.text('CALIENTE'), findsOneWidget);
+    expect(find.text('CLIENTE'), findsOneWidget);
+    final reactivation = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('reactivation-tag')),
+        matching: find.byType(Text),
+      ),
+    );
+    final priority = tester.widget<Text>(find.text('CALIENTE'));
+    expect(reactivation.style?.fontSize, priority.style?.fontSize);
 
     await tester.pumpWidget(
       MaterialApp(

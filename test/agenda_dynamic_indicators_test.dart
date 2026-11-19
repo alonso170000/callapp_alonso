@@ -1,4 +1,5 @@
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/agenda_screen.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
 import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_month_calendar.dart';
@@ -106,6 +107,75 @@ void main() {
     expect(find.text('Medio'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
     expect(find.text('Canal de contacto'), findsOneWidget);
+  });
+
+  testWidgets('Activity detail shows contact data and consistent tags', (
+    tester,
+  ) async {
+    final now = businessNow();
+    final activity = AgendaActivity(
+      id: 1,
+      prospectId: 17,
+      type: 'seguimiento',
+      medium: 'llamada',
+      title: 'SEGUIMIENTO',
+      prospect: 'Ana',
+      description: 'Contactar al prospecto',
+      date: now,
+      status: AgendaStatus.pending,
+      tags: const ['Contactado y validado', 'Caliente'],
+      tipoProspecto: 'reactivacion',
+    );
+    final prospect = ProspectRecord(
+      id: 17,
+      name: 'Ana',
+      phone: '9980000000',
+      email: 'ana@example.com',
+      status: 'Contactado y validado',
+      temperature: 'Caliente',
+      avatarColor: Colors.teal,
+      statusColor: Colors.green,
+      lastCallAt: now,
+      isClient: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaActivityDetail(
+            activity: activity,
+            loadProspects: () async => [prospect],
+            onClose: () {},
+            onMessage: () {},
+            onCall: () {},
+            onOpenProspect: () {},
+            onEdit: () {},
+            onComplete: () {},
+            onReschedule: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Último contacto · Llamada · Hoy'), findsOneWidget);
+    expect(find.text('CONTACTADO Y VALIDADO'), findsOneWidget);
+    expect(find.text('CALIENTE'), findsOneWidget);
+    expect(find.text('CLIENTE'), findsOneWidget);
+    expect(find.text('REACTIVACIÓN'), findsOneWidget);
+    expect(find.byTooltip('Llamar a Ana'), findsNothing);
+
+    final dateHeight = tester
+        .getSize(find.byKey(const ValueKey('activity-info-fecha')))
+        .height;
+    final reminderHeight = tester
+        .getSize(find.byKey(const ValueKey('activity-info-recordatorio')))
+        .height;
+    final mediumHeight = tester
+        .getSize(find.byKey(const ValueKey('activity-info-medio')))
+        .height;
+    expect(reminderHeight, dateHeight);
+    expect(mediumHeight, dateHeight);
   });
 
   testWidgets('Activity detail keeps its header fixed while content scrolls', (

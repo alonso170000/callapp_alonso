@@ -474,6 +474,7 @@ class AgendaService {
           ProspectStatus.canonical(row['prospecto_estatus'] as String),
         if (row['prioridad'] is String)
           (row['prioridad'] as String).replaceAll('frio', 'frío'),
+        if (row['cliente_id'] != null) 'CLIENTE',
       ],
       tipoProspecto:
           (row['prospecto_tipo'] ?? row['tipo_prospecto'])?.toString() ??

@@ -3,6 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('Login stays light and fits a short screen without scrolling', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: ThemeData.dark(), home: const LoginScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldContext = tester.element(find.byType(Scaffold));
+    expect(Theme.of(scaffoldContext).brightness, Brightness.light);
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Login remains usable on a small screen with the keyboard open', (
     tester,
   ) async {

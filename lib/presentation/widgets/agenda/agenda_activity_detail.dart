@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/presentation/widgets/app_press_bounce.dart';
 import 'package:callerapp_frontend/resources/colors/prospect_tag_colors.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/reactivation_tag.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_tag.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_card_components.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
@@ -15,7 +16,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/services/prospects_service.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/contact_medium.dart';
-import 'package:callerapp_frontend/presentation/models/prospect_action.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 class AgendaActivityDetail extends StatefulWidget {
   final AgendaActivity activity;
@@ -93,8 +94,6 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     _ => 'Sin definir',
   };
   VoidCallback get onClose => widget.onClose;
-  VoidCallback get onMessage => widget.onMessage;
-  VoidCallback get onCall => widget.onCall;
   VoidCallback get onOpenProspect => widget.onOpenProspect;
   VoidCallback get onEdit => widget.onEdit;
   VoidCallback get onComplete =>
@@ -168,64 +167,14 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     return '${hour.toString().padLeft(2, '0')}:$minute ${activity.date.hour < 12 ? 'AM' : 'PM'}';
   }
 
-  ProspectAction get _prospectAction {
-    final prospect = _prospect;
-    if (prospect != null) {
-      return ProspectAction.resolve(prospect: prospect, activities: [activity]);
-    }
-    return ProspectAction(
-      medium: ContactMedium.parse(activity.medium) ?? ContactMedium.llamada,
-      activity: activity.isFollowUp ? activity : null,
-    );
-  }
-
-  Widget _contactAction() {
-    final action = _prospectAction;
-    final medium = action.medium;
-    final available =
-        _prospect != null &&
-        (medium == ContactMedium.facebook || medium.isAvailable(_prospect!));
-    final suffix = action.hasActivity
-        ? ' · Seguimiento ${action.isOverdue ? 'atrasado' : 'agendado'}'
-        : '';
-    final icon = switch (medium) {
-      ContactMedium.llamada => Iconsax.call_calling_copy,
-      ContactMedium.whatsapp => Iconsax.whatsapp_copy,
-      ContactMedium.facebook => Iconsax.facebook_copy,
-      ContactMedium.correo => Iconsax.sms_copy,
-    };
-    return AppPressBounce(
-      child: IconButton(
-        tooltip: '${medium.actionLabel} a ${activity.prospect}$suffix',
-        onPressed: available
-            ? () {
-                final callback = widget.onContact;
-                if (callback != null) {
-                  callback(medium);
-                } else if (medium == ContactMedium.llamada) {
-                  onCall();
-                } else {
-                  onMessage();
-                }
-              }
-            : null,
-        style: IconButton.styleFrom(
-          backgroundColor: switch (medium) {
-            ContactMedium.llamada => AppColors.prospectActionCall,
-            ContactMedium.whatsapp => AppColors.prospectActionWhastapp,
-            ContactMedium.facebook => AppColors.prospectActionFacebook,
-            ContactMedium.correo => AppColors.prospectActionMail,
-          },
-          foregroundColor: AppColors.primaryColor,
-          minimumSize: const Size(38, 38),
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        icon: Icon(icon, size: 20),
-      ),
-    );
+  String get _lastContactLabel {
+    final lastCall = _prospect?.lastCallAt;
+    if (lastCall == null) return activity.lastContact;
+    final days = DateUtils.dateOnly(businessNow())
+        .difference(DateUtils.dateOnly(lastCall))
+        .inDays;
+    if (days <= 0) return 'Último contacto · Llamada · Hoy';
+    return 'Último contacto · Llamada · Hace $days ${days == 1 ? 'día' : 'días'}';
   }
 
   Widget _sectionTitle(String title) => Align(
@@ -245,7 +194,8 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
 
   Widget _infoCard(String value, String label, String detail, Color color) =>
       Container(
-        constraints: const BoxConstraints(minHeight: 42),
+        key: ValueKey('activity-info-${label.toLowerCase()}'),
+        height: AppStyles.agendaInfoCardHeight,
         padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
         decoration: BoxDecoration(
           color: color,
@@ -352,19 +302,16 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                     ),
                   ),
                   Text(
-                    activity.lastContact,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    _lastContactLabel,
                     style: const TextStyle(
-                      color: Colors.white,
                       fontFamily: 'SulphurPoint',
-                      fontSize: 11,
+                      fontSize: 12,
+                      color: Color(0xFFB0E4DB),
                     ),
                   ),
                 ],
               ),
             ),
-            _contactAction(),
           ],
         ),
         const SizedBox(height: 12),
@@ -376,25 +323,21 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 spacing: 5,
                 runSpacing: 5,
                 children: [
-                  if (activity.tags.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
-                      color: ProspectTagColors.background(activity.tags.first),
-                      child: Text(
-                        activity.tags.first,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: ProspectTagColors.foreground(
-                            activity.tags.first,
-                          ),
-                          fontFamily: 'BebasNeue',
-                          fontSize: 16,
-                        ),
-                      ),
+                  ...activity.tags.map(
+                    (tag) => ProspectTag(
+                      label: tag.toUpperCase(),
+                      background: ProspectTagColors.background(tag),
+                      foreground: ProspectTagColors.foreground(tag),
+                    ),
+                  ),
+                  if (_prospect?.isClient == true &&
+                      !activity.tags.any(
+                        (tag) => tag.trim().toLowerCase() == 'cliente',
+                      ))
+                    ProspectTag(
+                      label: 'CLIENTE',
+                      background: ProspectTagColors.client,
+                      foreground: ProspectTagColors.clientForeground,
                     ),
                   if (activity.isReactivation)
                     const ReactivationTag(compact: true),
@@ -440,9 +383,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
             backgroundColor: palette.secondaryActionForeground.withValues(
               alpha: 0.2,
             ),
-            foregroundColor: palette.secondaryActionForeground.withValues(
-              alpha: 0.7,
-            ),
+            foregroundColor: palette.secondaryActionForeground,
             side: BorderSide.none,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),

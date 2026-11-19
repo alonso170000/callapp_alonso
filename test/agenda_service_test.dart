@@ -69,6 +69,7 @@ void main() {
     'prospecto_nombre': 'Ana',
     'descripcion': 'Confirmar visita',
     'prospecto_tipo': 'reactivados',
+    'cliente_id': 31,
   };
   test('Maps status, date, actual title and filter type without fabricated metadata', () {
     for (final entry in {
@@ -86,6 +87,7 @@ void main() {
       expect(activity.date, now.subtract(const Duration(hours: 1)));
       expect(activity.hasReminder, isFalse);
       expect(activity.isReactivation, isTrue);
+      expect(activity.tags, contains('CLIENTE'));
       expect(
         AgendaFilters(selectedTypes: {'Llamada'}).matches(activity),
         isTrue,

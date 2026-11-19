@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
+import 'package:callerapp_frontend/resources/styles/app_themes.dart';
 
 class LoginScreen extends StatefulWidget {
   static const name = 'login';
@@ -61,152 +62,175 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final heroHeight = (constraints.maxHeight * 0.55)
-                .clamp(220.0, 480.0)
-                .toDouble();
-            return SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    children: [
-                      LoginIllustration(height: heroHeight),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-                        child: AutofillGroup(
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Center(
-                                  child: Image.asset(
-                                    'lib/resources/images/Hada Corp-Logo-2022-10.png',
-                                    width: 70,
-                                    height: 26,
-                                    semanticLabel: 'HADA Corp',
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Center(
-                                  child: Wrap(
-                                    alignment: WrapAlignment.center,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    spacing: 5,
-                                    children: [
-                                      Text(
-                                        'INICIA',
-                                        style: TextStyle(
-                                          fontFamily: 'BebasNeue',
-                                          fontSize: 34,
-                                          height: 1.1,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                        ),
+    return Theme(
+      data: AppThemes.build(Brightness.light),
+      child: Builder(
+        builder: (context) => Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeight = constraints.maxHeight < 650;
+                final heroHeight =
+                    (constraints.maxHeight * (compactHeight ? 0.33 : 0.55))
+                        .clamp(120.0, 480.0)
+                        .toDouble();
+                final sectionGap = compactHeight ? 10.0 : 14.0;
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Column(
+                        children: [
+                          LoginIllustration(height: heroHeight),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              compactHeight ? 4 : 8,
+                              24,
+                              compactHeight ? 16 : 32,
+                            ),
+                            child: AutofillGroup(
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Center(
+                                      child: Image.asset(
+                                        'lib/resources/images/Hada Corp-Logo-2022-10.png',
+                                        width: 70,
+                                        height: 26,
+                                        semanticLabel: 'HADA Corp',
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryColor,
-                                          borderRadius: BorderRadius.circular(
-                                            5,
+                                    ),
+                                    SizedBox(height: compactHeight ? 10 : 16),
+                                    Center(
+                                      child: Wrap(
+                                        alignment: WrapAlignment.center,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        spacing: 5,
+                                        children: [
+                                          Text(
+                                            'INICIA',
+                                            style: TextStyle(
+                                              fontFamily: 'BebasNeue',
+                                              fontSize: 34,
+                                              height: 1.1,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
                                           ),
-                                        ),
-                                        child: const Text(
-                                          'SESIÓN',
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(5),
+                                            ),
+                                            child: const Text(
+                                              'SESIÓN',
+                                              style: TextStyle(
+                                                fontFamily: 'BebasNeue',
+                                                fontSize: 34,
+                                                height: 1.1,
+                                                color: AppColors.accentColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionGap),
+                                    LoginField(
+                                      obscurePassword: _obscurePassword,
+                                      onSubmitted: _submit,
+                                      onTogglePassword: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                      label: 'Usuario',
+                                      controller: _emailController,
+                                      icon: Iconsax.user_copy,
+                                      password: false,
+                                    ),
+                                    SizedBox(height: sectionGap),
+                                    LoginField(
+                                      obscurePassword: _obscurePassword,
+                                      onSubmitted: _submit,
+                                      onTogglePassword: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                      label: 'Contraseña',
+                                      controller: _passwordController,
+                                      icon: Iconsax.lock_copy,
+                                      password: true,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    if (_error != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: Text(
+                                          _error!,
                                           style: TextStyle(
-                                            fontFamily: 'BebasNeue',
-                                            fontSize: 34,
-                                            height: 1.1,
-                                            color: AppColors.accentColor,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error,
                                           ),
+                                          semanticsLabel: _error,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                LoginField(
-                                  obscurePassword: _obscurePassword,
-                                  onSubmitted: _submit,
-                                  onTogglePassword: () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                                  label: 'Usuario',
-                                  controller: _emailController,
-                                  icon: Iconsax.user_copy,
-                                  password: false,
-                                ),
-                                const SizedBox(height: 14),
-                                LoginField(
-                                  obscurePassword: _obscurePassword,
-                                  onSubmitted: _submit,
-                                  onTogglePassword: () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                                  label: 'Contraseña',
-                                  controller: _passwordController,
-                                  icon: Iconsax.lock_copy,
-                                  password: true,
-                                ),
-                                const SizedBox(height: 2),
-                                if (_error != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: Text(
-                                      _error!,
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .error,
-                                      ),
-                                      semanticsLabel: _error,
-                                    ),
-                                  ),
-                                const SizedBox(height: 28),
-                                AppPressBounce(
-                                  enabled: !_submitting,
-                                  child: FilledButton(
-                                    onPressed: _submitting ? null : _submit,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: AppColors.primaryColor,
-                                      foregroundColor: Colors.white,
-                                      minimumSize: const Size.fromHeight(50),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontFamily: 'BebasNeue',
-                                        fontSize: 24,
+                                    SizedBox(height: compactHeight ? 16 : 28),
+                                    AppPressBounce(
+                                      enabled: !_submitting,
+                                      child: FilledButton(
+                                        onPressed: _submitting ? null : _submit,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              AppColors.primaryColor,
+                                          foregroundColor: Colors.white,
+                                          minimumSize: const Size.fromHeight(
+                                            50,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontFamily: 'BebasNeue',
+                                            fontSize: 24,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _submitting
+                                              ? 'CONECTANDO…'
+                                              : 'INGRESAR',
+                                        ),
                                       ),
                                     ),
-                                    child: Text(
-                                      _submitting ? 'CONECTANDO…' : 'INGRESAR',
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

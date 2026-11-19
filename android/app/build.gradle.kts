@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.callerapp_frontend"
+    namespace = "com.hadacorp.callapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.callerapp_frontend"
+        applicationId = "com.hadacorp.callapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -51,4 +51,23 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    doLast {
+        val versionName = android.defaultConfig.versionName ?: "1.0.0"
+        val buildDir = rootProject.layout.buildDirectory.get().asFile
+        // Gradle escribe el APK en apk/release; Flutter lo copia a flutter-apk despues.
+        val originalApk = File(buildDir, "app/outputs/apk/release/app-release.apk")
+        val outputDir = File(buildDir, "app/outputs/flutter-apk")
+        outputDir.mkdirs()
+        val renamedApk = File(outputDir, "CallApp-v$versionName.apk")
+
+        if (originalApk.exists()) {
+            originalApk.copyTo(renamedApk, overwrite = true)
+            println("APK renombrado generado en: ${renamedApk.absolutePath}")
+        } else {
+            println("No se encontro app-release.apk en: ${originalApk.absolutePath}")
+        }
+    }
 }

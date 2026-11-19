@@ -29,8 +29,14 @@ class ProspectTagColors {
     _ => AppColors.homeWarmText,
   };
 
-  static Color background(String value) =>
-      isPriority(value) ? priority(value) : status(value);
-  static Color foreground(String value) =>
-      isPriority(value) ? Colors.white : Colors.black;
+  static Color background(String value) => _key(value) == 'cliente'
+      ? client
+      : isPriority(value)
+      ? priority(value)
+      : status(value);
+  static Color foreground(String value) => _key(value) == 'cliente'
+      ? clientForeground
+      : isPriority(value)
+      ? Colors.white
+      : Colors.black;
 }

@@ -67,7 +67,7 @@ class ScriptStepView extends StatelessWidget {
                   child: IconButton(
                     tooltip: 'Volver al paso anterior',
                     onPressed: onBack,
-                    icon: const Icon(Iconsax.arrow_left_copy),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
                   ),
                 ),
               ),
@@ -77,7 +77,7 @@ class ScriptStepView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: Colors.white
                 ),
               ),
             ),
@@ -152,11 +152,10 @@ class ScriptStepView extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                const Text('Fin del guion'),
                 AppPressBounce(
                   child: TextButton(
                     onPressed: onRestart,
-                    child: const Text('Volver al inicio'),
+                    child: const Text('Volver al inicio', style: TextStyle(color: Colors.white),),
                   ),
                 ),
               ],

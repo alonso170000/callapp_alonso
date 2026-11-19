@@ -626,7 +626,7 @@ class _PickerButton extends StatelessWidget {
         textStyle: appButtonTextStyle,
       ),
       onPressed: onPressed,
-      child: Text(label),
+      child: Text(label, style: const TextStyle(fontFamily: 'SulphurPoint')),
     ),
   );
 }
@@ -655,7 +655,7 @@ class _DialogButton extends StatelessWidget {
         textStyle: appButtonTextStyle,
       ),
       onPressed: onPressed,
-      child: Text(label),
+      child: Text(label, style: const TextStyle(fontFamily: 'SulphurPoint')),
     ),
   );
 }

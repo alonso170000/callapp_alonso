@@ -152,6 +152,7 @@ class AppBottomSheet extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
                 Flexible(child: body),
                 if (footer != null) ...[const SizedBox(height: 12), footer!],
               ],
