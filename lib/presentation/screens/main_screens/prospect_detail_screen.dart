@@ -1136,7 +1136,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                         onPressed: () => Navigator.pop(sheetContext, true),
                         child: const Text(
                           'SALIR SIN GUARDAR',
-                          style: TextStyle(fontSize: 13),
+                          style: TextStyle(fontSize: 18),
                         ),
                       ),
                     ),

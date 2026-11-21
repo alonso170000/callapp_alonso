@@ -53,7 +53,7 @@ class NotificationService extends ChangeNotifier {
 
   /// Las notificaciones leídas más viejas que esto se purgan. El mismo corte
   /// se aplica al reconstruir la bandeja para que no reaparezcan como nuevas.
-  static const _retention = Duration(days: 7);
+  static const _retention = Duration(days: 14);
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -282,7 +282,13 @@ class NotificationService extends ChangeNotifier {
       newlyVisibleProspectIds: newlyVisibleProspectIds,
       baseline: baseline,
     );
-    if (assignments.isEmpty) {
+    final history = <int, ActivityNotification>{
+      for (final notification in assignmentHistoryFor(prospects, now: now))
+        notification.activityId: notification,
+      for (final notification in assignments)
+        notification.activityId: notification,
+    }.values.toList();
+    if (history.isEmpty) {
       await _reloadStored(scope, now);
       return;
     }
@@ -297,7 +303,7 @@ class NotificationService extends ChangeNotifier {
         newAssignments.add(notification);
       }
     }
-    await _store.upsert(scope, assignments);
+    await _store.upsert(scope, history);
     await _reloadStored(scope, now);
     _scheduleCleanup();
     notifyListeners();
@@ -481,7 +487,7 @@ class NotificationService extends ChangeNotifier {
     }
     try {
       await _store.upsert(scope, inbox);
-      await _store.purgeReadOlderThan(scope, now.subtract(_retention));
+      await _store.purgeOlderThan(scope, now.subtract(_retention));
       final stored = await _store.read(scope);
       _reminders
         ..clear()
@@ -495,7 +501,7 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> _reloadStored(NotificationScope scope, DateTime now) async {
     try {
-      await _store.purgeReadOlderThan(scope, now.subtract(_retention));
+      await _store.purgeOlderThan(scope, now.subtract(_retention));
       final stored = await _store.read(scope);
       _reminders
         ..clear()
@@ -550,10 +556,7 @@ class NotificationService extends ChangeNotifier {
       final scope = _scope;
       if (scope == null) return;
       try {
-        await _store.purgeReadOlderThan(
-          scope,
-          businessNow().subtract(_retention),
-        );
+        await _store.purgeOlderThan(scope, businessNow().subtract(_retention));
         final stored = await _store.read(scope);
         _reminders
           ..clear()
@@ -600,10 +603,11 @@ class NotificationService extends ChangeNotifier {
     final notifications = <ActivityNotification>[];
     for (final activity in activities) {
       final id = activity.id;
-      final isPending =
-          activity.status == AgendaStatus.pending ||
-          activity.status == AgendaStatus.overdue;
-      if (id == null || !isPending || !activity.hasReminder) continue;
+      if (id == null ||
+          activity.status == AgendaStatus.cancelled ||
+          !activity.hasReminder) {
+        continue;
+      }
       final reminderAt = activity.date.subtract(
         Duration(minutes: activity.reminderMinutes),
       );
@@ -671,6 +675,50 @@ class NotificationService extends ChangeNotifier {
     notifications.sort((a, b) => b.reminderAt.compareTo(a.reminderAt));
     return notifications;
   }
+
+  /// Reconstruye el historial visible sin convertir asignaciones antiguas en
+  /// alertas nuevas del sistema operativo.
+  static List<ActivityNotification> assignmentHistoryFor(
+    List<ProspectRecord> prospects, {
+    required DateTime now,
+  }) {
+    final cutoff = now.subtract(_retention);
+    final notifications = <ActivityNotification>[];
+    for (final prospect in prospects) {
+      final id = prospect.id;
+      final assignedAt = prospect.assignedAt;
+      if (id == null ||
+          assignedAt == null ||
+          assignedAt.isBefore(cutoff) ||
+          assignedAt.isAfter(now)) {
+        continue;
+      }
+      notifications.add(_assignmentNotification(prospect, assignedAt));
+    }
+    notifications.sort((a, b) => b.reminderAt.compareTo(a.reminderAt));
+    return notifications;
+  }
+
+  static ActivityNotification _assignmentNotification(
+    ProspectRecord prospect,
+    DateTime assignedAt,
+  ) => ActivityNotification(
+    reminderAt: assignedAt,
+    isRead: false,
+    activity: AgendaActivity(
+      id: -prospect.id!,
+      prospectId: prospect.id,
+      prospectAvatarUrl: prospect.avatarUrl,
+      type: assignmentType,
+      title: 'NUEVO PROSPECTO',
+      prospect: prospect.name,
+      description: 'Se te asignó un nuevo prospecto.',
+      date: assignedAt,
+      status: AgendaStatus.pending,
+      hasReminder: false,
+      reminderMinutes: 0,
+    ),
+  );
 
   /// Fecha estable para que dos chequeos seguidos no generen avisos duplicados.
   static DateTime? _assignmentMoment(

@@ -354,14 +354,23 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     _ => medium,
   };
 
+  String _methodToRestore() {
+    final savedMethod = _saved?['method'] as String?;
+    if (savedMethod != null) return savedMethod;
+
+    final activityMedium = _followUpToComplete?.medium;
+    if (activityMedium != null) return _methodForActivity(activityMedium);
+
+    return _initialMethod();
+  }
+
   void _cancel() {
     setState(() {
       _status =
           _saved?['status'] ??
           ProspectStatus.followUpInitial(widget.prospect.status);
-      _method =
-          _saved?['method'] ??
-          (widget.telephoneCallCompleted ? 'Llamada telefónica' : 'WhatsApp');
+      _method = _methodToRestore();
+      _activityMedium = (_selectedMedium ?? ContactMedium.llamada).backendValue;
       _priority = _saved?['priority'] ?? widget.prospect.temperature;
       _notes.text = _saved?['notes'] ?? '';
       _success =
@@ -894,9 +903,11 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   Widget _activityContextNotice() {
     if (_loadingContext) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
-        child: LinearProgressIndicator(),
+        child: LinearProgressIndicator(
+          color: AppPalette.of(context).nestedSurfaceFill,
+        ),
       );
     }
     if (_contextError != null) {
@@ -934,9 +945,9 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
     }
     final activity = _followUpToComplete;
     final message = activity == null
-        ? 'Este prospecto no tiene una actividad pendiente. Al guardar se registrará el contacto; programa el siguiente para no dejarlo sin seguimiento.'
+        ? 'Este prospecto no tiene una actividad pendiente. Al guardar se registrará el contacto; puedes programar el siguiente para no dejarlo sin seguimiento.'
         : widget.sourceActivity?.id == activity.id
-        ? 'Este seguimiento quedará vinculado a la actividad abierta desde Agenda y la marcará como Completada.'
+        ? 'Al guardar se completará el seguimiento programado para el ${_dateLabel(activity.date)} a las ${TimeOfDay.fromDateTime(activity.date).format(context)}.'
         : 'Al guardar se completará el seguimiento programado para el ${_dateLabel(activity.date)} a las ${TimeOfDay.fromDateTime(activity.date).format(context)}.';
     return Container(
       key: const ValueKey('follow-up-completion-notice'),
@@ -1066,7 +1077,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
               _select(
                 'Estatus de seguimiento',
                 _status,
-                ProspectStatus.availableFrom(_status),
+                ProspectStatus.availableFrom(widget.prospect.status),
                 (v) => _status = v,
               ),
               _select(

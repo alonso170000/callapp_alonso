@@ -928,8 +928,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   onNotificationActivity:
                       widget.onNotificationActivity ?? _showCurrentActivity,
                 ),
+                const SizedBox(height: 12),
                 if (widget.syncStatus != null) widget.syncStatus!,
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 if (_loading)
                   LinearProgressIndicator(
                     color: Theme.of(context).colorScheme.primary,

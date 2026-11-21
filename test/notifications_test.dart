@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_header.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 
@@ -68,6 +69,49 @@ void main() {
       },
     );
   }
+
+  testWidgets('Past-day notification paints its time tag as overdue', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final yesterday = DateUtils.dateOnly(businessNow())
+        .subtract(const Duration(days: 1));
+    final activity = AgendaActivity(
+      id: 92,
+      prospectId: 12,
+      type: 'seguimiento',
+      medium: 'llamada',
+      title: 'SEGUIMIENTO',
+      prospect: 'Alan Dorantes',
+      description: 'Llamar',
+      date: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59),
+      status: AgendaStatus.overdue,
+      reminderMinutes: 15,
+    );
+    await NotificationService.instance.syncActivities([activity]);
+    addTearDown(NotificationService.instance.endSession);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SafeArea(child: HomeHeader(userName: 'Ana')),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Notificaciones'));
+    await tester.pumpAndSettle();
+
+    final timeTag = tester.widget<Container>(
+      find.descendant(
+        of: find.byKey(const ValueKey('notification-time-92')),
+        matching: find.byType(Container),
+      ),
+    );
+    expect(timeTag.color, AppColors.notificationOverdueTag);
+  });
 
   testWidgets('Filters, sections, mark all and swipe delete notifications', (
     tester,

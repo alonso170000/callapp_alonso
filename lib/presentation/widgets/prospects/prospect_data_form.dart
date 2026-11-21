@@ -274,6 +274,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
           decoration: _decoration(_dirtyControls.contains(label)),
           dropdownColor: const Color(0xFFAD393E),
           style: const TextStyle(color: Colors.white, fontSize: 18),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
           hint: openFromFirstItem && items.any((item) => item['id'] == value)
               ? Text(
                   style: const TextStyle(
@@ -342,7 +343,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
         _developmentId == null) {
       setState(
         () => _error =
-            'Faltan datos de catálogo para guardar. Actualiza el prospecto.',
+            'Faltan datos para guardar. Actualiza el prospecto.',
       );
       return;
     }
@@ -592,7 +593,7 @@ class _ProspectDataFormState extends State<ProspectDataForm> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: TextStyle(color: AppColors.prospectDataField),
               ),
             ),
           if (!widget.readOnly) ...[

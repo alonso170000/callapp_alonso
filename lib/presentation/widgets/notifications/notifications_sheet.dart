@@ -330,7 +330,7 @@ class _NotificationCard extends StatelessWidget {
       DateUtils.dateOnly(notification.activity.date)
           .isBefore(DateUtils.dateOnly(now));
 
-  bool get _timeExpired {
+  bool get _clockTimeExpired {
     final date = notification.activity.date;
     return date.hour < now.hour ||
         (date.hour == now.hour && date.minute < now.minute);
@@ -340,7 +340,7 @@ class _NotificationCard extends StatelessWidget {
     if (notification.activity.type == NotificationService.assignmentType) {
       return AppColors.notificationAssignment;
     }
-    return _dateExpired && _timeExpired
+    return _dateExpired && _clockTimeExpired
         ? AppColors.notificationOverdueTitle
         : AppColors.homeYellowCard;
   }
@@ -499,7 +499,7 @@ class _NotificationCard extends StatelessWidget {
     if (notification.activity.type == NotificationService.assignmentType) {
       return AppColors.notificationAssignmentTag;
     }
-    return _timeExpired
+    return date.isBefore(now)
         ? AppColors.notificationOverdueTag
         : AppColors.notificationDateTimeTag;
   }

@@ -382,7 +382,6 @@ class ProspectHistoryCommentCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: const Color(0xFF75334F)),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
@@ -411,7 +410,7 @@ class ProspectHistoryCommentCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
-                    vertical: 1,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFEF86),
@@ -420,9 +419,9 @@ class ProspectHistoryCommentCard extends StatelessWidget {
                   ),
                   child: Icon(
                     switch (comment.medium) {
-                      'correo' => Icons.mail_outline,
-                      'whatsapp' => Icons.chat_outlined,
-                      'presencial' => Icons.people_outline,
+                      'correo' => Iconsax.sms_copy,
+                      'whatsapp' => Iconsax.whatsapp_copy,
+                      'facebook' => Iconsax.facebook_copy,
                       'telefono' => Iconsax.call_calling_copy,
                       _ => Icons.message_outlined,
                     },

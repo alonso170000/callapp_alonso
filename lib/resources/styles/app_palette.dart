@@ -371,7 +371,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     errorSurfaceFill: Color.fromARGB(255, 124, 66, 73),
     noticeSurfaceFill: Color.fromARGB(255, 76, 124, 146),
     noticeSurfaceInk: Color(0xFFFFE6A8),
-    historyCardFill: Color(0xFF3D2551),
+    historyCardFill: Color.fromARGB(255, 85, 51, 112),
     historyCardInk: Color(0xFFEFD3FA),
     scriptSurfaceFill: Color.fromARGB(255, 168, 152, 72),
     scriptSurfaceInk: Color(0xFFF0E2A6),

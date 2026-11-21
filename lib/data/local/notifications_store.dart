@@ -5,6 +5,7 @@ import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 
 typedef NotificationScope = LocalScope;
 
@@ -66,10 +67,12 @@ class NotificationsStore {
   Future<List<ActivityNotification>> read(NotificationScope scope) async {
     final database = await _database.databaseOrNull;
     if (database == null) return const [];
+    final now = businessNow();
+    final cutoff = now.subtract(const Duration(days: 14));
     final rows = await database.query(
       'activity_notifications',
-      where: 'user_id = ? AND development_id = ? AND dismissed = 0',
-      whereArgs: [scope.userId, scope.developmentId],
+      where: 'user_id = ? AND development_id = ? AND dismissed = 0 AND reminder_at_ms >= ?',
+      whereArgs: [scope.userId, scope.developmentId, cutoff.millisecondsSinceEpoch],
       orderBy: 'reminder_at_ms DESC',
     );
     return rows.map(_fromRow).toList();
@@ -137,7 +140,7 @@ class NotificationsStore {
     );
   }
 
-  Future<int> purgeReadOlderThan(
+  Future<int> purgeOlderThan(
     NotificationScope scope,
     DateTime cutoff,
   ) async {
@@ -145,7 +148,7 @@ class NotificationsStore {
     if (database == null) return 0;
     return database.delete(
       'activity_notifications',
-      where: 'user_id = ? AND development_id = ? AND is_read = 1 AND reminder_at_ms < ?',
+      where: 'user_id = ? AND development_id = ? AND reminder_at_ms < ?',
       whereArgs: [
         scope.userId,
         scope.developmentId,

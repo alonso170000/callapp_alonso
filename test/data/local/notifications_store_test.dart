@@ -2,6 +2,7 @@ import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/notifications_store.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/notification_models.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -18,8 +19,9 @@ void main() {
     const seller = NotificationScope(userId: 1, developmentId: 10);
     const otherSeller = NotificationScope(userId: 2, developmentId: 10);
 
-    await store.upsert(seller, [_notification(7, DateTime(2026, 10, 20))]);
-    await store.upsert(otherSeller, [_notification(8, DateTime(2026, 10, 20))]);
+    final now = businessNow();
+    await store.upsert(seller, [_notification(7, now)]);
+    await store.upsert(otherSeller, [_notification(8, now)]);
     await store.markRead(seller, 7);
 
     expect((await store.read(seller)).single.isRead, isTrue);
@@ -27,16 +29,20 @@ void main() {
 
     await store.dismiss(seller, 7);
     expect(await store.read(seller), isEmpty);
-    await store.upsert(seller, [_notification(7, DateTime(2026, 10, 20))]);
+    await store.upsert(seller, [_notification(7, now)]);
     expect(await store.read(seller), isEmpty);
 
-    await store.upsert(seller, [_notification(7, DateTime(2026, 10, 20, 1))]);
+    final rescheduledAt = now.add(const Duration(hours: 1));
+    await store.upsert(seller, [_notification(7, rescheduledAt)]);
     final rescheduled = (await store.read(seller)).single;
     expect(rescheduled.isRead, isFalse);
-    expect(rescheduled.reminderAt, DateTime(2026, 10, 20, 1));
+    expect(
+      rescheduled.reminderAt.millisecondsSinceEpoch,
+      rescheduledAt.millisecondsSinceEpoch,
+    );
   });
 
-  test('purges only read notifications older than seven days', () async {
+  test('purges notifications older than the retention cutoff regardless of read state', () async {
     final database = AppDatabase(
       factory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
@@ -44,21 +50,22 @@ void main() {
     addTearDown(database.close);
     final store = NotificationsStore(database: database);
     const scope = NotificationScope(userId: 1, developmentId: 10);
+    final now = businessNow();
     await store.upsert(scope, [
-      _notification(1, DateTime(2026, 10, 10)),
-      _notification(2, DateTime(2026, 10, 19)),
-      _notification(3, DateTime(2026, 10, 9)),
+      _notification(1, now.subtract(const Duration(days: 10))),
+      _notification(2, now.subtract(const Duration(days: 2))),
+      _notification(3, now.subtract(const Duration(days: 8))),
     ]);
     await store.markRead(scope, 1);
     await store.markRead(scope, 2);
 
-    final deleted = await store.purgeReadOlderThan(
+    final deleted = await store.purgeOlderThan(
       scope,
-      DateTime(2026, 10, 13),
+      now.subtract(const Duration(days: 5)),
     );
 
-    expect(deleted, 1);
-    expect((await store.read(scope)).map((item) => item.activityId), [2, 3]);
+    expect(deleted, 2);
+    expect((await store.read(scope)).map((item) => item.activityId), [2]);
   });
 }
 

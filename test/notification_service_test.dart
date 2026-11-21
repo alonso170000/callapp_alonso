@@ -112,12 +112,47 @@ void main() {
     final notifications = NotificationService.inboxNotificationsFor([
       activity(id: 1, date: DateTime(2026, 10, 20, 10)),
       activity(id: 2, date: DateTime(2026, 10, 10, 10)),
+      activity(id: 3, date: DateTime(2026, 10, 5, 10)),
+      activity(
+        id: 4,
+        date: DateTime(2026, 10, 12, 10),
+        status: AgendaStatus.completed,
+      ),
+      activity(
+        id: 5,
+        date: DateTime(2026, 10, 19, 10),
+        status: AgendaStatus.cancelled,
+      ),
     ], now: now);
 
-    expect(notifications.map((item) => item.activityId), [1]);
+    expect(notifications.map((item) => item.activityId), [1, 4, 2]);
   });
 
-  test('creates notifications only for newly assigned prospects', () {
+  test('reconstruye asignaciones de los últimos 14 días para la bandeja', () {
+    final now = DateTime(2026, 10, 20, 12);
+    ProspectRecord prospect(int id, DateTime assignedAt) => ProspectRecord(
+      id: id,
+      name: 'Prospecto $id',
+      phone: '99800000$id',
+      email: '',
+      status: 'Nuevo',
+      temperature: 'Tibio',
+      avatarColor: Colors.teal,
+      statusColor: Colors.green,
+      assignedAt: assignedAt,
+    );
+
+    final notifications = NotificationService.assignmentHistoryFor([
+      prospect(1, now.subtract(const Duration(days: 1))),
+      prospect(2, now.subtract(const Duration(days: 13))),
+      prospect(3, now.subtract(const Duration(days: 15))),
+      prospect(4, now.add(const Duration(minutes: 1))),
+    ], now: now);
+
+    expect(notifications.map((item) => item.activityId), [-1, -2]);
+  });
+
+  test('creates notifications for assignments within the 14-day window', () {
     final now = DateTime(2026, 10, 20, 12);
     ProspectRecord prospect(int id, DateTime assignedAt) => ProspectRecord(
       id: id,
@@ -142,13 +177,12 @@ void main() {
       baseline: now.subtract(const Duration(days: 30)),
     );
 
-    expect(notifications, hasLength(1));
-    expect(notifications.single.activityId, -1);
+    expect(notifications.map((item) => item.activityId), [-1, -2]);
     expect(
-      notifications.single.activity.type,
+      notifications.first.activity.type,
       NotificationService.assignmentType,
     );
-    expect(notifications.single.activity.prospectAvatarUrl, isNotNull);
+    expect(notifications.first.activity.prospectAvatarUrl, isNotNull);
   });
 
   test('notifies a prospect that becomes visible even without a new date', () {
@@ -302,4 +336,39 @@ void main() {
     await service.syncActivities([item], userId: 1, developmentId: 10);
     expect(service.reminders.single.isRead, isTrue);
   });
+
+  test(
+    'carga varias asignaciones históricas aunque no exista línea base',
+    () async {
+      final database = AppDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(database.close);
+      final service = NotificationService.forTesting(
+        NotificationsStore(database: database),
+      );
+      addTearDown(service.endSession);
+      final now = businessNow();
+      ProspectRecord prospect(int id, int daysAgo) => ProspectRecord(
+        id: id,
+        name: 'Prospecto $id',
+        phone: '99800000$id',
+        email: '',
+        status: 'Nuevo',
+        temperature: 'Tibio',
+        avatarColor: Colors.teal,
+        statusColor: Colors.green,
+        assignedAt: now.subtract(Duration(days: daysAgo)),
+      );
+
+      await service.syncAssignedProspects(
+        [prospect(1, 1), prospect(2, 7), prospect(3, 15)],
+        userId: 1,
+        developmentId: 10,
+      );
+
+      expect(service.reminders.map((item) => item.activityId), [-1, -2]);
+    },
+  );
 }

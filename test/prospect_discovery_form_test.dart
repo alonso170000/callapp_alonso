@@ -197,6 +197,67 @@ void main() {
     });
   });
 
+  for (final investmentCase in <(String, String?)>[
+    ('6 meses', '6 meses'),
+    ('2 años en adelante', '2 años en adelante'),
+    ('Sin tiempo estimado', null),
+  ]) {
+    testWidgets(
+      'capacidad de pago envía ${investmentCase.$2 ?? 'tiempo nulo'}',
+      (tester) async {
+        final service = _RecordingProspectsService();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ProspectDiscoveryForm(
+                  prospectId: 17,
+                  prospectsService: service,
+                  repository: _CatalogRepository(service),
+                  onSaved: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).first, '1500000');
+        final paymentDropdown = find.byKey(
+          const ValueKey('¿Forma de pago preferida? *-null'),
+        );
+        await tester.ensureVisible(paymentDropdown);
+        await tester.tap(paymentDropdown);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Contado').last);
+        await tester.pumpAndSettle();
+
+        if (investmentCase.$2 != null) {
+          final investmentDropdown = find.byKey(
+            const ValueKey('¿Tiempo estimado para utilizar su inversión?-null'),
+          );
+          await tester.ensureVisible(investmentDropdown);
+          await tester.tap(investmentDropdown);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(investmentCase.$1).last);
+          await tester.pumpAndSettle();
+        }
+
+        final save = find.widgetWithText(FilledButton, 'GUARDAR').at(1);
+        await tester.ensureVisible(save);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+
+        expect(service.fields, {
+          'seccion': 'capacidad_pago',
+          'presupuesto': 1500000.0,
+          'forma_pago': 'contado',
+          'tiempo_inversion': investmentCase.$2,
+        });
+      },
+    );
+  }
+
   testWidgets('experiencia previa oculta los detalles cuando no ha comprado', (
     tester,
   ) async {

@@ -655,7 +655,7 @@ class _DialogButton extends StatelessWidget {
         textStyle: appButtonTextStyle,
       ),
       onPressed: onPressed,
-      child: Text(label, style: const TextStyle(fontFamily: 'SulphurPoint')),
+      child: Text(label),
     ),
   );
 }

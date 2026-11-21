@@ -127,9 +127,9 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
   };
   static const _investmentCodes = {
     'Inmediato': 'inmediato',
-    '6 meses': 'meses',
-    '2 años': 'anos',
-    '2 años en adelante': 'anos',
+    '6 meses': '6 meses',
+    '2 años': '2 años',
+    '2 años en adelante': '2 años en adelante',
   };
   static const _factorCodes = {
     'Plusvalía': 'plusvalia',

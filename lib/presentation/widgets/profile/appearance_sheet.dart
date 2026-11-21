@@ -18,8 +18,6 @@ class AppearanceSheet extends StatelessWidget {
               'APARIENCIA',
               style: TextStyle(fontFamily: 'BebasNeue', fontSize: 26),
             ),
-            if (controller.loading || controller.saving)
-              const LinearProgressIndicator(),
             if (controller.error != null) ...[
               Text(
                 controller.error!,

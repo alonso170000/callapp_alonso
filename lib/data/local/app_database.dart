@@ -431,12 +431,12 @@ class AppDatabase {
   }
 
   /// Elimina avisos leídos anteriores a [cutoff] de todos los ámbitos.
-  Future<int> purgeReadNotificationsBefore(DateTime cutoff) async {
+  Future<int> purgeOldNotificationsBefore(DateTime cutoff) async {
     final database = await databaseOrNull;
     if (database == null) return 0;
     return database.delete(
       'activity_notifications',
-      where: 'is_read = 1 AND reminder_at_ms < ?',
+      where: 'reminder_at_ms < ?',
       whereArgs: [cutoff.millisecondsSinceEpoch],
     );
   }

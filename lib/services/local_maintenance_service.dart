@@ -14,7 +14,7 @@ class LocalMaintenanceService {
   static const cacheRetention = Duration(days: 30);
 
   /// Los avisos leídos se conservan 7 días, igual que la bandeja.
-  static const notificationRetention = Duration(days: 7);
+  static const notificationRetention = Duration(days: 14);
 
   static const _interval = Duration(hours: 24);
 
@@ -45,7 +45,7 @@ class LocalMaintenanceService {
     final removed = await _database.purgeExpiredScopes(
       reference.subtract(cacheRetention),
     );
-    await _database.purgeReadNotificationsBefore(
+    await _database.purgeOldNotificationsBefore(
       reference.subtract(notificationRetention),
     );
     await _database.writeMetadata(

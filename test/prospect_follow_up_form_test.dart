@@ -93,6 +93,100 @@ void main() {
     expect(find.text('Contactado y validado'), findsWidgets);
   });
 
+  testWidgets('permite volver a un estatus posterior mientras no se guarde', (
+    tester,
+  ) async {
+    const contactedProspect = ProspectRecord(
+      id: 18,
+      name: 'Prospecto validado',
+      phone: '9981234567',
+      email: '',
+      status: 'Validado',
+      temperature: 'Caliente',
+      avatarColor: Colors.teal,
+      statusColor: Colors.orange,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: contactedProspect,
+              prospectsService: _RecordingProspectsService(),
+              loadActivities: () async => [],
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final statusDropdown = find.byType(DropdownButtonFormField<String>).first;
+    await tester.tap(statusDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cotización').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Nuevo'), findsNothing);
+    expect(find.text('Contactado y validado'), findsWidgets);
+    expect(find.text('Seguimiento'), findsWidgets);
+    await tester.tap(find.text('Seguimiento').last);
+    await tester.pumpAndSettle();
+
+    final updatedStatus = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>).first,
+    );
+    expect(updatedStatus.initialValue, 'Seguimiento');
+  });
+
+  testWidgets('cancelar conserva el medio de la actividad de llamada', (
+    tester,
+  ) async {
+    final followUp = AgendaActivity(
+      id: 8,
+      prospectId: 17,
+      type: 'seguimiento',
+      medium: 'llamada',
+      title: 'SEGUIMIENTO',
+      prospect: prospect.name,
+      description: 'Realizar llamada',
+      date: DateTime(2026, 11, 20, 10),
+      status: AgendaStatus.pending,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProspectFollowUpForm(
+              prospect: prospect,
+              sourceActivity: followUp,
+              telephoneCallCompleted: true,
+              loadActivities: () async => [followUp],
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancel = find.widgetWithText(FilledButton, 'CANCELAR');
+    await tester.ensureVisible(cancel);
+    await tester.tap(cancel);
+    await tester.pump();
+
+    final method = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>).at(1),
+    );
+    expect(method.initialValue, 'Llamada telefónica');
+    expect(method.onChanged, isNull);
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets(
       'Programs a locked follow-up activity, summarizes it and saves both at $width',
