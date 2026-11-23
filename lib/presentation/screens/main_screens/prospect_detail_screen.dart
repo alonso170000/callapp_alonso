@@ -21,6 +21,7 @@ import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_histo
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_comments_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_options_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_email_history_panel.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_history_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/call_registration_bar.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_result_sheet.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/convert_prospect_sheet.dart';
@@ -130,6 +131,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
   bool _allowDirtyPop = false;
   List<ProspectEmailHistoryEntry> _emails = const [];
   String? _emailError;
+  List<ProspectCallRecord> _calls = const [];
+  bool _callsLoading = false;
+  String? _callsError;
   bool _sendingEmail = false;
   bool _convertingClient = false;
   bool _requestingDeletion = false;
@@ -355,6 +359,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       _selected.addAll(ProspectSection.values.map((section) => section.label));
     }
     _loadEmails();
+    _loadCalls();
     if (widget.initialContactMedium != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -541,6 +546,37 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
       if (mounted) {
         setState(() => _emailError = error.message);
       }
+    }
+  }
+
+  Future<void> _loadCalls() async {
+    final id = _prospect.id;
+    if (id == null || id < 1) {
+      if (!mounted) return;
+      setState(() {
+        _calls = const [];
+        _callsLoading = false;
+        _callsError = null;
+      });
+      return;
+    }
+    setState(() {
+      _callsLoading = true;
+      _callsError = null;
+    });
+    try {
+      final calls = await _emailService.listCalls(id);
+      if (!mounted) return;
+      setState(() {
+        _calls = calls;
+        _callsLoading = false;
+      });
+    } on ProspectsException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _callsError = error.message;
+        _callsLoading = false;
+      });
     }
   }
 
@@ -885,6 +921,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
         _lastCallId = result.callId;
         _selected.add(ProspectSection.followUp.label);
       });
+      unawaited(_loadCalls());
     }
     _openingCallResult = false;
     ScaffoldMessenger.of(context)
@@ -1258,6 +1295,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                             await _loadScripts(force: true);
                             await _commentsKey.currentState?.refresh();
                             await _loadEmails();
+                            await _loadCalls();
                             final id = _prospect.id;
                             if (id != null) {
                               final cached = await _prospectsRepository
@@ -1315,6 +1353,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                           _pendingReminderActivity = null;
                                         });
                                         _commentsKey.currentState?.refresh();
+                                        unawaited(_loadCalls());
                                       },
                                       onProspectUpdated: (updated) =>
                                           setState(() => _prospect = updated),
@@ -1383,6 +1422,13 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                                 prospectId: p.id!,
                                               ),
                                               const SizedBox(height: 10),
+                                              ProspectCallHistoryPanel(
+                                                calls: _calls,
+                                                loading: _callsLoading,
+                                                error: _callsError,
+                                                onRetry: _loadCalls,
+                                              ),
+                                              const SizedBox(height: 10),
                                               ProspectEmailHistoryPanel(
                                                 emails: _emails,
                                                 error: _emailError,
@@ -1397,6 +1443,7 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                                 demoProspectDiscoverySummary,
                                             emails: demoProspectEmailHistory,
                                             callHours: demoProspectCallHours,
+                                            calls: demoProspectCalls,
                                             sessionEntries: _history,
                                           ),
                                   ),

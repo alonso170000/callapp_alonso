@@ -1,13 +1,18 @@
 package com.hadacorp.callapp
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.CallLog
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.telephony.TelephonyManager
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,7 +22,10 @@ class MainActivity : FlutterActivity() {
     private val cubeChannelName = "callerapp/cube_acr"
     private val requestCode = 781
     private val cubeFolderRequestCode = 782
+    private val permissionsChannelName = "callerapp/permissions"
+    private val permissionsRequestCode = 783
     private var cubeFolderResult: MethodChannel.Result? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -113,6 +121,115 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, permissionsChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "status" -> result.success(permissionPayload())
+                    "requestCalls" -> requestRuntimePermissions(
+                        result,
+                        arrayOf(
+                            Manifest.permission.READ_CALL_LOG,
+                            Manifest.permission.READ_PHONE_STATE,
+                        ),
+                    )
+                    "requestNotifications" -> {
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        ) {
+                            requestRuntimePermissions(
+                                result,
+                                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                            )
+                        } else {
+                            result.success(permissionPayload())
+                        }
+                    }
+                    "requestExactAlarms" -> {
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                            !canScheduleExactAlarms()
+                        ) {
+                            try {
+                                startActivity(
+                                    Intent(
+                                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                        Uri.parse("package:$packageName"),
+                                    ),
+                                )
+                            } catch (_: Exception) {
+                                startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", packageName, null),
+                                    ),
+                                )
+                            }
+                        }
+                        result.success(canScheduleExactAlarms())
+                    }
+                    "openAppSettings" -> {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", packageName, null),
+                            ),
+                        )
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun hasPermission(permission: String): Boolean =
+        ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+
+    private fun notificationsEnabled(): Boolean =
+        NotificationManagerCompat.from(this).areNotificationsEnabled()
+
+    private fun canScheduleExactAlarms(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        } else {
+            true
+        }
+
+    private fun permissionPayload(): Map<String, Any> = mapOf(
+        "notifications" to notificationsEnabled(),
+        "exactAlarms" to canScheduleExactAlarms(),
+        "callLog" to hasPermission(Manifest.permission.READ_CALL_LOG),
+        "phoneState" to hasPermission(Manifest.permission.READ_PHONE_STATE),
+    )
+
+    private fun requestRuntimePermissions(
+        result: MethodChannel.Result,
+        permissions: Array<String>,
+    ) {
+        val missing = permissions.filter { !hasPermission(it) }
+        if (missing.isEmpty()) {
+            result.success(permissionPayload())
+            return
+        }
+        pendingPermissionResult?.success(permissionPayload())
+        pendingPermissionResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            missing.toTypedArray(),
+            permissionsRequestCode,
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != permissionsRequestCode) return
+        val result = pendingPermissionResult ?: return
+        pendingPermissionResult = null
+        result.success(permissionPayload())
     }
 
     /**

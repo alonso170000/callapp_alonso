@@ -1,3 +1,31 @@
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
+
+class ProspectCallSummary {
+  const ProspectCallSummary({required this.answered, required this.unanswered});
+
+  final int answered;
+  final int unanswered;
+
+  int get total => answered + unanswered;
+  bool get isEmpty => total == 0;
+
+  int get answeredPercent => total == 0 ? 0 : (answered * 100 / total).round();
+  int get unansweredPercent => total == 0 ? 0 : 100 - answeredPercent;
+
+  factory ProspectCallSummary.fromRecords(Iterable<ProspectCallRecord> calls) {
+    var answered = 0;
+    var unanswered = 0;
+    for (final call in calls) {
+      if (call.outcome == ProspectCallOutcome.answered.value) {
+        answered++;
+      } else {
+        unanswered++;
+      }
+    }
+    return ProspectCallSummary(answered: answered, unanswered: unanswered);
+  }
+}
+
 enum ProspectContactResult { answered, unanswered, appointment }
 
 class ProspectHistoryComment {
@@ -186,5 +214,44 @@ const demoProspectCallHours = <ProspectCallHourEntry>[
     weekday: DateTime.saturday,
     hour: 16,
     status: ProspectCallHourStatus.answered,
+  ),
+];
+
+final demoProspectCalls = <ProspectCallRecord>[
+  ProspectCallRecord(
+    id: 1,
+    startedAt: DateTime(2026, 9, 15, 10),
+    durationSeconds: 65,
+    durationEstimated: false,
+    outcome: ProspectCallOutcome.answered.value,
+    phone: '9980000002',
+    audioState: 'disponible',
+  ),
+  ProspectCallRecord(
+    id: 2,
+    startedAt: DateTime(2026, 9, 14, 17, 30),
+    durationSeconds: 42,
+    durationEstimated: false,
+    outcome: ProspectCallOutcome.answered.value,
+    phone: '9980000002',
+    audioState: 'disponible',
+  ),
+  ProspectCallRecord(
+    id: 3,
+    startedAt: DateTime(2026, 9, 13, 12, 15),
+    durationSeconds: 18,
+    durationEstimated: false,
+    outcome: ProspectCallOutcome.answered.value,
+    phone: '9980000002',
+    audioState: 'pendiente',
+  ),
+  ProspectCallRecord(
+    id: 4,
+    startedAt: DateTime(2026, 9, 12, 9, 45),
+    durationSeconds: 0,
+    durationEstimated: true,
+    outcome: ProspectCallOutcome.unanswered.value,
+    phone: '9980000002',
+    audioState: 'pendiente',
   ),
 ];

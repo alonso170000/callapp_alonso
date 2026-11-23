@@ -13,6 +13,8 @@ import 'package:callerapp_frontend/data/local/notifications_store.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/profile_preferences_store.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/permissions_service.dart';
+import 'package:callerapp_frontend/services/platform_support.dart';
 
 class NotificationService extends ChangeNotifier {
   static String _formatTime(DateTime value) =>
@@ -28,9 +30,11 @@ class NotificationService extends ChangeNotifier {
     NotificationsStore? store,
     ProfilePreferencesStore? preferences,
     AuthService? auth,
+    PermissionsService? permissions,
   }) : _store = store ?? NotificationsStore(),
        _preferences = preferences ?? ProfilePreferencesStore(),
-       _auth = auth ?? AuthService.instance {
+       _auth = auth ?? AuthService.instance,
+       _permissions = permissions ?? PermissionsService.instance {
     _auth.addListener(_sessionChanged);
     _sessionChanged();
   }
@@ -60,6 +64,7 @@ class NotificationService extends ChangeNotifier {
   final NotificationsStore _store;
   final ProfilePreferencesStore _preferences;
   final AuthService _auth;
+  final PermissionsService _permissions;
   final List<ActivityNotification> _reminders = [];
   List<AgendaActivity> _lastActivities = const [];
   NotificationScope? _scope;
@@ -70,9 +75,10 @@ class NotificationService extends ChangeNotifier {
   Timer? _nextInboxTimer;
   Timer? _cleanupTimer;
 
-  /// Prospecto que el usuario abrió desde una notificación del sistema.
-  /// Se conserva para poder abrirlo cuando la pantalla de Inicio ya esté lista.
-  final ValueNotifier<int?> pendingProspectId = ValueNotifier<int?>(null);
+  /// Destino pendiente cuando el usuario toca una notificación del sistema.
+  /// HomeScreen lo consume en cuanto está montado.
+  final ValueNotifier<NotificationTarget?> pendingTarget =
+      ValueNotifier<NotificationTarget?>(null);
 
   List<ActivityNotification> get reminders => List.unmodifiable(_reminders);
   bool get enabled => _enabled;
@@ -159,30 +165,54 @@ class NotificationService extends ChangeNotifier {
   }
 
   void _handleNotificationResponse(NotificationResponse? response) {
-    final prospectId = prospectIdFromPayload(response?.payload);
-    if (prospectId == null) return;
-    pendingProspectId.value = prospectId;
-    if (response?.payload?.startsWith(_assignmentPayloadPrefix) ?? false) {
-      unawaited(markRead(-prospectId));
+    final target = targetFromPayload(response?.payload);
+    if (target == null) return;
+
+    pendingTarget.value = target;
+
+    if (target.type == NotificationTargetType.activity) {
+      unawaited(markRead(target.id));
+    } else if (response?.payload?.startsWith(_assignmentPayloadPrefix) ??
+        false) {
+      unawaited(markRead(-target.id));
     }
+  }
+
+  static NotificationTarget? targetFromPayload(String? payload) {
+    if (payload == null) return null;
+
+    if (payload.startsWith(_payloadPrefix)) {
+      final id = int.tryParse(payload.substring(_payloadPrefix.length));
+      return id == null
+          ? null
+          : NotificationTarget(type: NotificationTargetType.activity, id: id);
+    }
+
+    for (final prefix in [_assignmentPayloadPrefix, _callPayloadPrefix]) {
+      if (payload.startsWith(prefix)) {
+        final id = int.tryParse(payload.substring(prefix.length));
+        return id == null
+            ? null
+            : NotificationTarget(type: NotificationTargetType.prospect, id: id);
+      }
+    }
+
+    return null;
   }
 
   /// Extrae el prospecto de un aviso de asignación o de llamada.
   static int? prospectIdFromPayload(String? payload) {
-    if (payload == null) return null;
-    for (final prefix in [_assignmentPayloadPrefix, _callPayloadPrefix]) {
-      if (payload.startsWith(prefix)) {
-        return int.tryParse(payload.substring(prefix.length));
-      }
+    final target = targetFromPayload(payload);
+    if (target == null || target.type != NotificationTargetType.prospect) {
+      return null;
     }
-    return null;
+    return target.id;
   }
 
-  /// Consume el prospecto pendiente y limpia el aviso para no repetirlo.
-  int? takePendingProspectId() {
-    final prospectId = pendingProspectId.value;
-    pendingProspectId.value = null;
-    return prospectId;
+  NotificationTarget? takePendingTarget() {
+    final target = pendingTarget.value;
+    pendingTarget.value = null;
+    return target;
   }
 
   Future<void> setEnabled(bool value) async {
@@ -367,26 +397,22 @@ class NotificationService extends ChangeNotifier {
   }
 
   Future<AndroidScheduleMode> _requestPermissions() async {
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    if (android != null) {
-      final notifications = await android.requestNotificationsPermission();
-      _permissionGranted = notifications ?? true;
-      if (_permissionGranted == false) {
+    if (PlatformSupport.isAndroid) {
+      try {
+        final snapshot = await _permissions.requestNotificationPermission();
+        _permissionGranted = snapshot.notifications;
+        notifyListeners();
+        if (!snapshot.notifications) {
+          return AndroidScheduleMode.inexactAllowWhileIdle;
+        }
+        return snapshot.exactAlarms
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle;
+      } on PermissionsException {
+        _permissionGranted = false;
         notifyListeners();
         return AndroidScheduleMode.inexactAllowWhileIdle;
       }
-      var exact = await android.canScheduleExactNotifications() ?? false;
-      if (!exact) {
-        await android.requestExactAlarmsPermission();
-        exact = await android.canScheduleExactNotifications() ?? false;
-      }
-      notifyListeners();
-      return exact
-          ? AndroidScheduleMode.exactAllowWhileIdle
-          : AndroidScheduleMode.inexactAllowWhileIdle;
     }
 
     final ios = _plugin
@@ -422,6 +448,7 @@ class NotificationService extends ChangeNotifier {
     _lastActivities = const [];
     _scope = null;
     _reminders.clear();
+    pendingTarget.value = null;
     notifyListeners();
     await _cancelOsNotifications();
   }

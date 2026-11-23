@@ -1,11 +1,14 @@
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
+import 'package:callerapp_frontend/presentation/widgets/agenda/agenda_activity_detail.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/prospect_section.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   for (final width in [320.0, 390.0]) {
@@ -127,4 +130,80 @@ void main() {
       expect(find.text('COMPLETAR ACTIVIDAD'), findsNothing);
     },
   );
+
+  testWidgets('una notificación de actividad abre la agenda', (tester) async {
+    final now = businessNow();
+    final activity = AgendaActivity(
+      id: 91,
+      prospectId: 12,
+      type: 'seguimiento',
+      medium: 'llamada',
+      title: 'SEGUIMIENTO',
+      prospect: 'Alan Dorantes',
+      description: 'Llamar',
+      date: now.add(const Duration(minutes: 12)),
+      status: AgendaStatus.pending,
+      reminderMinutes: 15,
+    );
+    NotificationService.instance.pendingTarget.value = const NotificationTarget(
+      type: NotificationTargetType.activity,
+      id: 91,
+    );
+    addTearDown(NotificationService.instance.endSession);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          loadActivities: () async => [activity],
+          loadProspects: () async => [],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AgendaActivityDetail), findsOneWidget);
+    expect(find.text('ATENDER ACTIVIDAD'), findsOneWidget);
+  });
+
+  testWidgets('una notificación de prospecto abre su detalle', (tester) async {
+    final prospect = ProspectRecord(
+      id: 77,
+      name: 'Prospecto real',
+      phone: '9981234567',
+      email: '',
+      status: 'Nuevo',
+      assignedAt: DateTime.now(),
+      temperature: 'Caliente',
+      avatarColor: Colors.teal,
+      statusColor: Colors.orange,
+    );
+    NotificationService.instance.pendingTarget.value = const NotificationTarget(
+      type: NotificationTargetType.prospect,
+      id: 77,
+    );
+    addTearDown(NotificationService.instance.endSession);
+
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => HomeScreen(
+            loadActivities: () async => [],
+            loadProspects: () async => [prospect],
+          ),
+        ),
+        GoRoute(
+          path: '/prospectos/:phone',
+          builder: (_, _) => const Scaffold(body: Text('DETALLE PROSPECTO')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DETALLE PROSPECTO'), findsOneWidget);
+  });
 }

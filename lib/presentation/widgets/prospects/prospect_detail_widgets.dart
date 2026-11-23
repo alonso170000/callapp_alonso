@@ -504,6 +504,7 @@ class _ProspectDetailPanelState extends State<ProspectDetailPanel> {
                       style: TextStyle(
                         fontSize: widget.nested ? 16 : 18,
                         fontFamily: 'SulphurPoint',
+                        fontWeight: FontWeight.w600,
                         color:
                             widget.foreground ??
                             (widget.nested

@@ -84,7 +84,7 @@ class ProspectEmailHistoryPanel extends StatelessWidget {
                                         color: palette.historyCardInk,
                                       ),
                                     ),
-                                    Text(email.description),
+                                    Text(email.description, style: TextStyle(color: palette.historyCardInk)),
                                   ],
                                 ),
                               ),

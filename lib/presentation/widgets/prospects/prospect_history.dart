@@ -1,4 +1,6 @@
+import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
+import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_call_history_panel.dart';
 import 'package:callerapp_frontend/presentation/widgets/prospects/prospect_detail_widgets.dart';
 import 'package:callerapp_frontend/resources/colors/colors.dart';
 import 'package:callerapp_frontend/resources/styles/app_palette.dart';
@@ -10,6 +12,7 @@ class ProspectHistory extends StatelessWidget {
   final ProspectDiscoverySummary discoverySummary;
   final List<ProspectEmailHistoryEntry> emails;
   final List<ProspectCallHourEntry> callHours;
+  final List<ProspectCallRecord> calls;
   final List<String> sessionEntries;
 
   const ProspectHistory({
@@ -18,6 +21,7 @@ class ProspectHistory extends StatelessWidget {
     required this.discoverySummary,
     required this.emails,
     required this.callHours,
+    this.calls = const [],
     this.sessionEntries = const [],
   });
 
@@ -127,8 +131,8 @@ class ProspectHistory extends StatelessWidget {
     for (final entry in callHours) {
       if (entry.weekday == weekday && entry.hour == hour) {
         return entry.status == ProspectCallHourStatus.answered
-            ? const Color(0xFF43C756)
-            : const Color(0xFFF04C55);
+            ? AppColors.prospectCallAnswered
+            : AppColors.prospectCallUnanswered;
       }
     }
     return _fieldColor;
@@ -247,8 +251,8 @@ class ProspectHistory extends StatelessWidget {
               spacing: 15,
               runSpacing: 5,
               children: [
-                _legend(const Color(0xFF43C756), 'Atendida'),
-                _legend(const Color(0xFFF04C55), 'Rechazada'),
+                _legend(AppColors.prospectCallAnswered, 'Atendida'),
+                _legend(AppColors.prospectCallUnanswered, 'Rechazada'),
                 _legend(_fieldColor, 'Sin actividad'),
               ],
             ),
@@ -323,6 +327,10 @@ class ProspectHistory extends StatelessWidget {
       const SizedBox(height: 10),
       _emailHistory(context),
       const SizedBox(height: 10),
+      if (calls.isNotEmpty) ...[
+        ProspectCallHistoryPanel(calls: calls, loading: false),
+        const SizedBox(height: 10),
+      ],
       _callHistory(context),
       if (sessionEntries.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -386,7 +394,7 @@ class ProspectHistoryCommentCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, color: AppColors.textDarkColor),
+        style: const TextStyle(fontSize: 13, color: AppColors.textDarkColor),
       ),
     );
   }
@@ -413,8 +421,7 @@ class ProspectHistoryCommentCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEF86),
-                    border: Border.all(color: const Color(0xFF776315)),
+                    color: AppColors.prospectCallHighlight,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
@@ -448,7 +455,11 @@ class ProspectHistoryCommentCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               '${_date(comment.createdAt)}   ${_time(comment.createdAt)}',
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(
+                fontSize: 13,
+                color: _fieldColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

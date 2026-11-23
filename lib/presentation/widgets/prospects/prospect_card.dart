@@ -159,6 +159,7 @@ class ProspectCard extends StatelessWidget {
                         style: const TextStyle(
                           fontFamily: 'SulphurPoint',
                           fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: Color(0xFFB0E4DB),
                         ),
                       ),

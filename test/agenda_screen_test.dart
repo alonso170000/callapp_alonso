@@ -8,6 +8,62 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 void main() {
+  testWidgets('controller.openActivityById abre el detalle de la actividad', (
+    tester,
+  ) async {
+    final controller = AgendaController();
+    addTearDown(controller.dispose);
+    final activity = AgendaActivity(
+      id: 5,
+      type: 'tarea',
+      title: 'TAREA',
+      prospect: 'Ana',
+      description: 'Enviar documentos',
+      date: DateTime.now(),
+      status: AgendaStatus.pending,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaScreen(
+            controller: controller,
+            loadActivities: () async => [activity],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await controller.openActivityById(5);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AgendaActivityDetail), findsOneWidget);
+  });
+
+  testWidgets('controller muestra mensaje si la actividad ya no existe', (
+    tester,
+  ) async {
+    final controller = AgendaController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaScreen(
+            controller: controller,
+            loadActivities: () async => [],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await controller.openActivityById(99);
+    await tester.pumpAndSettle();
+
+    expect(find.text('La actividad ya no está disponible.'), findsOneWidget);
+  });
+
   testWidgets('Task completion requires bottom-sheet confirmation', (
     tester,
   ) async {

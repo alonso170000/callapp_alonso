@@ -1,4 +1,25 @@
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:flutter/foundation.dart';
+
+enum NotificationTargetType { prospect, activity }
+
+@immutable
+class NotificationTarget {
+  const NotificationTarget({required this.type, required this.id});
+
+  final NotificationTargetType type;
+  final int id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotificationTarget && other.type == type && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(type, id);
+
+  @override
+  String toString() => 'NotificationTarget($type, $id)';
+}
 
 enum NotificationInboxFilter { all, unread, read }
 

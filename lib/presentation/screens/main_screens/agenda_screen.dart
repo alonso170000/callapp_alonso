@@ -30,6 +30,7 @@ import 'package:callerapp_frontend/presentation/widgets/app_bottom_sheet.dart';
 class AgendaController {
   void Function(DateTime, Set<int>, String)? _show;
   Future<void> Function(AgendaActivity)? _showActivity;
+  Future<void> Function(int)? _showActivityById;
   void showFromHome(DateTime date, Set<int> ids, String label) =>
       _show?.call(date, ids, label);
   VoidCallback? _openNewActivity;
@@ -41,11 +42,16 @@ class AgendaController {
     await _showActivity?.call(activity);
   }
 
+  Future<void> openActivityById(int activityId) async {
+    await _showActivityById?.call(activityId);
+  }
+
   void dispose() {
     _openNewActivity = null;
     _refresh = null;
     _show = null;
     _showActivity = null;
+    _showActivityById = null;
   }
 }
 
@@ -188,6 +194,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     widget.controller?._refresh = _load;
     widget.controller?._show = _showFromHome;
     widget.controller?._showActivity = _showCurrentActivity;
+    widget.controller?._showActivityById = _showCurrentActivityById;
     AuthService.instance.addListener(_sessionChanged);
     DataChangeBus.instance.addListener(_dataChanged);
     _load();
@@ -201,10 +208,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
       oldWidget.controller?._refresh = null;
       oldWidget.controller?._show = null;
       oldWidget.controller?._showActivity = null;
+      oldWidget.controller?._showActivityById = null;
       widget.controller?._openNewActivity = _showNewActivityDialog;
       widget.controller?._refresh = _load;
       widget.controller?._show = _showFromHome;
       widget.controller?._showActivity = _showCurrentActivity;
+      widget.controller?._showActivityById = _showCurrentActivityById;
     }
     if (widget.active && !oldWidget.active) _load();
   }
@@ -215,6 +224,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     widget.controller?._refresh = null;
     widget.controller?._show = null;
     widget.controller?._showActivity = null;
+    widget.controller?._showActivityById = null;
     AuthService.instance.removeListener(_sessionChanged);
     DataChangeBus.instance.removeListener(_dataChanged);
     _repository.dispose();
@@ -244,6 +254,21 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ? const <AgendaActivity>[]
         : _activities.where((activity) => activity.id == id);
     _showActivity(matches.isEmpty ? notificationActivity : matches.first);
+  }
+
+  Future<void> _showCurrentActivityById(int activityId) async {
+    await _load();
+    if (!mounted) return;
+
+    final matches = _activities.where((activity) => activity.id == activityId);
+    if (matches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La actividad ya no está disponible.')),
+      );
+      return;
+    }
+
+    _showActivity(matches.first);
   }
 
   Future<void> _showNewActivityDialog() async {

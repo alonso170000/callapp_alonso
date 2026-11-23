@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
+import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 import 'package:callerapp_frontend/presentation/widgets/home/home_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
@@ -58,10 +59,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     OutboxService.instance.addListener(_outboxChanged);
     _callSession.addListener(_callSessionChanged);
     if (widget.loadProspects == null) _assignmentController.start();
-    NotificationService.instance.pendingProspectId.addListener(
-      _pendingProspectChanged,
+    NotificationService.instance.pendingTarget.addListener(
+      _pendingTargetChanged,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingProspect());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingTarget());
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _callSession.restore();
       if (mounted && _callSession.hasStaleSession) _offerStaleCallDiscard();
@@ -296,18 +297,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     },
   );
 
-  void _pendingProspectChanged() {
+  void _pendingTargetChanged() {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _openPendingProspect();
+      if (mounted) _openPendingTarget();
     });
   }
 
-  void _openPendingProspect() {
-    final prospectId = NotificationService.instance.takePendingProspectId();
-    if (prospectId == null || !mounted) return;
-    setState(() => _selectedDestination = 1);
-    _prospectsController.openProspect(prospectId);
+  void _openPendingTarget() {
+    final target = NotificationService.instance.takePendingTarget();
+    if (target == null || !mounted) return;
+
+    switch (target.type) {
+      case NotificationTargetType.prospect:
+        setState(() => _selectedDestination = 1);
+        _prospectsController.openProspect(target.id);
+      case NotificationTargetType.activity:
+        setState(() => _selectedDestination = 2);
+        unawaited(_agendaController.openActivityById(target.id));
+    }
   }
 
   Future<void> _openNotificationActivity(AgendaActivity activity) async {
@@ -317,6 +325,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _prospectsController.openProspect(activity.prospectId!);
       return;
     }
+    setState(() => _selectedDestination = 2);
     await _agendaController.openActivity(activity);
   }
 
@@ -325,8 +334,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     OutboxService.instance.removeListener(_outboxChanged);
     _callSession.removeListener(_callSessionChanged);
-    NotificationService.instance.pendingProspectId.removeListener(
-      _pendingProspectChanged,
+    NotificationService.instance.pendingTarget.removeListener(
+      _pendingTargetChanged,
     );
     _assignmentController.dispose();
     _homeDashboardController.dispose();

@@ -120,6 +120,10 @@ class AppColors {
   static const Color prospectDataField = Color(0xFFAD393E);
   static const Color prospectHistoryHeader = Color(0xFF713080);
   static const Color prospectHistoryField = Color(0xFF9139A8);
+  // Resultados de llamadas del historial del prospecto.
+  static const Color prospectCallAnswered = Color(0xFF43C756);
+  static const Color prospectCallUnanswered = Color(0xFFF04C55);
+  static const Color prospectCallHighlight = Color(0xFFFFEF86);
 
   // Paleta compartida por las secciones del formulario de discovery.
   static const Color discoveryHeader = Color(0xFF438E72);

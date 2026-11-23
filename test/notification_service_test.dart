@@ -1,6 +1,7 @@
 import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/notifications_store.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/notification_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/services/business_clock.dart';
 import 'package:callerapp_frontend/services/notification_service.dart';
@@ -305,6 +306,30 @@ void main() {
       NotificationService.prospectIdFromPayload('callerapp:call:'),
       isNull,
     );
+  });
+
+  test('lee destinos de actividad y prospecto desde el payload', () {
+    final activityTarget = NotificationService.targetFromPayload(
+      'callerapp:activity:7',
+    );
+    expect(activityTarget?.type, NotificationTargetType.activity);
+    expect(activityTarget?.id, 7);
+
+    final assignment = NotificationService.targetFromPayload(
+      'callerapp:prospect:42',
+    );
+    expect(assignment?.type, NotificationTargetType.prospect);
+    expect(assignment?.id, 42);
+
+    final call = NotificationService.targetFromPayload('callerapp:call:42');
+    expect(call?.type, NotificationTargetType.prospect);
+    expect(call?.id, 42);
+
+    expect(
+      NotificationService.targetFromPayload('callerapp:activity:'),
+      isNull,
+    );
+    expect(NotificationService.targetFromPayload(null), isNull);
   });
 
   test('conserva el estado de leído al cerrar e iniciar sesión', () async {

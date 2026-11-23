@@ -196,7 +196,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
       Container(
         key: ValueKey('activity-info-${label.toLowerCase()}'),
         height: AppStyles.agendaInfoCardHeight,
-        padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(18),
@@ -306,6 +306,7 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                     style: const TextStyle(
                       fontFamily: 'SulphurPoint',
                       fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: Color(0xFFB0E4DB),
                     ),
                   ),

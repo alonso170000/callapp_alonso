@@ -7,20 +7,37 @@ import 'package:go_router/go_router.dart';
 import 'package:callerapp_frontend/presentation/screens/auth/login_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/home_screen.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/search_screen.dart';
+import 'package:callerapp_frontend/presentation/screens/onboarding/onboarding_screen.dart';
+import 'package:callerapp_frontend/services/onboarding_controller.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
-  refreshListenable: AuthService.instance,
+  refreshListenable: Listenable.merge([
+    AuthService.instance,
+    OnboardingController.instance,
+  ]),
   redirect: (context, state) {
+    final location = state.matchedLocation;
+    if (!OnboardingController.instance.completed) {
+      return location == '/onboarding' ? null : '/onboarding';
+    }
+    if (location == '/onboarding') {
+      return AuthService.instance.isAuthenticated ? '/home' : '/login';
+    }
     final authenticated = AuthService.instance.isAuthenticated;
-    if (!authenticated && state.matchedLocation != '/login') return '/login';
-    if (authenticated && state.matchedLocation == '/login') return '/home';
+    if (!authenticated && location != '/login') return '/login';
+    if (authenticated && location == '/login') return '/home';
     return null;
   },
 
   // errorBuilder: (context, state) =>
   //     NotFoundScreen(onGoHome: () => context.go('/')),
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      name: OnboardingScreen.name,
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     GoRoute(
       path: '/prospectos/:phone',
       builder: (context, state) {

@@ -103,9 +103,9 @@ class _UserAvatar extends StatelessWidget {
                   ),
                   child: const Center(
                     child: Icon(
-                      Icons.person,
+                      Icons.person_rounded,
                       color: Color(0xFFFFD486),
-                      size: 48,
+                      size: 60,
                     ),
                   ),
                 ),
@@ -148,7 +148,7 @@ class _UserAvatar extends StatelessWidget {
                               ),
                             )
                           : const Icon(
-                              Icons.notifications_rounded,
+                              Iconsax.notification,
                               color: AppColors.homeWarmText,
                               size: 20,
                             ),

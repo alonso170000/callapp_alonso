@@ -7,6 +7,28 @@ import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/screens/main_screens/prospect_detail_screen.dart';
 
 void main() {
+  testWidgets('el historial demo muestra la efectividad de llamadas', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      MaterialApp(home: ProspectDetailScreen(prospect: demoProspects[1])),
+    );
+
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Historial'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Efectividad de contactos'), findsOneWidget);
+    expect(find.text('Resumen de llamadas'), findsOneWidget);
+    expect(find.text('75%'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets('Multiple sections and follow-up at $width', (tester) async {
       tester.view.devicePixelRatio = 1;
@@ -474,6 +496,8 @@ void main() {
       expect(find.text('Historial de correos'), findsOneWidget);
       expect(find.text('RUNASecondEmail'), findsOneWidget);
       expect(find.text('Correo de Bienvenida enviado'), findsOneWidget);
+      expect(find.text('Efectividad de contactos'), findsOneWidget);
+      expect(find.text('Resumen de llamadas'), findsOneWidget);
       expect(find.text('Historial de llamadas por horario'), findsOneWidget);
       expect(find.text('Semana 12 - 18'), findsOneWidget);
       expect(find.text('Atendida'), findsOneWidget);

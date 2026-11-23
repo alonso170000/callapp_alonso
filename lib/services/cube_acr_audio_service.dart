@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:callerapp_frontend/data/local/app_database.dart';
-import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/presentation/models/call_models.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
 import 'package:callerapp_frontend/services/phone_number.dart';
@@ -43,17 +42,6 @@ class CubeAcrAudioService {
   final AppDatabase _database;
   final AuthService _auth;
 
-  LocalScope get scope {
-    final userId = _auth.userId;
-    final developmentId = _auth.developmentId;
-    if (userId == null || developmentId == null) {
-      throw const AudioImportException(
-        'Inicia sesión para vincular la carpeta de Cube ACR.',
-      );
-    }
-    return LocalScope(userId: userId, developmentId: developmentId);
-  }
-
   /// La carpeta de Cube ACR es una preferencia del dispositivo, no del usuario
   /// ni del desarrollo. Se guarda sin ámbito para que el mantenimiento local no
   /// la borre junto con las cachés.
@@ -73,8 +61,6 @@ class CubeAcrAudioService {
   Future<bool> hasFolder() async => (await _read(_uriPrefix)) != null;
 
   Future<String?> linkFolder() async {
-    // Exige una sesión activa antes de abrir el selector.
-    scope;
     final selected = await _channel.invokeMapMethod<String, dynamic>(
       'pickFolder',
     );

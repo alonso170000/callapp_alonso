@@ -264,6 +264,42 @@ void main() {
     expect(entry.nextActivityId, 10);
   });
 
+  test('Maps calls from the lead calls endpoint', () async {
+    final service = ProspectsService(
+      auth: await login(),
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/leads/17/calls');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [
+              {
+                'id': 5,
+                'iniciada_at': '2026-10-20T15:00:00.000Z',
+                'duracion_segundos': 42,
+                'duracion_estimada': false,
+                'resultado': 'contestada',
+                'telefono_marcado': '9981234567',
+                'audio_estado': 'disponible',
+                'resumen': 'Interesado',
+              },
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+
+    final call = (await service.listCalls(17)).single;
+    expect(call.id, 5);
+    expect(call.outcome, 'contestada');
+    expect(call.durationSeconds, 42);
+    expect(call.phone, '9981234567');
+    expect(call.summary, 'Interesado');
+  });
+
   test('Loads closers from the role-filtered endpoint', () async {
     final service = ProspectsService(
       auth: await login(),
