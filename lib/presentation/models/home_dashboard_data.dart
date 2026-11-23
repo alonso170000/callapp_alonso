@@ -4,6 +4,18 @@ import 'agenda_models.dart';
 import 'home_models.dart';
 import 'prospect_models.dart';
 
+class HomeTodayEntry {
+  final ProspectRecord prospect;
+  final AgendaActivity activity;
+  final ProspectActivityMarker? marker;
+
+  const HomeTodayEntry({
+    required this.prospect,
+    required this.activity,
+    required this.marker,
+  });
+}
+
 /// Builds the activity metrics shown on the home dashboard.
 class HomeDashboardData {
   HomeDashboardData(
@@ -77,6 +89,61 @@ class HomeDashboardData {
   }
 
   List<ProspectRecord> get todayProspects => prospectsFor(todayActivities);
+  List<HomeTodayEntry> get todayEntries {
+    final prospectsById = {
+      for (final prospect in prospects)
+        if (prospect.id != null) prospect.id!: prospect,
+    };
+    final activitiesByProspect = <int, List<AgendaActivity>>{};
+    for (final activity in todayActivities) {
+      final prospectId = activity.prospectId;
+      if (prospectId == null || !prospectsById.containsKey(prospectId)) {
+        continue;
+      }
+      activitiesByProspect.putIfAbsent(prospectId, () => []).add(activity);
+    }
+
+    final entries = <HomeTodayEntry>[];
+    for (final group in activitiesByProspect.entries) {
+      final open = group.value.where(isOpen).toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      final done =
+          group.value
+              .where((activity) => activity.status == AgendaStatus.completed)
+              .toList()
+            ..sort((a, b) => a.date.compareTo(b.date));
+      final representative = open.isNotEmpty
+          ? open.first
+          : done.isNotEmpty
+          ? done.first
+          : null;
+      if (representative == null) continue;
+      final marker = switch (representative.status) {
+        AgendaStatus.overdue => ProspectActivityMarker.overdue,
+        AgendaStatus.pending => ProspectActivityMarker.pending,
+        _ => null,
+      };
+      entries.add(
+        HomeTodayEntry(
+          prospect: prospectsById[group.key]!,
+          activity: representative,
+          marker: marker,
+        ),
+      );
+    }
+    entries.sort((a, b) {
+      final markerOrder = (a.marker == null ? 1 : 0).compareTo(
+        b.marker == null ? 1 : 0,
+      );
+      if (markerOrder != 0) return markerOrder;
+      final dateOrder = a.activity.date.compareTo(b.activity.date);
+      return dateOrder != 0
+          ? dateOrder
+          : a.prospect.name.compareTo(b.prospect.name);
+    });
+    return entries;
+  }
+
   List<AgendaActivity> get todayActivities =>
       activities
           .where(

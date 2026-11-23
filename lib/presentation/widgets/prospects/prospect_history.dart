@@ -455,9 +455,9 @@ class ProspectHistoryCommentCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               '${_date(comment.createdAt)}   ${_time(comment.createdAt)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: _fieldColor,
+                color: AppPalette.of(context).historyCardInk,
                 fontWeight: FontWeight.w600,
               ),
             ),

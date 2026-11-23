@@ -46,6 +46,8 @@ class AppColors {
   static const Color homeGreenCard = Color(0xFF85F5A6);
   static const Color homeYellowCard = Color(0xFFFFF47A);
   static const Color homeOrangeSection = Color(0xFFFFD391);
+  static const Color homeActivityOverdue = Color(0xFFE5342B);
+  static const Color homeActivityPending = Color.fromARGB(255, 255, 248, 152);
   static const Color homeBlueSection = Color(0xFF64D7EA);
   static const Color homeRedSection = Color(0xFFFF9CA2);
   static const Color homeBadge = Color(0xFFF2FF81);

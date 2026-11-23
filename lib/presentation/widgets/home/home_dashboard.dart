@@ -309,6 +309,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+  Widget _todaySection(HomeDashboardData data) {
+    final entries = data.todayEntries;
+    return ProspectSection(
+      title: 'Prospectos del día',
+      color: AppColors.homeOrangeSection,
+      height: 136,
+      onOpen: () => widget.onProspects(
+        entries.map((entry) => entry.prospect.id).whereType<int>().toSet(),
+        'Prospectos del día · ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+      ),
+      onProspect: (index) => widget.onActivity(entries[index].activity),
+      prospects: [
+        for (final entry in entries)
+          ProspectItem(
+            name: entry.prospect.name,
+            avatarUrl: entry.prospect.avatarUrl,
+            subtitle: entry.activity.title,
+            avatarColor: entry.prospect.avatarColor,
+            accentColor: entry.prospect.statusColor,
+            marker: entry.marker,
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
@@ -460,12 +485,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _activitySection(
-                    'Prospectos del día',
-                    AppColors.homeOrangeSection,
-                    data.todayActivities,
-                    data,
-                  ),
+                  _todaySection(data),
                   const SizedBox(height: 20),
                   _section(
                     'Prospectos nuevos',

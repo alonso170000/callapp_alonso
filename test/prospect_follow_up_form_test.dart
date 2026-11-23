@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_history_models.dart';
@@ -846,6 +848,7 @@ void main() {
           ),
         ],
       );
+      final activities = Completer<List<AgendaActivity>>();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -856,13 +859,25 @@ void main() {
                 prospectsService: service,
                 sourceActivity: completed,
                 readOnly: true,
-                loadActivities: () async => [completed],
+                loadActivities: () => activities.future,
                 onSaved: (_) {},
               ),
             ),
           ),
         ),
       );
+      await tester.pump();
+      await tester.pump();
+
+      final scheduleToggle = find
+          .bySemanticsLabel('¿Programar siguiente contacto?')
+          .last;
+      expect(
+        tester.widget<Semantics>(scheduleToggle).properties.toggled,
+        isFalse,
+      );
+
+      activities.complete([completed]);
       await tester.pumpAndSettle();
 
       final medium = tester.widget<DropdownButtonFormField<String>>(
@@ -871,6 +886,10 @@ void main() {
       expect(medium.initialValue, 'WhatsApp');
       expect(medium.onChanged, isNull);
       expect(find.text('Se respondió por WhatsApp.'), findsOneWidget);
+      expect(
+        tester.widget<Semantics>(scheduleToggle).properties.toggled,
+        isFalse,
+      );
       expect(tester.takeException(), isNull);
     },
   );

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 enum CallProgressStatus { completed, pending, missed }
 
+enum ProspectActivityMarker { overdue, pending }
+
 class WeeklyCallProgress {
   final DateTime? date;
   final String dayLabel;
@@ -38,6 +40,7 @@ class ProspectItem {
   final String? timeLabel;
   final Color avatarColor;
   final Color accentColor;
+  final ProspectActivityMarker? marker;
 
   const ProspectItem({
     required this.name,
@@ -46,6 +49,7 @@ class ProspectItem {
     this.timeLabel,
     required this.avatarColor,
     required this.accentColor,
+    this.marker,
   });
 }
 

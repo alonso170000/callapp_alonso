@@ -5,6 +5,7 @@ import 'package:callerapp_frontend/services/cube_acr_audio_service.dart';
 import 'package:callerapp_frontend/services/onboarding_controller.dart';
 import 'package:callerapp_frontend/services/permissions_service.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class OnboardingScreen extends StatefulWidget {
   static const name = 'onboarding';
@@ -283,7 +284,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   );
 
   Widget _welcomePage() => _page([
-    const Icon(Icons.phone_in_talk_outlined, size: 72),
+    Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28.0), 
+        child: Image.asset(
+          'lib/resources/images/callapp_logo.png', 
+          width: 100, 
+          height: 100, 
+          fit: BoxFit.cover, 
+        ),
+      ),
+    ),
     const SizedBox(height: 20),
     _title('BIENVENIDO A CALLAPP'),
     const SizedBox(height: 16),
@@ -377,7 +388,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     const Text('1. Instala y configura Cube ACR para grabar tus llamadas.'),
     const SizedBox(height: 8),
     const Text(
-      '2. Vincula aquí la carpeta "Documents/CubeCallRecorder/All" donde Cube ACR guarda los audios.',
+      '2. Vincula aquí la carpeta: "Documents/CubeCallRecorder/All" donde Cube ACR guarda los audios.',
     ),
     const SizedBox(height: 8),
     const Text(

@@ -1,10 +1,69 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:callerapp_frontend/presentation/models/home_dashboard_data.dart';
+import 'package:callerapp_frontend/presentation/models/home_models.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 
 void main() {
+  test(
+    'todayEntries groups prospects and prioritizes their nearest open activity',
+    () {
+      ProspectRecord prospect(int id) => ProspectRecord(
+        id: id,
+        name: 'Persona $id',
+        phone: '',
+        email: '',
+        status: 'Seguimiento',
+        temperature: '',
+        avatarColor: Colors.teal,
+        statusColor: Colors.orange,
+      );
+      AgendaActivity activity(
+        int id,
+        int prospectId,
+        int hour,
+        AgendaStatus status,
+      ) => AgendaActivity(
+        id: id,
+        prospectId: prospectId,
+        title: 'Actividad $id',
+        prospect: 'Persona $prospectId',
+        description: '',
+        date: DateTime(2026, 10, 13, hour),
+        status: status,
+      );
+      final data = HomeDashboardData(
+        [prospect(1), prospect(2), prospect(3), prospect(4)],
+        [
+          activity(1, 1, 9, AgendaStatus.overdue),
+          activity(2, 3, 10, AgendaStatus.completed),
+          activity(3, 2, 11, AgendaStatus.pending),
+          activity(4, 2, 8, AgendaStatus.completed),
+        ],
+        DateTime(2026, 10, 13, 12),
+      );
+
+      expect(data.todayEntries.map((entry) => entry.prospect.id), [1, 2, 3]);
+      expect(data.todayEntries.map((entry) => entry.marker), [
+        ProspectActivityMarker.overdue,
+        ProspectActivityMarker.pending,
+        null,
+      ]);
+      expect(
+        data.todayEntries.where((entry) => entry.prospect.id == 2),
+        hasLength(1),
+      );
+      expect(
+        data.todayEntries
+            .firstWhere((entry) => entry.prospect.id == 2)
+            .activity
+            .id,
+        3,
+      );
+    },
+  );
+
   test('New prospects include every assignment date, newest first and missing dates last', () {
     ProspectRecord record(int id, DateTime? date, {String status = 'Nuevo'}) =>
         ProspectRecord(

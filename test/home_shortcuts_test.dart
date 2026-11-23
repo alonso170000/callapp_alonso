@@ -106,11 +106,18 @@ void main() {
         final todaySection = tester
             .widgetList<ProspectSection>(find.byType(ProspectSection))
             .firstWhere((section) => section.title == 'Prospectos del día');
+        expect(todaySection.prospects.map((item) => item.name), [
+          'Persona 2',
+          'Persona 3',
+          'Persona 1',
+        ]);
         todaySection.onProspect!(0);
         await tester.pumpAndSettle();
         expect(find.byType(AgendaActivityDetail), findsOneWidget);
-        expect(find.text('Actividad 11'), findsWidgets);
+        expect(find.text('Actividad 12'), findsWidgets);
         Navigator.pop(tester.element(find.byType(AgendaActivityDetail)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Inicio').last);
         await tester.pumpAndSettle();
         expect(find.text('Prospectos del día'), findsOneWidget);
         for (var metric = 0; metric < 2; metric++) {

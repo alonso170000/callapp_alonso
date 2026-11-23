@@ -304,7 +304,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
 
   void _initializeWithoutPendingActivity() {
     _completionAcknowledged = true;
-    if (!_scheduleInitialized) {
+    if (!_scheduleInitialized && !widget.readOnly) {
       _schedule = true;
       _scheduleInitialized = true;
     }
@@ -586,7 +586,7 @@ class _ProspectFollowUpFormState extends State<ProspectFollowUpForm> {
             textStyle: const TextStyle(fontFamily: 'BebasNeue', fontSize: 18),
           ),
           onPressed: widget.readOnly ? null : onPressed,
-          child: Text(label),
+          child: Text(label, style: const TextStyle(fontFamily: 'SulphurPoint', fontSize: 16)),
         ),
       );
 
