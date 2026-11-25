@@ -312,6 +312,18 @@ class ProspectDetailHeader extends StatelessWidget {
                             ),
                         ],
                       ),
+                      SizedBox(height: 2),
+                      if (prospect.assignedBy != null)
+                        Text(
+                          'Asignado por ${prospect.assignedBy?.split(' ').take(2).join(' ')}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: palette.headerForeground,
+                            fontFamily: 'SulphurPoint',
+                            fontSize: 11,
+                          ),
+                        ),
                     ],
                   ),
                 ),

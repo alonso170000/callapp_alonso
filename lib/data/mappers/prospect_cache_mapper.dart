@@ -33,6 +33,7 @@ class ProspectCacheMapper {
     'discovery_complete': _boolToInt(prospect.discoveryComplete),
     'days_since_contact': prospect.daysSinceContact,
     'assigned_at_ms': _dateToInt(prospect.assignedAt),
+    'assigned_by': prospect.assignedBy,
     'next_contact_at_ms': _dateToInt(prospect.nextContact),
     'last_contact_result': prospect.lastContactResult,
     'last_call_duration_ms': prospect.lastCallDuration?.inMilliseconds,
@@ -80,6 +81,7 @@ class ProspectCacheMapper {
       discoveryComplete: _intToBool(row['discovery_complete']),
       daysSinceContact: row['days_since_contact']! as int,
       assignedAt: _intToDate(row['assigned_at_ms']),
+      assignedBy: row['assigned_by'] as String?,
       nextContact: _intToDate(row['next_contact_at_ms']),
       lastContactResult: row['last_contact_result']! as String,
       lastCallDuration: switch (row['last_call_duration_ms']) {

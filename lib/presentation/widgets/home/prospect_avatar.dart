@@ -23,7 +23,7 @@ class ProspectAvatar extends StatelessWidget {
             child: ColoredBox(
               color: item.avatarColor,
               child: item.avatarUrl == null || item.avatarUrl!.isEmpty
-                  ? fallback
+                  ? fallback 
                   : Image.network(
                       item.avatarUrl!,
                       width: 56,

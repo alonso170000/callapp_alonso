@@ -37,6 +37,8 @@ class ProspectSummarySheet extends StatelessWidget {
               'Asignación': date == null
                   ? 'Sin fecha de asignación'
                   : '${date.day}/${date.month}/${date.year}',
+              if (prospect.assignedBy != null)
+                'Asignado por': prospect.assignedBy!,
             }.entries)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),

@@ -30,6 +30,7 @@ class AgendaActivityDetail extends StatefulWidget {
   final VoidCallback onReschedule;
   final VoidCallback? onDelete;
   final Future<List<ProspectRecord>> Function()? loadProspects;
+  final bool lockedByActiveCall;
 
   const AgendaActivityDetail({
     super.key,
@@ -44,6 +45,7 @@ class AgendaActivityDetail extends StatefulWidget {
     required this.onReschedule,
     this.onDelete,
     this.loadProspects,
+    this.lockedByActiveCall = false,
   });
 
   @override
@@ -373,10 +375,15 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
     ),
   );
 
-  Widget _secondaryAction(String label, IconData icon, VoidCallback onPressed) {
+  Widget _secondaryAction(
+    String label,
+    IconData icon,
+    VoidCallback? onPressed,
+  ) {
     final palette = AppPalette.of(context);
     return Expanded(
       child: AppPressBounce(
+        enabled: onPressed != null,
         child: OutlinedButton.icon(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
@@ -474,6 +481,11 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
       ),
     ],
   );
+
+  bool get _primaryEnabled =>
+      !(widget.lockedByActiveCall &&
+          activity.status != AgendaStatus.completed &&
+          !activity.isFollowUp);
 
   @override
   Widget build(BuildContext context) => Material(
@@ -605,6 +617,26 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
           minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             children: [
+              if (widget.lockedByActiveCall) ...[
+                Container(
+                  key: const ValueKey('activity-call-lock-notice'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppPalette.of(context).warmBannerFill,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Llamada en curso con ${activity.prospect}. No puedes editar, reprogramar, completar ni cancelar esta actividad hasta registrar o descartar la llamada.',
+                    style: TextStyle(
+                      color: AppPalette.of(context).warmBannerForeground,
+                      fontFamily: 'SulphurPoint',
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 9),
+              ],
               if (_isOpen ||
                   (activity.status == AgendaStatus.completed &&
                       activity.isFollowUp))
@@ -612,10 +644,13 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                   width: double.infinity,
                   height: 56,
                   child: AppPressBounce(
+                    enabled: _primaryEnabled,
                     child: FilledButton.icon(
-                      onPressed: activity.status == AgendaStatus.completed
-                          ? onOpenProspect
-                          : onComplete,
+                      onPressed: _primaryEnabled
+                          ? (activity.status == AgendaStatus.completed
+                                ? onOpenProspect
+                                : onComplete)
+                          : null,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primaryColor,
                         foregroundColor: AppColors.homeWarmText,
@@ -646,19 +681,23 @@ class _AgendaActivityDetailState extends State<AgendaActivityDetail> {
                 const SizedBox(height: 9),
                 Row(
                   children: [
-                    _secondaryAction('EDITAR', Iconsax.edit_copy, onEdit),
+                    _secondaryAction(
+                      'EDITAR',
+                      Iconsax.edit_copy,
+                      widget.lockedByActiveCall ? null : onEdit,
+                    ),
                     const SizedBox(width: 9),
                     _secondaryAction(
                       'Cancelar',
                       Iconsax.calendar_remove_copy,
-                      onReschedule,
+                      widget.lockedByActiveCall ? null : onReschedule,
                     ),
                     if (_canDelete) const SizedBox(width: 9),
                     if (_canDelete)
                       _secondaryAction(
                         'Eliminar',
                         Iconsax.trash_copy,
-                        widget.onDelete!,
+                        widget.lockedByActiveCall ? null : widget.onDelete!,
                       ),
                   ],
                 ),

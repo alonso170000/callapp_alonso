@@ -387,6 +387,36 @@ class NotificationService extends ChangeNotifier {
     }
   }
 
+  Future<void> showPushAssignment({
+    required int prospectId,
+    required String title,
+    required String body,
+  }) async {
+    if (!_enabled || kIsWeb) return;
+    await initialize();
+    if (!_initialized) return;
+    await _plugin.show(
+      id: _notificationId(-prospectId),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: '$_assignmentPayloadPrefix$prospectId',
+    );
+  }
+
   Future<void> cancelCallReminder() async {
     if (!_initialized || kIsWeb) return;
     try {
@@ -552,7 +582,7 @@ class NotificationService extends ChangeNotifier {
           id: _notificationId(notification.activityId),
           title: 'Nuevo prospecto asignado',
           body:
-              '${notification.prospect} ya está disponible en Mis prospectos.',
+              '${notification.prospect} · ${notification.activity.description}',
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               _channelId,
@@ -690,7 +720,9 @@ class NotificationService extends ChangeNotifier {
             type: assignmentType,
             title: 'NUEVO PROSPECTO',
             prospect: prospect.name,
-            description: 'Se te asignó un nuevo prospecto.',
+            description: prospect.assignedBy == null
+                ? 'Se te asignó un nuevo prospecto.'
+                : 'Asignado por ${prospect.assignedBy}.',
             date: assignedAt,
             status: AgendaStatus.pending,
             hasReminder: false,
@@ -739,7 +771,9 @@ class NotificationService extends ChangeNotifier {
       type: assignmentType,
       title: 'NUEVO PROSPECTO',
       prospect: prospect.name,
-      description: 'Se te asignó un nuevo prospecto.',
+      description: prospect.assignedBy == null
+          ? 'Se te asignó un nuevo prospecto.'
+          : 'Asignado por ${prospect.assignedBy}.',
       date: assignedAt,
       status: AgendaStatus.pending,
       hasReminder: false,

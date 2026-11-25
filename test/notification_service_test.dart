@@ -153,6 +153,29 @@ void main() {
     expect(notifications.map((item) => item.activityId), [-1, -2]);
   });
 
+  test('muestra quién asignó el prospecto cuando está disponible', () {
+    final now = DateTime(2026, 10, 20, 12);
+    final notifications = NotificationService.assignmentHistoryFor([
+      ProspectRecord(
+        id: 17,
+        name: 'Ana Pérez',
+        phone: '9991234567',
+        email: '',
+        status: 'Nuevo',
+        temperature: 'Tibio',
+        avatarColor: Colors.teal,
+        statusColor: Colors.green,
+        assignedAt: now.subtract(const Duration(minutes: 5)),
+        assignedBy: 'María Asesora',
+      ),
+    ], now: now);
+
+    expect(
+      notifications.single.activity.description,
+      'Asignado por María Asesora.',
+    );
+  });
+
   test('creates notifications for assignments within the 14-day window', () {
     final now = DateTime(2026, 10, 20, 12);
     ProspectRecord prospect(int id, DateTime assignedAt) => ProspectRecord(

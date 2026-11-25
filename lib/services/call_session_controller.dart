@@ -136,6 +136,9 @@ class CallSessionController extends ChangeNotifier {
   Future<bool>? _claimInFlight;
 
   ActiveCall? get activeCall => _activeCall;
+  int? get activeActivityId => _activeCall?.sourceActivityId;
+  bool isAttendingActivity(int? activityId) =>
+      activityId != null && _activeCall?.sourceActivityId == activityId;
   int? get lastCallId => _lastCallId;
   bool get hasStaleSession => _staleSession;
 

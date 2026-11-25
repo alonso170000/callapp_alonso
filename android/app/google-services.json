@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "665049089517",
+    "project_id": "callapp-49ed5",
+    "storage_bucket": "callapp-49ed5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665049089517:android:d6cad520c709c9dc52d3e4",
+        "android_client_info": {
+          "package_name": "com.hadacorp.callapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXYN14JQX0EdVDUh-BltjIA8pLNFs8WSo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final instance = AppDatabase();
 
-  static const schemaVersion = 6;
+  static const schemaVersion = 7;
   static const prospectsResource = 'prospects';
   static const activitiesResource = 'activities';
   static const catalogsResource = 'catalogs';
@@ -82,6 +82,7 @@ class AppDatabase {
           if (oldVersion < 4) await _createPendingOperationsTable(database);
           if (oldVersion < 5) await _addProspectTypeColumns(database);
           if (oldVersion < 6) await _addProspectClientColumns(database);
+          if (oldVersion < 7) await _addProspectAssignmentColumns(database);
         },
       ),
     );
@@ -112,6 +113,7 @@ class AppDatabase {
         discovery_complete INTEGER NOT NULL DEFAULT 0,
         days_since_contact INTEGER NOT NULL DEFAULT 0,
         assigned_at_ms INTEGER,
+        assigned_by TEXT,
         next_contact_at_ms INTEGER,
         last_contact_result TEXT NOT NULL,
         last_call_duration_ms INTEGER,
@@ -161,6 +163,15 @@ class AppDatabase {
       'cached_prospects',
       'client_id',
       'INTEGER',
+    );
+  }
+
+  static Future<void> _addProspectAssignmentColumns(Database database) async {
+    await _addColumnIfMissing(
+      database,
+      'cached_prospects',
+      'assigned_by',
+      'TEXT',
     );
   }
 

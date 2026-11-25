@@ -393,6 +393,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 bottom: false,
                 child: AgendaActivityDetail(
                   activity: activity,
+                  lockedByActiveCall: _callSession.isAttendingActivity(
+                    activity.id,
+                  ),
                   loadProspects: widget.loadProspects ?? _cachedProspects,
                   onClose: () => Navigator.pop(detailContext),
                   onMessage: () => _showActionMessage(
@@ -423,6 +426,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
+    if (_callSession.isAttendingActivity(activity.id)) {
+      _showActionMessage(
+        'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+        detailContext,
+      );
+      return;
+    }
     if (activity.id == null ||
         (activity.status != AgendaStatus.pending &&
             activity.status != AgendaStatus.overdue)) {
@@ -677,6 +687,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
+    if (_callSession.isAttendingActivity(activity.id)) {
+      _showActionMessage(
+        'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+        detailContext,
+      );
+      return;
+    }
     final id = activity.id;
     if (id == null || !_deleting.add(id)) return;
     try {
@@ -835,6 +852,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
     BuildContext detailContext,
   ) async {
     if (activity.isFollowUp) return;
+    if (_callSession.isAttendingActivity(activity.id)) {
+      _showActionMessage(
+        'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+        detailContext,
+      );
+      return;
+    }
     final confirmed = await _confirmActivityAction(
       detailContext,
       title: 'Completar actividad',
@@ -884,6 +908,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
+    if (_callSession.isAttendingActivity(activity.id)) {
+      _showActionMessage(
+        'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+        detailContext,
+      );
+      return;
+    }
     final confirmed = await _confirmActivityAction(
       detailContext,
       title: 'Cancelar actividad',

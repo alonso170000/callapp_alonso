@@ -5,9 +5,12 @@ import 'package:callerapp_frontend/data/local/app_database.dart';
 import 'package:callerapp_frontend/data/local/local_scope.dart';
 import 'package:callerapp_frontend/data/local/pending_operations_store.dart';
 import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
+import 'package:callerapp_frontend/presentation/models/prospect_models.dart';
 import 'package:callerapp_frontend/repositories/agenda_repository.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/business_clock.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -112,6 +115,43 @@ void main() {
       expect((await outbox.read(scope)).single.kind, 'agenda.complete');
     },
   );
+
+  test('bloquea mutaciones de la actividad con llamada en curso', () async {
+    final auth = await _auth(userId: 8, developmentId: 16);
+    final database = AppDatabase(
+      factory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+    final activity = _activity(42, 'Llamada activa');
+    final callSession = CallSessionController(auth: auth, database: database);
+    addTearDown(callSession.dispose);
+    await callSession.start(
+      prospect: demoProspects.first,
+      origin: 'agenda',
+      sourceActivityId: activity.id,
+      startedAt: businessNow(),
+    );
+    final repository = AgendaRepository(
+      auth: auth,
+      cache: ActivitiesCache(database: database),
+      outbox: PendingOperationsStore(database: database),
+      service: _FakeAgendaService(() async => [activity]),
+      callSession: callSession,
+    );
+    final optimistic = activity.copyWith(title: 'Actualizada');
+    final matcher = throwsA(isA<AgendaBusinessException>());
+
+    await expectLater(
+      repository.update(activity, const {
+        'titulo': 'Actualizada',
+      }, optimisticActivity: optimistic),
+      matcher,
+    );
+    await expectLater(repository.complete(activity), matcher);
+    await expectLater(repository.cancel(activity), matcher);
+    await expectLater(repository.delete(activity), matcher);
+  });
 }
 
 Future<AuthService> _auth({

@@ -687,6 +687,7 @@ class ProspectsService {
         final value? => businessTimeFromInstant(value),
         null => null,
       },
+      assignedBy: row['asignado_por_nombre'] as String?,
       lastCallAt: lastCall,
       lastCallStatus: lastCall == null
           ? null

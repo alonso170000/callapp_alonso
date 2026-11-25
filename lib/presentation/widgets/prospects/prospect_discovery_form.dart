@@ -20,6 +20,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
   final ProspectsService? prospectsService;
   final ProspectsRepository? repository;
   final bool readOnly;
+  final bool canAssignCloser;
   final ValueChanged<bool>? onDirtyChanged;
   final ValueChanged<ProspectRecord>? onProspectUpdated;
 
@@ -31,6 +32,7 @@ class ProspectDiscoveryForm extends StatefulWidget {
     this.prospectsService,
     this.repository,
     this.readOnly = false,
+    this.canAssignCloser = true,
     this.onDirtyChanged,
     this.onProspectUpdated,
   });
@@ -1050,67 +1052,69 @@ class _ProspectDiscoveryFormState extends State<ProspectDiscoveryForm> {
             ),
           ),
         ),
-        const SizedBox(height: 14),
-        ProspectDetailPanel(
-          title: 'Capacidad y forma de pago',
-          color: AppColors.discoveryHeader,
-          nested: true,
-          initiallyExpanded: true,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppPalette.of(context).discoverySurfaceFill,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              children: [
-                _text(
-                  '¿Cuál es su presupuesto? *',
-                  _budget,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,2}'),
+        if (widget.canAssignCloser) ...[
+          const SizedBox(height: 14),
+          ProspectDetailPanel(
+            title: 'Capacidad y forma de pago',
+            color: AppColors.discoveryHeader,
+            nested: true,
+            initiallyExpanded: true,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppPalette.of(context).discoverySurfaceFill,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  _text(
+                    '¿Cuál es su presupuesto? *',
+                    _budget,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                  ],
-                  prefixText: r'$ ',
-                  errorText:
-                      _showPaymentErrors &&
-                          (_budgetValue == null || _budgetValue! <= 0)
-                      ? 'Ingrese un presupuesto mayor a cero.'
-                      : null,
-                ),
-                _select(
-                  '¿Forma de pago preferida? *',
-                  _payment,
-                  ['Contado', 'Crédito con la empresa', 'Crédito bancario'],
-                  (value) => _payment = value,
-                  errorText: _showPaymentErrors && _payment == null
-                      ? 'Seleccione una forma de pago.'
-                      : null,
-                ),
-                _select(
-                  '¿Tiempo estimado para utilizar su inversión?',
-                  _investmentTime,
-                  ['Inmediato', '6 meses', '2 años', '2 años en adelante'],
-                  (value) => _investmentTime = value,
-                ),
-                _buttons(
-                  'capacidad_pago',
-                  () => setState(() {
-                    _budget.text = (_saved?['budget'] as String?) ?? '';
-                    _payment = _saved?['payment'] as String?;
-                    _investmentTime = _saved?['investmentTime'] as String?;
-                    _showPaymentErrors = false;
-                  }),
-                  _savePayment,
-                ),
-              ],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
+                      ),
+                    ],
+                    prefixText: r'$ ',
+                    errorText:
+                        _showPaymentErrors &&
+                            (_budgetValue == null || _budgetValue! <= 0)
+                        ? 'Ingrese un presupuesto mayor a cero.'
+                        : null,
+                  ),
+                  _select(
+                    '¿Forma de pago preferida? *',
+                    _payment,
+                    ['Contado', 'Crédito con la empresa', 'Crédito bancario'],
+                    (value) => _payment = value,
+                    errorText: _showPaymentErrors && _payment == null
+                        ? 'Seleccione una forma de pago.'
+                        : null,
+                  ),
+                  _select(
+                    '¿Tiempo estimado para utilizar su inversión?',
+                    _investmentTime,
+                    ['Inmediato', '6 meses', '2 años', '2 años en adelante'],
+                    (value) => _investmentTime = value,
+                  ),
+                  _buttons(
+                    'capacidad_pago',
+                    () => setState(() {
+                      _budget.text = (_saved?['budget'] as String?) ?? '';
+                      _payment = _saved?['payment'] as String?;
+                      _investmentTime = _saved?['investmentTime'] as String?;
+                      _showPaymentErrors = false;
+                    }),
+                    _savePayment,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 14),
         ProspectDetailPanel(
           title: 'Motivadores de compra',

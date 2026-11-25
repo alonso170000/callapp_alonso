@@ -22,6 +22,7 @@ class ProspectRecord {
   final bool decision, willingness, money, passedToTO, discoveryComplete;
   final int daysSinceContact;
   final DateTime? assignedAt;
+  final String? assignedBy;
   final DateTime? nextContact;
   final String lastContactResult;
   final Duration? lastCallDuration;
@@ -66,6 +67,7 @@ class ProspectRecord {
     this.appointment,
     this.daysSinceContact = 1,
     this.assignedAt,
+    this.assignedBy,
     this.nextContact,
     this.lastContactResult = 'Sin contacto',
     this.lastCallDuration,
@@ -125,6 +127,7 @@ class ProspectRecord {
     String? lastCallStatus,
     String? lastCallAudioName,
     int? daysSinceContact,
+    String? assignedBy,
     bool? discoveryComplete,
     String? tipoProspecto,
     bool? isClient,
@@ -152,6 +155,7 @@ class ProspectRecord {
     discoveryComplete: discoveryComplete ?? this.discoveryComplete,
     daysSinceContact: daysSinceContact ?? this.daysSinceContact,
     assignedAt: assignedAt,
+    assignedBy: assignedBy ?? this.assignedBy,
     nextContact: nextContact ?? this.nextContact,
     lastContactResult: lastContactResult ?? this.lastContactResult,
     lastCallDuration: lastCallDuration ?? this.lastCallDuration,

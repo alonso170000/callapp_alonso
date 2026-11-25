@@ -35,6 +35,29 @@ Future<CallSessionController> _startSession(_FakeCallLogService log) async {
 }
 
 void main() {
+  test('identifica la actividad atendida por la llamada activa', () async {
+    final controller = CallSessionController(
+      callLog: _FakeCallLogService(active: false),
+    );
+    addTearDown(controller.dispose);
+    await controller.start(
+      prospect: demoProspects.first,
+      origin: 'agenda',
+      sourceActivityId: 42,
+      startedAt: businessNow(),
+    );
+
+    expect(controller.activeActivityId, 42);
+    expect(controller.isAttendingActivity(42), isTrue);
+    expect(controller.isAttendingActivity(7), isFalse);
+    expect(controller.isAttendingActivity(null), isFalse);
+
+    await controller.cancel();
+
+    expect(controller.activeActivityId, isNull);
+    expect(controller.isAttendingActivity(42), isFalse);
+  });
+
   test('descarta la sesión cuando solo se abrió el marcador', () async {
     final log = _FakeCallLogService(active: false);
     final controller = await _startSession(log);

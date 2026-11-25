@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:callerapp_frontend/services/notification_service.dart';
+import 'package:callerapp_frontend/services/push_notification_service.dart';
 import 'package:callerapp_frontend/services/session_store.dart';
 
 class AuthException implements Exception {
@@ -40,6 +41,8 @@ class AuthService extends ChangeNotifier {
   int? get developmentId => _int(activeDevelopment?['id']);
   String get userName => _userName ?? 'Usuario';
   Map<String, dynamic>? activeDevelopment;
+  String? get role => activeDevelopment?['rol']?.toString();
+  bool get isCloser => role?.trim().toLowerCase() == 'cerrador';
   String? get token => _token;
   String get baseUrl => _baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
   bool get isAuthenticated => _token != null;
@@ -200,6 +203,7 @@ class AuthService extends ChangeNotifier {
   /// Es idempotente y conserva la caché local para el mismo ámbito.
   Future<void> expireSession() async {
     if (_token == null) return;
+    await PushNotificationService.instance.unregisterCurrent();
     unawaited(NotificationService.instance.endSession());
     await _sessions.clear();
     _clearSessionData();
@@ -207,6 +211,7 @@ class AuthService extends ChangeNotifier {
   }
 
   void logout() {
+    unawaited(PushNotificationService.instance.unregisterCurrent());
     unawaited(NotificationService.instance.endSession());
     unawaited(_sessions.clear());
     _clearSessionData();

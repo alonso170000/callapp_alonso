@@ -960,6 +960,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
+    if (_callSession.isAttendingActivity(activity.id)) {
+      ScaffoldMessenger.of(detailContext).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+          ),
+        ),
+      );
+      return;
+    }
     if (activity.id == null ||
         (activity.status != AgendaStatus.pending &&
             activity.status != AgendaStatus.overdue)) {
@@ -1012,6 +1022,16 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
     AgendaActivity activity,
     BuildContext detailContext,
   ) async {
+    if (_callSession.isAttendingActivity(activity.id)) {
+      ScaffoldMessenger.of(detailContext).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registra o descarta la llamada en curso antes de modificar esta actividad.',
+          ),
+        ),
+      );
+      return;
+    }
     final confirmed = await showAppConfirmationSheet(
       context: context,
       title: 'Cancelar actividad',
@@ -1071,6 +1091,9 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                 bottom: false,
                 child: AgendaActivityDetail(
                   activity: activity,
+                  lockedByActiveCall: _callSession.isAttendingActivity(
+                    activity.id,
+                  ),
                   onClose: () => Navigator.pop(detailContext),
                   onMessage: () => _closeActivityAndRun(
                     detailContext,
@@ -1369,6 +1392,8 @@ class _ProspectDetailScreenState extends State<ProspectDetailScreen>
                                       prospectId: p.id,
                                       prospect: p,
                                       readOnly: _formsReadOnly,
+                                      canAssignCloser:
+                                          !AuthService.instance.isCloser,
                                       onDirtyChanged: (dirty) => _setFormDirty(
                                         ProspectSection.discovery,
                                         dirty,

@@ -7,6 +7,7 @@ import 'package:callerapp_frontend/presentation/models/agenda_models.dart';
 import 'package:callerapp_frontend/presentation/models/prospect_status.dart';
 import 'package:callerapp_frontend/services/agenda_service.dart';
 import 'package:callerapp_frontend/services/auth_service.dart';
+import 'package:callerapp_frontend/services/call_session_controller.dart';
 import 'package:callerapp_frontend/services/outbox_service.dart';
 import 'package:callerapp_frontend/services/data_change_bus.dart';
 
@@ -26,18 +27,29 @@ class AgendaRepository {
     PendingOperationsStore? outbox,
     AuthService? auth,
     DataChangeBus? changes,
+    CallSessionController? callSession,
   }) : _service = service ?? AgendaService(auth: auth),
        _ownsService = service == null,
        _cache = cache ?? ActivitiesCache(),
        _outbox = outbox ?? PendingOperationsStore(),
        _auth = auth ?? AuthService.instance,
-       _changes = changes ?? DataChangeBus.instance;
+       _changes = changes ?? DataChangeBus.instance,
+       _callSession = callSession ?? CallSessionController.instance;
   final AgendaService _service;
   final bool _ownsService;
   final ActivitiesCache _cache;
   final PendingOperationsStore _outbox;
   final AuthService _auth;
   final DataChangeBus _changes;
+  final CallSessionController _callSession;
+
+  void _ensureActivityEditable(int? activityId) {
+    if (_callSession.isAttendingActivity(activityId)) {
+      throw const AgendaBusinessException(
+        'No puedes modificar ni cancelar esta actividad mientras la llamada está en curso. Registra o descarta la llamada primero.',
+      );
+    }
+  }
 
   AgendaMutationResult _changed(AgendaMutationResult result) {
     _changes.notify(agenda: true, prospects: true);
@@ -127,6 +139,7 @@ class AgendaRepository {
   );
 
   Future<AgendaMutationResult> delete(AgendaActivity activity) async {
+    _ensureActivityEditable(activity.id);
     final current = scope;
     var id = activity.id;
     if (id == null) {
@@ -177,6 +190,7 @@ class AgendaRepository {
     required AgendaActivity optimistic,
     required Future<void> Function(int, String) remote,
   }) async {
+    _ensureActivityEditable(activity.id);
     final current = scope;
     var id = activity.id;
     if (id == null) {
